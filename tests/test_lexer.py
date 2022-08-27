@@ -1,6 +1,6 @@
 import pytest
 
-from katana.katana import NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE, Lexer, Token, EOF_TOKEN_TYPE
+from katana.katana import MINUS_TOKEN_TYPE, NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE, Lexer, Token, EOF_TOKEN_TYPE
 
 class TestLexer:
 
@@ -24,5 +24,14 @@ class TestLexer:
         ("3 + 4", [Token(NUM_TOKEN_TYPE, 0, "3"), Token(PLUS_TOKEN_TYPE, 2, "+"), Token(NUM_TOKEN_TYPE, 4, "4"), Token(EOF_TOKEN_TYPE, 5, "EOF")])
         ])
     def test_lex_simple_add(self, program, token_list):
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+
+    @pytest.mark.parametrize("program,token_list", [
+        ("1 - 2", [Token(NUM_TOKEN_TYPE, 0, "1"), Token(MINUS_TOKEN_TYPE, 2, "-"), Token(NUM_TOKEN_TYPE, 4, "2"), Token(EOF_TOKEN_TYPE, 5, "EOF")]),
+        ("3 - 4", [Token(NUM_TOKEN_TYPE, 0, "3"), Token(MINUS_TOKEN_TYPE, 2, "-"), Token(NUM_TOKEN_TYPE, 4, "4"), Token(EOF_TOKEN_TYPE, 5, "EOF")])
+        ])
+    def test_lex_simple_subtract(self, program, token_list):
         lexer = Lexer(program)
         assert token_list == lexer.lex()

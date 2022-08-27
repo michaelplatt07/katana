@@ -1,6 +1,6 @@
 import pytest
 
-from katana.katana import NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE, LiteralNode, OpNode, Parser, Token, EOF_TOKEN_TYPE
+from katana.katana import NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE, MINUS_TOKEN_TYPE, LiteralNode, OpNode, Parser, Token, EOF_TOKEN_TYPE
 
 class TestParserLiterals:
 
@@ -19,6 +19,12 @@ class TestParserLiterals:
 class TestParserAddition:
 
     def test_parser_adding_two_numbers(self):
+        """
+        Given the simple program:
+        1 + 2
+        Epxected to return an AST like:
+        (1+2)
+        """
         token_list = [Token(NUM_TOKEN_TYPE, 0, "1"), Token(PLUS_TOKEN_TYPE, 1, "+"), Token(NUM_TOKEN_TYPE, 2, "2"), Token(EOF_TOKEN_TYPE, 3, "EOF")]
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
@@ -26,13 +32,52 @@ class TestParserAddition:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
-    @pytest.mark.skip
     def test_parser_adding_three_numbers(self):
+        """
+        Given the simple program:
+        1 + 2 + 3
+        Expected to return an AST like:
+        ((1+2)+3)
+        """
         token_list = [Token(NUM_TOKEN_TYPE, 0, "1"), Token(PLUS_TOKEN_TYPE, 1, "+"), Token(NUM_TOKEN_TYPE, 2, "2"), Token(PLUS_TOKEN_TYPE, 3, "+"), Token(NUM_TOKEN_TYPE, 4, "3"), Token(EOF_TOKEN_TYPE, 5, "EOF")]
         left_node_1 = LiteralNode(token_list[0], "1")
         right_node_1 = LiteralNode(token_list[2], "2")
         first_plus = OpNode(token_list[0], "+", left_node_1, right_node_1)
-        right_node_2 = LiteralNode(token_list[2], "2")
+        right_node_2 = LiteralNode(token_list[2], "3")
         ast = OpNode(token_list[3], "+", first_plus, right_node_2)
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+class TestParserSubtraction:
+
+    def test_parser_adding_subtracting_numbers(self):
+        """
+        Given the simple program:
+        1 - 2
+        Epxected to return an AST like:
+        (1-2)
+        """
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "1"), Token(MINUS_TOKEN_TYPE, 1, "-"), Token(NUM_TOKEN_TYPE, 2, "2"), Token(EOF_TOKEN_TYPE, 3, "EOF")]
+        left_node = LiteralNode(token_list[0], "1")
+        right_node = LiteralNode(token_list[2], "2")
+        ast = OpNode(token_list[0], "-", left_node, right_node)
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_parser_subtracting_three_numbers(self):
+        """
+        Given the simple program:
+        1 - 2 - 3
+        Expected to return an AST like:
+        ((1-2)-3)
+        """
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "1"), Token(MINUS_TOKEN_TYPE, 1, "-"), Token(NUM_TOKEN_TYPE, 2, "2"), Token(MINUS_TOKEN_TYPE, 3, "-"), Token(NUM_TOKEN_TYPE, 4, "3"), Token(EOF_TOKEN_TYPE, 5, "EOF")]
+        left_node_1 = LiteralNode(token_list[0], "1")
+        right_node_1 = LiteralNode(token_list[2], "2")
+        first_plus = OpNode(token_list[0], "-", left_node_1, right_node_1)
+        right_node_2 = LiteralNode(token_list[2], "3")
+        ast = OpNode(token_list[3], "-", first_plus, right_node_2)
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+
