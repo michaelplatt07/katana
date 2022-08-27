@@ -49,7 +49,7 @@ class ExpressionNode(Node):
         self.left_side = left_side
         self.right_side = right_side
 
-class OpNode(Node):
+class PlusMinusNode(Node):
     def __init__(self, token, value, left_side=None, right_side=None):
         super().__init__(token)
         self.value = value
@@ -59,7 +59,7 @@ class OpNode(Node):
     def __eq__(self, other):
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
-        return self.value == other.value and left_side_equal and right_side_equal
+        return self.value == other.value and left_side_equal and right_side_equal and self.token == other.token
 
     def __repr__(self):
         return f"({self.left_side}{self.value}{self.right_side})"
@@ -70,7 +70,7 @@ class LiteralNode(Node):
         self.value = value
 
     def __eq__(self, other):
-        return self.value == other.value
+        return self.value == other.value and self.token == other.token
 
     def __repr__(self):
         return f"{self.value}"
@@ -159,7 +159,7 @@ class Parser:
         return node
 
     def parse_op(self):
-        node = OpNode(self.curr_token, self.curr_token.value)
+        node = PlusMinusNode(self.curr_token, self.curr_token.value)
         left_side = self.root_node
         self.root_node = node
         node.left_side = left_side
