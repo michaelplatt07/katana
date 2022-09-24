@@ -1,4 +1,3 @@
-import pytest
 from katana.katana import (
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
@@ -49,6 +48,8 @@ class TestParserAddition:
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
         ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
+        left_node.parent_node = ast
+        right_node.parent_node = ast
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -188,7 +189,6 @@ class TestComments:
         assert ast == parser.parse()
 
 
-@pytest.mark.skip
 class TestArithmetic:
     def test_parser_add_and_multiply(self):
         """
@@ -197,4 +197,21 @@ class TestArithmetic:
         Expected to return an AST like:
         (2+(3*4))
         """
-        assert False
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "2"),
+            Token(PLUS_TOKEN_TYPE, 2, "+"),
+            Token(NUM_TOKEN_TYPE, 4, "3"),
+            Token(MULTIPLY_TOKEN_TYPE, 6, "*"),
+            Token(NUM_TOKEN_TYPE, 8, "4"),
+            Token(EOF_TOKEN_TYPE, 10, "EOF"),
+        ]
+        left_node_add = LiteralNode(token_list[0], "2")
+        left_node_multiply = LiteralNode(token_list[2], "3")
+        right_node_multiply = LiteralNode(token_list[4], "4")
+        multiply_node = MultiplyDivideNode(
+            token_list[3], "*", left_node_multiply, right_node_multiply)
+        add_node = PlusMinusNode(
+            token_list[1], "+", left_node_add, multiply_node)
+        ast = add_node
+        parser = Parser(token_list)
+        assert ast == parser.parse()

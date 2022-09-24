@@ -21,11 +21,15 @@ EOF_TOKEN_TYPE = "EOF"
 
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
 
-#########
-# Classes
-#########
+########
+# PEMDAS
+########
+ADD_MUL = "+*"
 
 
+########
+# TOKENS
+########
 class Token:
     def __init__(self, ttype, position, value):
         self.ttype = ttype
@@ -40,13 +44,17 @@ class Token:
                 and self.value == other.value)
 
 
+#######
+# NODES
+#######
 class Node:
     """
     Base node class.
     """
 
-    def __init__(self, token):
+    def __init__(self, token, parent_node=None):
         self.token = token
+        self.parent_node = parent_node
 
 
 class ExpressionNode(Node):
@@ -54,11 +62,16 @@ class ExpressionNode(Node):
     Superclass that represents an expression that is some sort of arithmetic.
     """
 
-    def __init__(self, token, value, left_side, right_side):
-        super().__init__(token)
+    def __init__(self, token, value, left_side, right_side, parent_node=None):
+        super().__init__(token, parent_node)
         self.value = value
         self.left_side = left_side
         self.right_side = right_side
+        self.parent_node = parent_node
+
+        # Set the parent node of the left and right side to self.
+        self.left_side.parent_node = self
+        self.right_side.parent_node = self
 
     def __eq__(self, other):
         left_side_equal = self.left_side == other.left_side
@@ -75,11 +88,13 @@ class PlusMinusNode(ExpressionNode):
     Node specific for plus minus. Doing this because of PEMDAS.
     """
 
-    def __init__(self, token, value, left_side=None, right_side=None):
-        super().__init__(token, value, left_side, right_side)
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, left_side, right_side, parent_node)
 
     def __eq__(self, other):
-        return type(self) == type(other) and super().__eq__(other)
+        return (type(self) == type(other) and
+                super().__eq__(other))
 
 
 class MultiplyDivideNode(ExpressionNode):
@@ -87,17 +102,20 @@ class MultiplyDivideNode(ExpressionNode):
     Node specific for multiply divide. Doing this because of PEMDAS.
     """
 
-    def __init__(self, token, value, left_side=None, right_side=None):
-        super().__init__(token, value, left_side, right_side)
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, left_side, right_side, parent_node)
 
     def __eq__(self, other):
-        return type(self) == type(other) and super().__eq__(other)
+        return (type(self) == type(other) and
+                super().__eq__(other))
 
 
 class LiteralNode(Node):
-    def __init__(self, token, value):
-        super().__init__(token)
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, parent_node)
         self.value = value
+        self.parent_node = parent_node
 
     def __eq__(self, other):
         return type(self) == type(other) and self.value == other.value
@@ -106,6 +124,9 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
+#######
+# LEXER
+#######
 class Lexer:
     def __init__(self, program):
         self.start_pos = -1
@@ -175,6 +196,10 @@ class Lexer:
         print(self.program)
         print(" "*self.curr_pos + "^")
 
+########
+# PARSER
+########
+
 
 class Parser:
     def __init__(self, token_list):
@@ -204,19 +229,29 @@ class Parser:
         return node
 
     def parse_literal(self):
-        node = LiteralNode(self.curr_token, self.curr_token.value)
-        if not self.root_node:
+        """
+        Parse a literal token.
+
+        If we are parsing a literal token we create it but don't set the
+        parent_node because it will either get set later in the parse_op on
+        the creation of the op node, or it isn't linked to anything anyways.
+        """
+        node = LiteralNode(self.curr_token, self.curr_token.value, None)
+        if not self.root_node:  # Meaning this is the first token processed.
             self.root_node = node
         return node
 
     def parse_op(self, op_type):
-        node = op_type(self.curr_token, self.curr_token.value)
-        left_side = self.root_node
-        self.root_node = node
-        node.left_side = left_side
+        left_node = self.root_node
+        op_token = self.curr_token
         self.advance_token()
         right_node = self.process_token()
-        self.root_node.right_side = right_node
+        if (self.root_node and
+                ADD_MUL == self.root_node.token.value + op_token.value):
+            assert False, "We need to flip the order"
+        node = op_type(op_token, op_token.value,
+                       left_side=left_node, right_side=right_node)
+        self.root_node = node
         return node
 
     def parse(self):
@@ -226,6 +261,25 @@ class Parser:
         return self.root_node
 
 
+##########
+# Compiler
+##########
+class Compiler:
+
+    def __init__(self, ast):
+        self.ast = ast
+        self.curr_node = ast
+
+    def compile(self):
+        assert False, "Not yet implemented."
+
+    def traverse_tree(self):
+        # Doing a depth first parse here
+        if self.curr_node.left_node:
+
+            return
+
+
 ######
 # main
 ######
@@ -233,14 +287,25 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         "--program", help="The program that should be parse.")
-    arg_parser.add_argument(
-        "--compile", action="store_true",
-        help="Compile the program and print the AST.")
+    arg_parser.add_argument("--lex", action="store_true",
+                            help="Lex the program and return a token list.")
+    arg_parser.add_argument("--parse", action="store_true",
+                            help="Return the program and print the AST.")
+    arg_parser.add_argument("--compile", action="store_true",
+                            help="Compile the program and create assembly.")
     args = arg_parser.parse_args()
+
     with open(args.program, 'r') as program:
-        lexer = Lexer(program.read())
-        token_list = lexer.lex()
-        print(token_list)
-        if args.compile:
+        token_list = None
+        ast = None
+        if args.lex or args.parse or args.compile:
+            lexer = Lexer(program.read())
+            token_list = lexer.lex()
+            print(token_list)
+        if args.parse or args.compile:
             parser = Parser(token_list)
-            print(parser.parse())
+            ast = parser.parse()
+            print(ast)
+        if args.compile:
+            compiler = Compiler(ast)
+            compiler.compile()
