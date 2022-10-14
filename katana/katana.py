@@ -1,4 +1,5 @@
 import argparse
+import os
 # TODO(map) Move all the classes and enums outs so imports are nice
 ###########
 # Constants
@@ -300,6 +301,9 @@ class Compiler:
         self.traverse_tree(self.ast)
         self.create_assembly_for_print()
         self.create_assembly_for_exit()
+        os.system("nasm -f elf64 sample_programs/out.asm")
+        os.system("ld -o sample_programs/out sample_programs/out.o")
+        os.system("./sample_programs/out")
         assert False, "Not yet implemented."
 
     def traverse_tree(self, root_node):
