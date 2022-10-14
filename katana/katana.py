@@ -5,6 +5,13 @@ import argparse
 ###########
 EOF = "EOF"
 
+#################
+# Node Priorities
+#################
+HIGH = 2
+MEDIUM = 1
+LOW = 0
+
 #############
 # Token Types
 #############
@@ -52,9 +59,19 @@ class Node:
     Base node class.
     """
 
-    def __init__(self, token, parent_node=None):
+    def __init__(self, token, priority, parent_node=None):
         self.token = token
         self.parent_node = parent_node
+        # Used to add weight to nodes for checking priority of execution.
+        self.priority = priority
+        # Used for AST parsing later. Will never be set when building.
+        self.visited = False
+
+    def __eq__(self, other):
+        if self.priority == other.priority:
+            return True
+        else:
+            assert False, f"{self} priority {self.priority} != {other} priority {other.priority}."
 
 
 class ExpressionNode(Node):
@@ -62,8 +79,8 @@ class ExpressionNode(Node):
     Superclass that represents an expression that is some sort of arithmetic.
     """
 
-    def __init__(self, token, value, left_side, right_side, parent_node=None):
-        super().__init__(token, parent_node)
+    def __init__(self, token, value, priority, left_side, right_side, parent_node=None):
+        super().__init__(token, priority, parent_node)
         self.value = value
         self.left_side = left_side
         self.right_side = right_side
@@ -77,7 +94,8 @@ class ExpressionNode(Node):
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
         return (self.value == other.value and left_side_equal and
-                right_side_equal and self.token == other.token)
+                right_side_equal and self.token == other.token and
+                super().__eq__(other))
 
     def __repr__(self):
         return f"({self.left_side}{self.value}{self.right_side})"
@@ -90,7 +108,7 @@ class PlusMinusNode(ExpressionNode):
 
     def __init__(self, token, value, left_side=None, right_side=None,
                  parent_node=None):
-        super().__init__(token, value, left_side, right_side, parent_node)
+        super().__init__(token, value, MEDIUM, left_side, right_side, parent_node)
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -104,7 +122,7 @@ class MultiplyDivideNode(ExpressionNode):
 
     def __init__(self, token, value, left_side=None, right_side=None,
                  parent_node=None):
-        super().__init__(token, value, left_side, right_side, parent_node)
+        super().__init__(token, value, HIGH, left_side, right_side, parent_node)
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -113,12 +131,13 @@ class MultiplyDivideNode(ExpressionNode):
 
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
-        super().__init__(token, parent_node)
+        super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.value == other.value
+        return (type(self) == type(other) and self.value == other.value and
+                super().__eq__(other))
 
     def __repr__(self):
         return f"{self.value}"
@@ -242,13 +261,20 @@ class Parser:
         return node
 
     def parse_op(self, op_type):
+        """
+        2+3*4
+        current ast
+            +
+           2 3
+        self.root_node -> +
+        self.curr_token -> *
+        if the next token has higher priority than the current root token...
+        make the current token the root token
+        """
         left_node = self.root_node
         op_token = self.curr_token
         self.advance_token()
         right_node = self.process_token()
-        if (self.root_node and
-                ADD_MUL == self.root_node.token.value + op_token.value):
-            assert False, "We need to flip the order"
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
         self.root_node = node
@@ -268,16 +294,65 @@ class Compiler:
 
     def __init__(self, ast):
         self.ast = ast
-        self.curr_node = ast
 
     def compile(self):
+        self.create_assembly_skeleton()
+        self.traverse_tree(self.ast)
+        self.create_assembly_for_print()
+        self.create_assembly_for_exit()
         assert False, "Not yet implemented."
 
-    def traverse_tree(self):
+    def traverse_tree(self, root_node):
         # Doing a depth first parse here
-        if self.curr_node.left_node:
+        if type(root_node) is LiteralNode:
+            root_node.visited = True
+            print(root_node.value)
+            self.push_number_onto_stack(root_node.value)
+            self.traverse_tree(root_node.parent_node)
+        elif root_node.left_side and not root_node.left_side.visited:
+            root_node.visited = True
+            self.traverse_tree(root_node.left_side)
+        elif root_node.right_side and not root_node.right_side.visited:
+            root_node.visited = True
+            self.traverse_tree(root_node.right_side)
+        elif root_node.left_side.visited and root_node.right_side.visited and root_node.parent_node:
+            print(root_node.value)
+            self.traverse_tree(root_node.parent_node)
+        else:
+            self.create_assembly_for_add()
+            print(root_node.value)
 
-            return
+    def create_assembly_skeleton(self):
+        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    global _start\n")
+            compiled_program.write("    _start:\n")
+
+    def push_number_onto_stack(self, num):
+        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+            compiled_program.write(f"    push {num}\n")
+
+    def create_assembly_for_add(self):
+        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+            compiled_program.write("    pop rax\n")
+            compiled_program.write("    pop rbx\n")
+            compiled_program.write("    add rax, rbx\n")
+            compiled_program.write("    add rax, 48\n")
+            compiled_program.write("    push rax\n")
+
+    def create_assembly_for_print(self):
+        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+            compiled_program.write("    mov rsi, rsp\n")
+            compiled_program.write("    mov rax, 1\n")
+            compiled_program.write("    mov rdi, 1\n")
+            compiled_program.write("    mov rdx, 4\n")
+            compiled_program.write("    syscall\n")
+
+    def create_assembly_for_exit(self):
+        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+            compiled_program.write("    mov rax, 60\n")
+            compiled_program.write("    mov rdi, 0\n")
+            compiled_program.write("    syscall\n")
 
 
 ######
