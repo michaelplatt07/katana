@@ -28,28 +28,25 @@ EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
 
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
-
-########
-# PEMDAS
-########
-ADD_MUL = "+*"
+IGNORE_OPS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
 
 
 ########
 # TOKENS
 ########
 class Token:
-    def __init__(self, ttype, position, value):
+    def __init__(self, ttype, position, value, priority):
         self.ttype = ttype
         self.position = position
         self.value = value
+        self.priority = priority
 
     def __repr__(self):
         return f"[{self.ttype}, {self.position}, {self.value}]"
 
     def __eq__(self, other):
         return (self.ttype == other.ttype and self.position == other.position
-                and self.value == other.value)
+                and self.value == other.value and self.priority == other.priority)
 
 
 #######
@@ -165,7 +162,7 @@ class Lexer:
         self.curr_pos += 1
         if self.curr_pos == self.end_pos:
             self.has_next_char = False
-            self.token_list.append(Token(EOF_TOKEN_TYPE, self.curr_pos, EOF))
+            self.token_list.append(Token(EOF_TOKEN_TYPE, self.curr_pos, EOF, LOW))
         else:
             token = self.generate_token(self.program[self.curr_pos])
             if token.ttype == NUM_TOKEN_TYPE:
@@ -180,7 +177,7 @@ class Lexer:
                 self.token_list.append(token)
 
     def peek(self) -> Token:
-        peek_token = Token(EOF_TOKEN_TYPE, self.curr_pos + 1, EOF)
+        peek_token = Token(EOF_TOKEN_TYPE, self.curr_pos + 1, EOF, LOW)
         if self.curr_pos + 1 < self.end_pos:
             peek_token = self.generate_token(self.program[self.curr_pos + 1])
         return peek_token
@@ -189,25 +186,25 @@ class Lexer:
         end_of_comment_pos = self.program[self.curr_pos:].index(
             "\n") + self.curr_pos
         token = Token(COMMENT_TOKEN_TYPE, self.curr_pos,
-                      self.program[self.curr_pos:end_of_comment_pos])
+                      self.program[self.curr_pos:end_of_comment_pos], LOW)
         self.curr_pos = end_of_comment_pos
         return token
 
     def generate_token(self, character) -> Token:
         if character == '+':
-            return Token(PLUS_TOKEN_TYPE, self.curr_pos, character)
+            return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
         elif character == '-':
-            return Token(MINUS_TOKEN_TYPE, self.curr_pos, character)
+            return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
         elif character == '*':
-            return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character)
+            return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
         elif character == '/':
-            return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character)
+            return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
         elif character.isnumeric():
-            return Token(NUM_TOKEN_TYPE, self.curr_pos, character)
+            return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character == "\n":  # Don't care about return for now
-            return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character)
+            return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character.isspace():  # Never care about spaces
-            return Token(SPACE_TOKEN_TYPE, self.curr_pos, character)
+            return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
         else:
             self.print_invalid_character_error()
             raise Exception("Invalid token")
@@ -227,6 +224,19 @@ class Parser:
         self.has_next_token = True
         self.curr_token_pos = -1
         self.root_node = None
+
+    def parse(self):
+        while self.has_next_token:
+            self.advance_token()
+            node = self.process_token()
+            # This probably isn't the most efficient way but we ignore
+            # None because that means we hit an EOF. This could mean
+            # we don't actually need the EOF an would just return the
+            # list without it.
+            if node:
+                self.switch_nodes_base_on_priority(node)
+                self.root_node = node
+        return self.root_node
 
     def advance_token(self):
         self.curr_token_pos += 1
@@ -256,36 +266,25 @@ class Parser:
         parent_node because it will either get set later in the parse_op on
         the creation of the op node, or it isn't linked to anything anyways.
         """
-        node = LiteralNode(self.curr_token, self.curr_token.value, None)
-        if not self.root_node:  # Meaning this is the first token processed.
-            self.root_node = node
-        return node
+        return LiteralNode(self.curr_token, self.curr_token.value, None)
 
     def parse_op(self, op_type):
-        """
-        2+3*4
-        current ast
-            +
-           2 3
-        self.root_node -> +
-        self.curr_token -> *
-        if the next token has higher priority than the current root token...
-        make the current token the root token
-        """
         left_node = self.root_node
         op_token = self.curr_token
         self.advance_token()
         right_node = self.process_token()
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
-        self.root_node = node
         return node
+# 2 + 3 * 4 = (2 + (3 * 4))
+# 2 + 3 * 4 = ((2 + 3) * 4)
 
-    def parse(self):
-        while self.has_next_token:
-            self.advance_token()
-            self.process_token()
-        return self.root_node
+    def switch_nodes_base_on_priority(self, curr_node):
+        if self.root_node and curr_node.priority > self.root_node.priority:
+            print(f"Current node = {curr_node}")
+            print("Switch the nodes")
+        else:
+            print("Just append like normal")
 
 
 ##########

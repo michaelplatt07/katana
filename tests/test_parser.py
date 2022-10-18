@@ -13,21 +13,24 @@ from katana.katana import (
     Parser,
     PlusMinusNode,
     Token,
+    HIGH,
+    MEDIUM,
+    LOW
 )
 
 
 class TestParserLiterals:
 
     def test_parser_single_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, "1"),
-                      Token(EOF_TOKEN_TYPE, 1, "EOF")]
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+                      Token(EOF_TOKEN_TYPE, 1, "EOF", LOW)]
         ast = LiteralNode(token_list[0], "1")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
     def test_parser_multi_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, "123"),
-                      Token(EOF_TOKEN_TYPE, 1, "EOF")]
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "123", LOW),
+                      Token(EOF_TOKEN_TYPE, 1, "EOF", LOW)]
         ast = LiteralNode(token_list[0], "123")
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -42,10 +45,10 @@ class TestParserAddition:
         (1+2)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
@@ -63,12 +66,12 @@ class TestParserAddition:
         ((1+2)+3)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(PLUS_TOKEN_TYPE, 6, "+"),
-            Token(NUM_TOKEN_TYPE, 8, "3"),
-            Token(EOF_TOKEN_TYPE, 9, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 6, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 9, "EOF", LOW),
         ]
         left_node_1 = LiteralNode(token_list[0], "1")
         right_node_1 = LiteralNode(token_list[2], "2")
@@ -90,10 +93,10 @@ class TestParserSubtraction:
         """
 
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(MINUS_TOKEN_TYPE, 2, "-"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(MINUS_TOKEN_TYPE, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
@@ -110,12 +113,12 @@ class TestParserSubtraction:
         """
 
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(MINUS_TOKEN_TYPE, 2, "-"),
-            Token(NUM_TOKEN_TYPE, 5, "2"),
-            Token(MINUS_TOKEN_TYPE, 6, "-"),
-            Token(NUM_TOKEN_TYPE, 8, "3"),
-            Token(EOF_TOKEN_TYPE, 9, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(MINUS_TOKEN_TYPE, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(MINUS_TOKEN_TYPE, 6, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 9, "EOF", LOW),
         ]
         left_node_1 = LiteralNode(token_list[0], "1")
         right_node_1 = LiteralNode(token_list[2], "2")
@@ -136,10 +139,10 @@ class TestMultiply:
         (3*4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(MULTIPLY_TOKEN_TYPE, 2, "*"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 2, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
@@ -157,10 +160,10 @@ class TestDivide:
         (3/4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(DIVIDE_TOKEN_TYPE, 2, "/"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(DIVIDE_TOKEN_TYPE, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
@@ -178,11 +181,11 @@ class TestComments:
         (3/4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(MINUS_TOKEN_TYPE, 2, "/"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(COMMENT_TOKEN_TYPE, 6, "4"),
-            Token(EOF_TOKEN_TYPE, 21, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(MINUS_TOKEN_TYPE, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(COMMENT_TOKEN_TYPE, 6, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 21, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
@@ -200,12 +203,12 @@ class TestArithmetic:
         (2+(3*4))
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "2"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "3"),
-            Token(MULTIPLY_TOKEN_TYPE, 6, "*"),
-            Token(NUM_TOKEN_TYPE, 8, "4"),
-            Token(EOF_TOKEN_TYPE, 10, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 6, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 10, "EOF", LOW),
         ]
         left_node_add = LiteralNode(token_list[0], "2")
         left_node_multiply = LiteralNode(token_list[2], "3")
