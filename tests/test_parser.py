@@ -230,12 +230,12 @@ class TestArithmetic:
         ((2+(3*4))+5)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "2"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "3"),
-            Token(MULTIPLY_TOKEN_TYPE, 6, "*"),
-            Token(NUM_TOKEN_TYPE, 8, "4"),
-            Token(EOF_TOKEN_TYPE, 10, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 6, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 10, "EOF", LOW),
         ]
         left_node_add = LiteralNode(token_list[0], "2")
         left_node_multiply = LiteralNode(token_list[2], "3")

@@ -162,7 +162,8 @@ class Lexer:
         self.curr_pos += 1
         if self.curr_pos == self.end_pos:
             self.has_next_char = False
-            self.token_list.append(Token(EOF_TOKEN_TYPE, self.curr_pos, EOF, LOW))
+            self.token_list.append(
+                Token(EOF_TOKEN_TYPE, self.curr_pos, EOF, LOW))
         else:
             token = self.generate_token(self.program[self.curr_pos])
             if token.ttype == NUM_TOKEN_TYPE:
@@ -303,7 +304,6 @@ class Compiler:
         os.system("nasm -f elf64 sample_programs/out.asm")
         os.system("ld -o sample_programs/out sample_programs/out.o")
         os.system("./sample_programs/out")
-        assert False, "Not yet implemented."
 
     def traverse_tree(self, root_node):
         # Doing a depth first parse here
@@ -321,9 +321,12 @@ class Compiler:
         elif root_node.left_side.visited and root_node.right_side.visited and root_node.parent_node:
             print(root_node.value)
             self.traverse_tree(root_node.parent_node)
-        else:
+        elif type(root_node) is PlusMinusNode:
             self.create_assembly_for_add()
             print(root_node.value)
+        else:
+            assert False, (f"This node type {type(root_node)} is"
+                           "not yet implemented.")
 
     def create_assembly_skeleton(self):
         with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
