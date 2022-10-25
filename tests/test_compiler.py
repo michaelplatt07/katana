@@ -14,7 +14,7 @@ from katana.katana import (
 )
 
 
-class TestCompiler:
+class TestCompilerAddSubOnly:
     def test_simple_math_program(self):
         """
         Given a simple mathmatics program like:
@@ -67,7 +67,12 @@ class TestCompiler:
         expected_ast = minus_token_one
         assert expected_ast == parser.parse()
 
-    @pytest.mark.skip
+@pytest.mark.skip
+class TestCompilerMultDivOnly:
+    pass
+
+@pytest.mark.skip
+class TestCompilerAddSubMultDiv:
     def test_advanced_math_program(self):
         """
         Given a simple mathmatics program like:

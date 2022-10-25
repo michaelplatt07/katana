@@ -230,13 +230,21 @@ class Parser:
         while self.has_next_token:
             self.advance_token()
             node = self.process_token()
-            # This probably isn't the most efficient way but we ignore
-            # None because that means we hit an EOF. This could mean
-            # we don't actually need the EOF an would just return the
-            # list without it.
             if node:
-                self.switch_nodes_base_on_priority(node)
                 self.root_node = node
+#            node = self.process_token()
+#            if node:
+#                if not self.root_node:
+#                    self.root_node = node
+#                elif type(self.root_node) == LiteralNode and type(node) != LiteralNode:
+#                    # We have a LiteralNode at the root but the current node is
+#                    # not. Cannot have LiteralNode as root when an operator is
+#                    # currently being processed.
+#                    self.root_node = node
+#                else:
+#                    pass # No need to swap anything
+#            else:
+#                pass # Got None return meaning we got EOF_TOKEN_TYPE
         return self.root_node
 
     def advance_token(self):
@@ -270,23 +278,23 @@ class Parser:
         return LiteralNode(self.curr_token, self.curr_token.value, None)
 
     def parse_op(self, op_type):
-        left_node = self.root_node
+        # This determines whether or not the root node is an operation or a 
+        # number and if we should replace the right side with an op
+        replace_right_side_with_op = type(self.root_node) != LiteralNode and self.root_node.priority < self.curr_token.priority
+        if replace_right_side_with_op:
+            left_node = self.root_node.right_side
+        else:
+            left_node = self.root_node
         op_token = self.curr_token
         self.advance_token()
         right_node = self.process_token()
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
+        if replace_right_side_with_op:
+            ret_node = self.root_node
+            ret_node.right_side = node
+            return ret_node
         return node
-# 2 + 3 * 4 = (2 + (3 * 4))
-# 2 + 3 * 4 = ((2 + 3) * 4)
-
-    def switch_nodes_base_on_priority(self, curr_node):
-        if self.root_node and curr_node.priority > self.root_node.priority:
-            print(f"Current node = {curr_node}")
-            print("Switch the nodes")
-        else:
-            print("Just append like normal")
-
 
 ##########
 # Compiler
@@ -295,8 +303,11 @@ class Compiler:
 
     def __init__(self, ast):
         self.ast = ast
+        # TODO(map) Make this a relative path in the future
+        self.output_path = "/home/michael/Desktop/katana/sample_programs/out.asm"
 
     def compile(self):
+        self.create_empty_out_file()
         self.create_assembly_skeleton()
         self.traverse_tree(self.ast)
         self.create_assembly_for_print()
@@ -304,6 +315,10 @@ class Compiler:
         os.system("nasm -f elf64 sample_programs/out.asm")
         os.system("ld -o sample_programs/out sample_programs/out.o")
         os.system("./sample_programs/out")
+
+    def create_empty_out_file(self):
+        with open(self.output_path, 'w') as compiled_program:
+            compiled_program.write("; Start of program\n")
 
     def traverse_tree(self, root_node):
         # Doing a depth first parse here
@@ -329,17 +344,17 @@ class Compiler:
                            "not yet implemented.")
 
     def create_assembly_skeleton(self):
-        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
             compiled_program.write("    global _start\n")
             compiled_program.write("    _start:\n")
 
     def push_number_onto_stack(self, num):
-        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write(f"    push {num}\n")
 
     def create_assembly_for_add(self):
-        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    pop rax\n")
             compiled_program.write("    pop rbx\n")
             compiled_program.write("    add rax, rbx\n")
@@ -347,7 +362,7 @@ class Compiler:
             compiled_program.write("    push rax\n")
 
     def create_assembly_for_print(self):
-        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    mov rsi, rsp\n")
             compiled_program.write("    mov rax, 1\n")
             compiled_program.write("    mov rdi, 1\n")
@@ -355,7 +370,7 @@ class Compiler:
             compiled_program.write("    syscall\n")
 
     def create_assembly_for_exit(self):
-        with open("/home/michael/Desktop/programming/katana/sample_programs/out.asm", 'a') as compiled_program:
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    mov rax, 60\n")
             compiled_program.write("    mov rdi, 0\n")
             compiled_program.write("    syscall\n")
