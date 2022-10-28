@@ -9,6 +9,7 @@ EOF = "EOF"
 #################
 # Node Priorities
 #################
+VERY_HIGH = 3
 HIGH = 2
 MEDIUM = 1
 LOW = 0
@@ -23,12 +24,36 @@ MULTIPLY_TOKEN_TYPE = "MULTIPLY"
 NUM_TOKEN_TYPE = "NUM"
 NEW_LINE_TOKEN_TYPE = "NEWLINE"
 PLUS_TOKEN_TYPE = "PLUS"
+LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
+RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
 
+ALL_TOKENS = (
+    COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
+    NUM_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE,
+    PLUS_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    SPACE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    EOF_TOKEN_TYPE
+)
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
 IGNORE_OPS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
+
+
+############
+# Exceptions
+############
+class UnclosedParenthesisError(Exception):
+    def __init__(self):
+        super().__init__("Unclosed parenthesis in program.")
 
 
 ########
@@ -91,8 +116,19 @@ class ExpressionNode(Node):
     def __eq__(self, other):
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
+        parents_equal = False
+        if self.parent_node and not other.parent_node:
+            assert False, f"Found parent node on self {self} but not other {other}"
+        elif not self.parent_node and other.parent_node:
+            assert False, f"Found parent node on other {other} but not self {self}"
+        elif not self.parent_node and not other.parent_node:
+            # Root node, no parent to compare against.
+            parents_equal = True
+        else:
+            parents_equal = self.parent_node.value == other.parent_node.value
         return (self.value == other.value and left_side_equal and
                 right_side_equal and self.token == other.token and
+                parents_equal and
                 super().__eq__(other))
 
     def __repr__(self):
@@ -152,10 +188,13 @@ class Lexer:
         self.end_pos = len(self.program)
         self.token_list = []
         self.has_next_char = True
+        self.unpaired_parens = 0
 
     def lex(self):
         while self.has_next_char:
             self.advance()
+        if self.unpaired_parens != 0:
+            raise UnclosedParenthesisError()
         return self.token_list
 
     def advance(self):
@@ -174,6 +213,10 @@ class Lexer:
             elif token.ttype == DIVIDE_TOKEN_TYPE:
                 if self.peek().ttype == DIVIDE_TOKEN_TYPE:
                     token = self.get_single_line_comment_token()
+            elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                self.unpaired_parens += 1
+            elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                self.unpaired_parens -= 1
             if token.ttype not in IGNORE_TOKENS:
                 self.token_list.append(token)
 
@@ -192,7 +235,9 @@ class Lexer:
         return token
 
     def generate_token(self, character) -> Token:
-        if character == '+':
+        if character.isnumeric():
+            return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
+        elif character == '+':
             return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
         elif character == '-':
             return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
@@ -200,8 +245,10 @@ class Lexer:
             return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
         elif character == '/':
             return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
-        elif character.isnumeric():
-            return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
+        elif character == '(':
+            return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+        elif character == ')':
+            return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
         elif character == "\n":  # Don't care about return for now
             return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character.isspace():  # Never care about spaces
@@ -232,39 +279,32 @@ class Parser:
             node = self.process_token()
             if node:
                 self.root_node = node
-#            node = self.process_token()
-#            if node:
-#                if not self.root_node:
-#                    self.root_node = node
-#                elif type(self.root_node) == LiteralNode and type(node) != LiteralNode:
-#                    # We have a LiteralNode at the root but the current node is
-#                    # not. Cannot have LiteralNode as root when an operator is
-#                    # currently being processed.
-#                    self.root_node = node
-#                else:
-#                    pass # No need to swap anything
-#            else:
-#                pass # Got None return meaning we got EOF_TOKEN_TYPE
         return self.root_node
 
     def advance_token(self):
         self.curr_token_pos += 1
         self.curr_token = self.token_list[self.curr_token_pos]
 
-    def process_token(self):
+    def process_token(self, node=None):
         node = None
         if self.curr_token.ttype == NUM_TOKEN_TYPE:
             node = self.parse_literal()
         elif self.curr_token.ttype == PLUS_TOKEN_TYPE:
-            node = self.parse_op(PlusMinusNode)
+            node = self.parse_op(PlusMinusNode, node)
         elif self.curr_token.ttype == MINUS_TOKEN_TYPE:
             node = self.parse_op(PlusMinusNode)
         elif self.curr_token.ttype == MULTIPLY_TOKEN_TYPE:
             node = self.parse_op(MultiplyDivideNode)
         elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
             node = self.parse_op(MultiplyDivideNode)
+        elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            self.handle_parenthesis()
+        elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
+            pass
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
             self.has_next_token = False
+        else:
+            assert False, f"Unknown token type {self.curr_token.ttype}"
         return node
 
     def parse_literal(self):
@@ -277,10 +317,11 @@ class Parser:
         """
         return LiteralNode(self.curr_token, self.curr_token.value, None)
 
-    def parse_op(self, op_type):
-        # This determines whether or not the root node is an operation or a 
+    def parse_op(self, op_type, node=None):
+        # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
-        replace_right_side_with_op = type(self.root_node) != LiteralNode and self.root_node.priority < self.curr_token.priority
+        replace_right_side_with_op = type(
+            self.root_node) != LiteralNode and self.root_node.priority < self.curr_token.priority
         if replace_right_side_with_op:
             left_node = self.root_node.right_side
         else:
@@ -292,8 +333,26 @@ class Parser:
                        left_side=left_node, right_side=right_node)
         if replace_right_side_with_op:
             ret_node = self.root_node
+            node.parent_node = ret_node
             ret_node.right_side = node
             return ret_node
+        return node
+
+    def handle_parenthesis(self):
+        # This only works for numbers. For functions this will need to be
+        # updated to handle those situations.
+        node = None
+        if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
+            # Advance once to get past the paren token.
+            self.advance_token()
+
+            # Currently don't care about the previous token. Keeping this in
+            # so we can error out if the token isn't recognized.
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                node = self.process_token()
+                self.advance_token()
+        else:
+            assert False, f"Token self.token_list[self.curr_token_pos - 1] not in ALL_TOKENS"
         return node
 
 ##########
@@ -304,43 +363,69 @@ class Compiler:
     def __init__(self, ast):
         self.ast = ast
         # TODO(map) Make this a relative path in the future
-        self.output_path = "/home/michael/Desktop/katana/sample_programs/out.asm"
+        self.output_path = os.getcwd() + "/out.asm"
 
     def compile(self):
         self.create_empty_out_file()
         self.create_assembly_skeleton()
-        self.traverse_tree(self.ast)
+        self.write_assembly()
+        # self.traverse_tree(self.ast)
         self.create_assembly_for_print()
         self.create_assembly_for_exit()
-        os.system("nasm -f elf64 sample_programs/out.asm")
-        os.system("ld -o sample_programs/out sample_programs/out.o")
-        os.system("./sample_programs/out")
+        os.system("nasm -f elf64 out.asm")
+        os.system("ld -o out out.o")
+        os.system("./out")
 
     def create_empty_out_file(self):
         with open(self.output_path, 'w') as compiled_program:
-            compiled_program.write("; Start of program\n")
+            compiled_program.write(";; Start of program\n")
 
-    def traverse_tree(self, root_node):
-        # Doing a depth first parse here
-        if type(root_node) is LiteralNode:
-            root_node.visited = True
-            print(root_node.value)
-            self.push_number_onto_stack(root_node.value)
-            self.traverse_tree(root_node.parent_node)
-        elif root_node.left_side and not root_node.left_side.visited:
-            root_node.visited = True
-            self.traverse_tree(root_node.left_side)
-        elif root_node.right_side and not root_node.right_side.visited:
-            root_node.visited = True
-            self.traverse_tree(root_node.right_side)
-        elif root_node.left_side.visited and root_node.right_side.visited and root_node.parent_node:
-            print(root_node.value)
-            self.traverse_tree(root_node.parent_node)
-        elif type(root_node) is PlusMinusNode:
-            self.create_assembly_for_add()
-            print(root_node.value)
+    def write_assembly(self):
+        self.create_assembly_skeleton()
+        with open(self.output_path, 'a') as compiled_program:
+            for line in self.traverse_tree(self.ast):
+                compiled_program.write(line)
+
+    def traverse_tree(self, node):
+        if type(node) is LiteralNode:
+            node.visited = True
+            print(f"Pushing {node.value} onto stack.")
+            return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
+        elif node.left_side and not node.left_side.visited:
+            print(
+                f"Tranversing from {node} to left side node {node.left_side}")
+            return self.traverse_tree(node.left_side)
+        elif node.right_side and not node.right_side.visited:
+            print(
+                f"Tranversing from {node} to right side node {node.right_side}")
+            return self.traverse_tree(node.right_side)
+        elif node.left_side.visited and node.right_side.visited and node.parent_node:
+            node.visited = True
+            print(f"Performing node {node.value} op for {node}.")
+            if node.value == "+":
+                return self.get_add_asm() + self.traverse_tree(node.parent_node)
+            elif node.value == "-":
+                return self.get_sub_asm() + self.traverse_tree(node.parent_node)
+            elif node.value == "*":
+                return self.get_mul_asm() + self.traverse_tree(node.parent_node)
+            elif node.value == "/":
+                return self.get_div_asm() + self.traverse_tree(node.parent_node)
+            else:
+                assert False, f"Unrecognized node value {node.value}"
+        elif not node.parent_node:
+            print(f"Performing root node {node.value} op.")
+            if node.value == "+":
+                return self.get_add_asm()
+            elif node.value == "-":
+                return self.get_sub_asm()
+            elif node.value == "*":
+                return self.get_mul_asm()
+            elif node.value == "/":
+                return self.get_div_asm()
+            else:
+                assert False, f"Unrecognized root node value {node.value}"
         else:
-            assert False, (f"This node type {type(root_node)} is"
+            assert False, (f"This node type {type(node)} is"
                            "not yet implemented.")
 
     def create_assembly_skeleton(self):
@@ -349,20 +434,43 @@ class Compiler:
             compiled_program.write("    global _start\n")
             compiled_program.write("    _start:\n")
 
-    def push_number_onto_stack(self, num):
-        with open(self.output_path, 'a') as compiled_program:
-            compiled_program.write(f"    push {num}\n")
+    def get_push_number_onto_stack_asm(self, num):
+        return [f"    push {num}\n"]
 
-    def create_assembly_for_add(self):
-        with open(self.output_path, 'a') as compiled_program:
-            compiled_program.write("    pop rax\n")
-            compiled_program.write("    pop rbx\n")
-            compiled_program.write("    add rax, rbx\n")
-            compiled_program.write("    add rax, 48\n")
-            compiled_program.write("    push rax\n")
+    def get_add_asm(self):
+        return ["    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n"]
+
+    def get_sub_asm(self):
+        return ["    ;; Subtract\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    sub rbx, rax\n",
+                "    push rbx\n"]
+
+    def get_mul_asm(self):
+        return ["    ;; Multiply\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mul rbx\n",
+                "    push rax\n"]
+
+    def get_div_asm(self):
+        return ["    ;; Divide\n",
+                "    pop rbx\n",
+                "    pop rax\n",
+                "    div rbx\n",
+                "    push rax\n"]
 
     def create_assembly_for_print(self):
         with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("    ;; Print\n")
+            compiled_program.write("    pop rax\n")
+            compiled_program.write("    add rax, 48\n")
+            compiled_program.write("    push rax\n")
             compiled_program.write("    mov rsi, rsp\n")
             compiled_program.write("    mov rax, 1\n")
             compiled_program.write("    mov rdi, 1\n")
@@ -371,6 +479,7 @@ class Compiler:
 
     def create_assembly_for_exit(self):
         with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("    ;; Exit\n")
             compiled_program.write("    mov rax, 60\n")
             compiled_program.write("    mov rdi, 0\n")
             compiled_program.write("    syscall\n")

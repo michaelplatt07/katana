@@ -8,11 +8,15 @@ from katana.katana import (
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     Token,
+    VERY_HIGH,
     HIGH,
     MEDIUM,
-    LOW
+    LOW,
+    UnclosedParenthesisError
 )
 
 
@@ -221,3 +225,36 @@ class TestLexerBadFormat:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+
+class TestLexerParenthesis:
+    """
+    Testing that the parenthesis tokens get lexed correctly.
+    """
+
+    def test_paren_with_add_only(self):
+        program = "1 + (2 + 3)"
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 7, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 9, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, ")", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 11, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_unclosed_paren_error(self):
+        program = "1 + (2 + 3"
+        lexer = Lexer(program)
+        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis in program."):
+            lexer.lex()
+
+    def test_unclosed_paren_error_other_side(self):
+        program = "1 + )2 + 3"
+        lexer = Lexer(program)
+        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis in program."):
+            lexer.lex()
