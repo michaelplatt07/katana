@@ -7,6 +7,13 @@ Katana is a language that was originally developed in Python and compiles straig
 2. Easy to read syntax
 3. Compile time feedback
 
+## Testing
+### Unit Tests
+Running `pytest tests/` will run the full suite of tests. To get a more verbose output you can run `pytest -vv tests/` to see a detailed output.
+
+### Coverage
+Katana uses `coverage` to determine which lines of code are not being tested. Specifically running `coverage run -m pytest tests` will create a coverage folder folder, then run `coverage html` to get a nice output view.
+
 ## Coding in Katana
 ---
 ## Basic Arithmetic
