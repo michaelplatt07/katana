@@ -181,3 +181,25 @@ class TestCompilerAdvancedMath:
         )
         expected_ast = minus_node
         assert expected_ast == parser.parse()
+
+
+class TestParenthesis:
+
+    def test_add_higher_prio_than_mult_with_paren(self):
+        """
+        Given a program like:
+        (1 + 2) * 3)
+        Expected to return an AST like:
+        ((1+2)*3)
+        """
+        lexer = Lexer("(1 + 2) * 3\n")
+        token_list = lexer.lex()
+        parser = Parser(token_list)
+        one_node = LiteralNode(token_list[1], "1")
+        two_node = LiteralNode(token_list[3], "2")
+        three_node = LiteralNode(token_list[6], "3")
+        first_plus = PlusMinusNode(
+            token_list[2], "+", one_node, two_node)
+        ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
+        parser = Parser(token_list)
+        assert ast == parser.parse()

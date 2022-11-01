@@ -91,10 +91,15 @@ class Node:
         self.visited = False
 
     def __eq__(self, other):
-        if self.priority == other.priority:
-            return True
-        else:
+        priority_equal = self.priority == other.priority
+        if not priority_equal:
             assert False, f"{self} priority {self.priority} != {other} priority {other.priority}."
+
+        token_equal = self.token == other.token
+        if not token_equal:
+            assert False,f"Tokens {self.token} != {other.token}"
+
+        return priority_equal and token_equal
 
 
 class ExpressionNode(Node):
@@ -114,22 +119,36 @@ class ExpressionNode(Node):
         self.right_side.parent_node = self
 
     def __eq__(self, other):
-        left_side_equal = self.left_side == other.left_side
-        right_side_equal = self.right_side == other.right_side
-        parents_equal = False
+        # Make sure there is a parent on both sides or no parent on either side
         if self.parent_node and not other.parent_node:
             assert False, f"Found parent node on self {self} but not other {other}"
         elif not self.parent_node and other.parent_node:
             assert False, f"Found parent node on other {other} but not self {self}"
         elif not self.parent_node and not other.parent_node:
-            # Root node, no parent to compare against.
             parents_equal = True
         else:
-            parents_equal = self.parent_node.value == other.parent_node.value
-        return (self.value == other.value and left_side_equal and
-                right_side_equal and self.token == other.token and
-                parents_equal and
-                super().__eq__(other))
+            parents_equal = (self.parent_node.token == other.parent_node.token and
+                             self.parent_node.priority == other.parent_node.priority)
+
+        left_side_equal = self.left_side == other.left_side
+        right_side_equal = self.right_side == other.right_side
+        if not left_side_equal:
+            assert False, "Left sides were not equal."
+        elif not right_side_equal:
+            assert False, "Right sides were not equal."
+        elif not parents_equal:
+            assert False, "Parents were not equal"
+
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+
+        values_equal = self.value == other.value
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+
+        return (left_side_equal and right_side_equal and parents_equal and
+                types_equal and values_equal and super().__eq__(other))
 
     def __repr__(self):
         return f"({self.left_side}{self.value}{self.right_side})"
@@ -142,10 +161,14 @@ class PlusMinusNode(ExpressionNode):
 
     def __init__(self, token, value, left_side=None, right_side=None,
                  parent_node=None):
-        super().__init__(token, value, MEDIUM, left_side, right_side, parent_node)
+        super().__init__(token, value, MEDIUM, left_side, right_side,
+                         parent_node)
 
     def __eq__(self, other):
-        return (type(self) == type(other) and
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
                 super().__eq__(other))
 
 
@@ -156,10 +179,14 @@ class MultiplyDivideNode(ExpressionNode):
 
     def __init__(self, token, value, left_side=None, right_side=None,
                  parent_node=None):
-        super().__init__(token, value, HIGH, left_side, right_side, parent_node)
+        super().__init__(token, value, HIGH, left_side, right_side,
+                         parent_node)
 
     def __eq__(self, other):
-        return (type(self) == type(other) and
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
                 super().__eq__(other))
 
 
@@ -170,8 +197,13 @@ class LiteralNode(Node):
         self.parent_node = parent_node
 
     def __eq__(self, other):
-        return (type(self) == type(other) and self.value == other.value and
-                super().__eq__(other))
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
 
     def __repr__(self):
         return f"{self.value}"
@@ -274,31 +306,32 @@ class Parser:
         self.root_node = None
 
     def parse(self):
+        root_node = None
         while self.has_next_token:
             self.advance_token()
-            node = self.process_token()
+            node = self.process_token(root_node)
             if node:
-                self.root_node = node
-        return self.root_node
+                root_node = node
+        return root_node
 
     def advance_token(self):
         self.curr_token_pos += 1
         self.curr_token = self.token_list[self.curr_token_pos]
 
-    def process_token(self, node=None):
+    def process_token(self, root_node):
         node = None
         if self.curr_token.ttype == NUM_TOKEN_TYPE:
             node = self.parse_literal()
         elif self.curr_token.ttype == PLUS_TOKEN_TYPE:
-            node = self.parse_op(PlusMinusNode, node)
+            node = self.parse_op(PlusMinusNode, root_node)
         elif self.curr_token.ttype == MINUS_TOKEN_TYPE:
-            node = self.parse_op(PlusMinusNode)
+            node = self.parse_op(PlusMinusNode, root_node)
         elif self.curr_token.ttype == MULTIPLY_TOKEN_TYPE:
-            node = self.parse_op(MultiplyDivideNode)
+            node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
-            node = self.parse_op(MultiplyDivideNode)
+            node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            self.handle_parenthesis()
+            node = self.handle_parenthesis()
         elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
             pass
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -317,22 +350,22 @@ class Parser:
         """
         return LiteralNode(self.curr_token, self.curr_token.value, None)
 
-    def parse_op(self, op_type, node=None):
+    def parse_op(self, op_type, root_node):
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = type(
-            self.root_node) != LiteralNode and self.root_node.priority < self.curr_token.priority
+            root_node) != LiteralNode and root_node.priority < self.curr_token.priority and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
         if replace_right_side_with_op:
-            left_node = self.root_node.right_side
+            left_node = root_node.right_side
         else:
-            left_node = self.root_node
+            left_node = root_node
         op_token = self.curr_token
         self.advance_token()
-        right_node = self.process_token()
+        right_node = self.process_token(root_node)
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
         if replace_right_side_with_op:
-            ret_node = self.root_node
+            ret_node = root_node
             node.parent_node = ret_node
             ret_node.right_side = node
             return ret_node
@@ -341,7 +374,7 @@ class Parser:
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
-        node = None
+        root_node = None
         if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
             # Advance once to get past the paren token.
             self.advance_token()
@@ -349,11 +382,11 @@ class Parser:
             # Currently don't care about the previous token. Keeping this in
             # so we can error out if the token isn't recognized.
             while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                node = self.process_token()
+                root_node = self.process_token(root_node)
                 self.advance_token()
         else:
             assert False, f"Token self.token_list[self.curr_token_pos - 1] not in ALL_TOKENS"
-        return node
+        return root_node
 
 ##########
 # Compiler

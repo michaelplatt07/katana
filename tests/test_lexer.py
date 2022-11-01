@@ -247,6 +247,21 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_paren_with_add_and_mul(self):
+        program = "(1 + 2) * 3"
+        token_list = [
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 3, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, ")", VERY_HIGH),
+            Token(MULTIPLY_TOKEN_TYPE, 8, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 11, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
     def test_unclosed_paren_error(self):
         program = "1 + (2 + 3"
         lexer = Lexer(program)

@@ -1,3 +1,4 @@
+import pytest
 from katana.katana import (
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
@@ -365,9 +366,36 @@ class TestParserParenthesis:
         ]
         one_node = LiteralNode(token_list[0], "1")
         two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[5], "2")
+        three_node = LiteralNode(token_list[5], "3")
         first_plus = PlusMinusNode(
-            token_list[6], "+", two_node, three_node)
+            token_list[4], "+", two_node, three_node)
         ast = PlusMinusNode(token_list[1], "+", one_node, first_plus)
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_add_higher_prio_than_mult_with_paren(self):
+        """
+        Given a program like:
+        (1 + 2) * 3)
+        Expected to return an AST like:
+        ((1+2)*3)
+        """
+        token_list = [
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 3, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, ")", VERY_HIGH),
+            Token(MULTIPLY_TOKEN_TYPE, 8, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 11, "EOF", LOW),
+        ]
+        one_node = LiteralNode(token_list[1], "1")
+        two_node = LiteralNode(token_list[3], "2")
+        three_node = LiteralNode(token_list[6], "3")
+        first_plus = PlusMinusNode(
+            token_list[2], "+", one_node, two_node)
+        ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
+        parser = Parser(token_list)
+        result = parser.parse()
+        assert ast == result

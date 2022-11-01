@@ -55,21 +55,32 @@ Returns
 ### Advance Arithmetic
 Katana respects order of operations for arithmetic
 ```
-8 / 8 + 3 * 2
+4 / 1 + 3 * 2
 ```
 Returns
 ```
-7
+10
 ```
+
+Using parenthesis changes the outcome of the arithmetic
+```
+4 / (1 + 3) * 2
+```
+Returns
+```
+2
+```
+
 
 ## TODO: Features to Implement
 [x] Implement subtract in asssembly
 [x] Implement multiply in asssembly
 [x] Implement divide in asssembly
-[ ] Handle parenthesis moving order of operations
-[ ] Raise exception in a better way in generate_token
-[ ] Store values as variables in assembly
+[x] Handle parenthesis moving order of operations
+[ ] Handle semicolon token to end a line
+[ ] Change the program parsing to read line by line
 [ ] Enable printing for numbers
+[ ] Store values as variables in assembly
 [ ] Add additional mathematics like double and float math
 [ ] Implement strong typing
 [ ] Add functions
