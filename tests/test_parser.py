@@ -1,31 +1,38 @@
+import pytest
 from katana.katana import (
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
-    EOF_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
+    EOF_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    VERY_HIGH,
     LiteralNode,
     MINUS_TOKEN_TYPE,
-    MultiplyDivideNode,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    MultiplyDivideNode,
     Parser,
     PlusMinusNode,
     Token,
+    HIGH,
+    MEDIUM,
+    LOW
 )
 
 
 class TestParserLiterals:
 
     def test_parser_single_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, "1"),
-                      Token(EOF_TOKEN_TYPE, 1, "EOF")]
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+                      Token(EOF_TOKEN_TYPE, 1, "EOF", LOW)]
         ast = LiteralNode(token_list[0], "1")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
     def test_parser_multi_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, "123"),
-                      Token(EOF_TOKEN_TYPE, 1, "EOF")]
+        token_list = [Token(NUM_TOKEN_TYPE, 0, "123", LOW),
+                      Token(EOF_TOKEN_TYPE, 1, "EOF", LOW)]
         ast = LiteralNode(token_list[0], "123")
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -40,10 +47,10 @@ class TestParserAddition:
         (1+2)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
@@ -61,12 +68,12 @@ class TestParserAddition:
         ((1+2)+3)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(PLUS_TOKEN_TYPE, 6, "+"),
-            Token(NUM_TOKEN_TYPE, 8, "3"),
-            Token(EOF_TOKEN_TYPE, 9, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 6, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 9, "EOF", LOW),
         ]
         left_node_1 = LiteralNode(token_list[0], "1")
         right_node_1 = LiteralNode(token_list[2], "2")
@@ -88,10 +95,10 @@ class TestParserSubtraction:
         """
 
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(MINUS_TOKEN_TYPE, 2, "-"),
-            Token(NUM_TOKEN_TYPE, 4, "2"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(MINUS_TOKEN_TYPE, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "1")
         right_node = LiteralNode(token_list[2], "2")
@@ -108,12 +115,12 @@ class TestParserSubtraction:
         """
 
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "1"),
-            Token(MINUS_TOKEN_TYPE, 2, "-"),
-            Token(NUM_TOKEN_TYPE, 5, "2"),
-            Token(MINUS_TOKEN_TYPE, 6, "-"),
-            Token(NUM_TOKEN_TYPE, 8, "3"),
-            Token(EOF_TOKEN_TYPE, 9, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(MINUS_TOKEN_TYPE, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(MINUS_TOKEN_TYPE, 6, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 9, "EOF", LOW),
         ]
         left_node_1 = LiteralNode(token_list[0], "1")
         right_node_1 = LiteralNode(token_list[2], "2")
@@ -134,10 +141,10 @@ class TestMultiply:
         (3*4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(MULTIPLY_TOKEN_TYPE, 2, "*"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 2, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
@@ -155,10 +162,10 @@ class TestDivide:
         (3/4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(DIVIDE_TOKEN_TYPE, 2, "/"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(EOF_TOKEN_TYPE, 5, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(DIVIDE_TOKEN_TYPE, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 5, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
@@ -173,18 +180,18 @@ class TestComments:
         Given a simple program like:
         3 + 4 // Add numbers
         Expected to return an AST like:
-        (3/4)
+        (3+4)
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "3"),
-            Token(MINUS_TOKEN_TYPE, 2, "/"),
-            Token(NUM_TOKEN_TYPE, 4, "4"),
-            Token(COMMENT_TOKEN_TYPE, 6, "4"),
-            Token(EOF_TOKEN_TYPE, 21, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "4", LOW),
+            Token(COMMENT_TOKEN_TYPE, 8, "// Add numbers", LOW),
+            Token(EOF_TOKEN_TYPE, 21, "EOF", LOW),
         ]
         left_node = LiteralNode(token_list[0], "3")
         right_node = LiteralNode(token_list[2], "4")
-        ast = PlusMinusNode(token_list[1], "/", left_node, right_node)
+        ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -198,12 +205,12 @@ class TestArithmetic:
         (2+(3*4))
         """
         token_list = [
-            Token(NUM_TOKEN_TYPE, 0, "2"),
-            Token(PLUS_TOKEN_TYPE, 2, "+"),
-            Token(NUM_TOKEN_TYPE, 4, "3"),
-            Token(MULTIPLY_TOKEN_TYPE, 6, "*"),
-            Token(NUM_TOKEN_TYPE, 8, "4"),
-            Token(EOF_TOKEN_TYPE, 10, "EOF"),
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 6, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(EOF_TOKEN_TYPE, 10, "EOF", LOW),
         ]
         left_node_add = LiteralNode(token_list[0], "2")
         left_node_multiply = LiteralNode(token_list[2], "3")
@@ -215,3 +222,180 @@ class TestArithmetic:
         ast = add_node
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_parser_multiply_sub_add_more_complex(self):
+        """
+        Given a program like:
+        2 * 3 - 4 + 5
+        Expected to return an AST like:
+        (((2*3)-4)+5)
+        """
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 2, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MINUS_TOKEN_TYPE, 6, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(PLUS_TOKEN_TYPE, 10, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 12, "5", LOW),
+            Token(EOF_TOKEN_TYPE, 13, "EOF", LOW),
+        ]
+        two_node = LiteralNode(token_list[0], "2")
+        three_node = LiteralNode(token_list[2], "3")
+        four_node = LiteralNode(token_list[4], "4")
+        five_node = LiteralNode(token_list[6], "5")
+        multiply_node = MultiplyDivideNode(
+            token_list[1], "*", two_node, three_node)
+        sub_node = PlusMinusNode(token_list[3], "-", multiply_node, four_node)
+        plus_node = PlusMinusNode(token_list[5], "+", sub_node, five_node)
+        ast = plus_node
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_parser_add_sub_and_multiply_more_complex(self):
+        """
+        Given a program like:
+        2 + 3 - 4 * 5
+        Expected to return an AST like:
+        ((2+3)-(4*5))
+        """
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MINUS_TOKEN_TYPE, 6, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 10, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 12, "5", LOW),
+            Token(EOF_TOKEN_TYPE, 13, "EOF", LOW),
+        ]
+        two_node = LiteralNode(token_list[0], "2")
+        three_node = LiteralNode(token_list[2], "3")
+        four_node = LiteralNode(token_list[4], "4")
+        five_node = LiteralNode(token_list[6], "5")
+        multiply_node = MultiplyDivideNode(
+            token_list[5], "*", four_node, five_node)
+        plus_node = PlusMinusNode(token_list[1], "+", two_node, three_node)
+        sub_node = PlusMinusNode(token_list[3], "-", plus_node, multiply_node)
+        ast = sub_node
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_parser_add_multiply_sub_more_complex(self):
+        """
+        Given a program like:
+        2 + 3 * 4 - 5
+        Expected to return an AST like:
+        ((2+(3*4))-5)
+        """
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 6, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, "4", LOW),
+            Token(MINUS_TOKEN_TYPE, 10, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 12, "5", LOW),
+            Token(EOF_TOKEN_TYPE, 13, "EOF", LOW),
+        ]
+        two_node = LiteralNode(token_list[0], "2")
+        three_node = LiteralNode(token_list[2], "3")
+        four_node = LiteralNode(token_list[4], "4")
+        five_node = LiteralNode(token_list[6], "5")
+        multiply_node = MultiplyDivideNode(
+            token_list[3], "*", three_node, four_node)
+        plus_node = PlusMinusNode(token_list[1], "+", two_node, multiply_node)
+        sub_node = PlusMinusNode(token_list[5], "-", plus_node, five_node)
+        ast = sub_node
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_parser_div_add_mul_more_complex(self):
+        """
+        Given a program like:
+        8 / 8 + 3 * 2
+        Expected to return an AST like:
+        ((8*8)+(3*2))
+        """
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "8", LOW),
+            Token(DIVIDE_TOKEN_TYPE, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 4, "8", LOW),
+            Token(PLUS_TOKEN_TYPE, 6, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, "3", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 10, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 12, "2", LOW),
+            Token(EOF_TOKEN_TYPE, 13, "EOF", LOW),
+        ]
+        first_eight_node = LiteralNode(token_list[0], "8")
+        second_eight_node = LiteralNode(token_list[2], "8")
+        three_node = LiteralNode(token_list[4], "3")
+        two_node = LiteralNode(token_list[6], "2")
+        divide_node = MultiplyDivideNode(
+            token_list[1], "/", first_eight_node, second_eight_node)
+        multiply_node = MultiplyDivideNode(
+            token_list[5], "*", three_node, two_node)
+        add_node = PlusMinusNode(
+            token_list[3], "+", divide_node, multiply_node)
+        ast = add_node
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+
+class TestParserParenthesis:
+    """
+    Testing that parenethesis work as expected such as for order of operations.
+    """
+
+    def test_simple_add_with_paren(self):
+        """
+        Given a program like:
+        1 + (2 + 3)
+        Expected to return an AST like:
+        (1+(2+3))
+        """
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(PLUS_TOKEN_TYPE, 7, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 9, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, ")", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 11, "EOF", LOW),
+        ]
+        one_node = LiteralNode(token_list[0], "1")
+        two_node = LiteralNode(token_list[3], "2")
+        three_node = LiteralNode(token_list[5], "3")
+        first_plus = PlusMinusNode(
+            token_list[4], "+", two_node, three_node)
+        ast = PlusMinusNode(token_list[1], "+", one_node, first_plus)
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_add_higher_prio_than_mult_with_paren(self):
+        """
+        Given a program like:
+        (1 + 2) * 3)
+        Expected to return an AST like:
+        ((1+2)*3)
+        """
+        token_list = [
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 3, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 5, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, ")", VERY_HIGH),
+            Token(MULTIPLY_TOKEN_TYPE, 8, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, "3", LOW),
+            Token(EOF_TOKEN_TYPE, 11, "EOF", LOW),
+        ]
+        one_node = LiteralNode(token_list[1], "1")
+        two_node = LiteralNode(token_list[3], "2")
+        three_node = LiteralNode(token_list[6], "3")
+        first_plus = PlusMinusNode(
+            token_list[2], "+", one_node, two_node)
+        ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
+        parser = Parser(token_list)
+        result = parser.parse()
+        assert ast == result
