@@ -44,8 +44,8 @@ ALL_TOKENS = (
     EOL_TOKEN_TYPE,
     EOF_TOKEN_TYPE
 )
-IGNORE_TOKENS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
-IGNORE_OPS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
+IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
+IGNORE_OPS = (SPACE_TOKEN_TYPE, COMMENT_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE, EOL_TOKEN_TYPE)
 
 
 ############
@@ -55,6 +55,10 @@ class UnclosedParenthesisError(Exception):
     def __init__(self):
         super().__init__("Unclosed parenthesis in program.")
 
+class NoTerminatorError(Exception):
+    # TODO(map) This should probably take a line number and column number.
+    def __init__(self):
+        super().__init__("Line is not terminted with a semicolon.")
 
 ########
 # TOKENS
@@ -216,8 +220,8 @@ class Lexer:
     def __init__(self, program):
         self.start_pos = -1
         self.curr_pos = -1
-        self.program = program
-        self.end_pos = len(self.program)
+        self.program = program[0]
+        self.end_pos = len(program[0])
         self.token_list = []
         self.has_next_char = True
         self.unpaired_parens = 0
@@ -281,7 +285,11 @@ class Lexer:
             return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
         elif character == ')':
             return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+        elif character == ';':
+            return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character == "\n":  # Don't care about return for now
+            if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
+                raise NoTerminatorError()
             return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character.isspace():  # Never care about spaces
             return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
@@ -332,7 +340,7 @@ class Parser:
             node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
-        elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
+        elif self.curr_token.ttype in IGNORE_OPS:
             pass
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
             self.has_next_token = False
@@ -395,7 +403,6 @@ class Compiler:
 
     def __init__(self, ast):
         self.ast = ast
-        # TODO(map) Make this a relative path in the future
         self.output_path = os.getcwd() + "/out.asm"
 
     def compile(self):
@@ -537,7 +544,10 @@ if __name__ == "__main__":
         token_list = None
         ast = None
         if args.lex or args.parse or args.compile:
-            lexer = Lexer(program.read())
+            lines = program.readlines()
+            if len(lines) > 1:
+                assert False, "Multi-line processing not enabled."
+            lexer = Lexer(lines)
             token_list = lexer.lex()
             print(token_list)
         if args.parse or args.compile:

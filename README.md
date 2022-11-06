@@ -80,16 +80,16 @@ Returns
 
 
 ## TODO: Features to Implement
-[x] Implement subtract in asssembly
-[x] Implement multiply in asssembly
-[x] Implement divide in asssembly
-[x] Handle parenthesis moving order of operations
-[ ] Handle semicolon token to end a line
-[ ] Change the program parsing to read line by line
-[ ] Enable printing for numbers
-[ ] Store values as variables in assembly
-[ ] Add additional mathematics like double and float math
-[ ] Implement strong typing
-[ ] Add functions
-[ ] Modulo calcuations
-[ ] Formatting numbers like 1_000_000 is supported for easier reading
+- [x] Implement subtract in asssembly
+- [x] Implement multiply in asssembly
+- [x] Implement divide in asssembly
+- [x] Handle parenthesis moving order of operations
+- [ ] Handle semicolon token to end a line
+- [ ] Change the program parsing to read line by line
+- [ ] Enable printing for numbers
+- [ ] Store values as variables in assembly
+- [ ] Add additional mathematics like double and float math
+- [ ] Implement strong typing
+- [ ] Add functions
+- [ ] Modulo calcuations
+- [ ] Formatting numbers like 1_000_000 is supported for easier reading
