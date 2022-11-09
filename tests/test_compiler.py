@@ -25,7 +25,7 @@ class TestCompilerAddSubOnly:
         Expected result of:
         (((1+2)+3)-4)
         """
-        lexer = Lexer("1 + 2 + 3 - 4\n")
+        lexer = Lexer(["1 + 2 + 3 - 4;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -53,7 +53,7 @@ class TestCompilerAddSubOnly:
         Expected result of:
         (((1+2)+3)-4)
         """
-        lexer = Lexer("1 +      2  +     3 -      4\n")
+        lexer = Lexer(["1 +      2  +     3 -      4;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -83,7 +83,7 @@ class TestCompilerMultDivOnly:
         Expected result of:
         ((1*2)*3)
         """
-        lexer = Lexer("1 * 2 * 3\n")
+        lexer = Lexer(["1 * 2 * 3;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -107,7 +107,7 @@ class TestCompilerMultDivOnly:
         Expected result of:
         ((1/2)/3)
         """
-        lexer = Lexer("1 / 2 / 3\n")
+        lexer = Lexer(["1 / 2 / 3;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -133,7 +133,7 @@ class TestCompilerAdvancedMath:
         Expected result of:
         ((1+2)-(4*3))
         """
-        lexer = Lexer("1 * 2 + 3 / 4\n")
+        lexer = Lexer(["1 * 2 + 3 / 4;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -161,7 +161,7 @@ class TestCompilerAdvancedMath:
         Expected result of:
         ((1+2)-(3/4))
         """
-        lexer = Lexer("1 + 2 - 3 / 4\n")
+        lexer = Lexer(["1 + 2 - 3 / 4;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
@@ -192,7 +192,7 @@ class TestParenthesis:
         Expected to return an AST like:
         ((1+2)*3)
         """
-        lexer = Lexer("(1 + 2) * 3\n")
+        lexer = Lexer(["(1 + 2) * 3;\n"])
         token_list = lexer.lex()
         parser = Parser(token_list)
         one_node = LiteralNode(token_list[1], "1")

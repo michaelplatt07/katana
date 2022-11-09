@@ -44,8 +44,13 @@ ALL_TOKENS = (
     EOL_TOKEN_TYPE,
     EOF_TOKEN_TYPE
 )
-IGNORE_TOKENS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
-IGNORE_OPS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
+IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
+IGNORE_OPS = (
+    SPACE_TOKEN_TYPE,
+    COMMENT_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE
+)
 
 
 ############
@@ -54,6 +59,12 @@ IGNORE_OPS = (SPACE_TOKEN_TYPE, NEW_LINE_TOKEN_TYPE)
 class UnclosedParenthesisError(Exception):
     def __init__(self):
         super().__init__("Unclosed parenthesis in program.")
+
+
+class NoTerminatorError(Exception):
+    # TODO(map) This should probably take a line number and column number.
+    def __init__(self):
+        super().__init__("Line is not terminted with a semicolon.")
 
 
 ########
@@ -70,8 +81,10 @@ class Token:
         return f"[{self.ttype}, {self.position}, {self.value}]"
 
     def __eq__(self, other):
-        return (self.ttype == other.ttype and self.position == other.position
-                and self.value == other.value and self.priority == other.priority)
+        return (self.ttype == other.ttype
+                and self.position == other.position
+                and self.value == other.value
+                and self.priority == other.priority)
 
 
 #######
@@ -97,7 +110,7 @@ class Node:
 
         token_equal = self.token == other.token
         if not token_equal:
-            assert False,f"Tokens {self.token} != {other.token}"
+            assert False, f"Tokens {self.token} != {other.token}"
 
         return priority_equal and token_equal
 
@@ -107,7 +120,8 @@ class ExpressionNode(Node):
     Superclass that represents an expression that is some sort of arithmetic.
     """
 
-    def __init__(self, token, value, priority, left_side, right_side, parent_node=None):
+    def __init__(self, token, value, priority, left_side, right_side,
+                 parent_node=None):
         super().__init__(token, priority, parent_node)
         self.value = value
         self.left_side = left_side
@@ -121,14 +135,15 @@ class ExpressionNode(Node):
     def __eq__(self, other):
         # Make sure there is a parent on both sides or no parent on either side
         if self.parent_node and not other.parent_node:
-            assert False, f"Found parent node on self {self} but not other {other}"
+            assert False, (f"Found parent node on self {self} but not other {other}")
         elif not self.parent_node and other.parent_node:
-            assert False, f"Found parent node on other {other} but not self {self}"
+            assert False, (f"Found parent node on other {other} but not self {self}")
         elif not self.parent_node and not other.parent_node:
             parents_equal = True
         else:
-            parents_equal = (self.parent_node.token == other.parent_node.token and
-                             self.parent_node.priority == other.parent_node.priority)
+            parents_equal = (self.parent_node and other.parent_node
+                             and self.parent_node.token == other.parent_node.token
+                             and self.parent_node.priority == other.parent_node.priority)
 
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
@@ -216,8 +231,8 @@ class Lexer:
     def __init__(self, program):
         self.start_pos = -1
         self.curr_pos = -1
-        self.program = program
-        self.end_pos = len(self.program)
+        self.program = program[0]
+        self.end_pos = len(program[0])
         self.token_list = []
         self.has_next_char = True
         self.unpaired_parens = 0
@@ -281,7 +296,11 @@ class Lexer:
             return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
         elif character == ')':
             return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+        elif character == ';':
+            return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character == "\n":  # Don't care about return for now
+            if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
+                raise NoTerminatorError()
             return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
         elif character.isspace():  # Never care about spaces
             return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
@@ -293,11 +312,10 @@ class Lexer:
         print(self.program)
         print(" "*self.curr_pos + "^")
 
+
 ########
 # PARSER
 ########
-
-
 class Parser:
     def __init__(self, token_list):
         self.token_list = token_list
@@ -332,7 +350,7 @@ class Parser:
             node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
-        elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
+        elif self.curr_token.ttype in IGNORE_OPS:
             pass
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
             self.has_next_token = False
@@ -353,8 +371,11 @@ class Parser:
     def parse_op(self, op_type, root_node):
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
-        replace_right_side_with_op = type(
-            root_node) != LiteralNode and root_node.priority < self.curr_token.priority and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
+        replace_right_side_with_op = (
+                type(root_node) != LiteralNode
+                and root_node.priority < self.curr_token.priority
+                and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
+                )
         if replace_right_side_with_op:
             left_node = root_node.right_side
         else:
@@ -385,8 +406,9 @@ class Parser:
                 root_node = self.process_token(root_node)
                 self.advance_token()
         else:
-            assert False, f"Token self.token_list[self.curr_token_pos - 1] not in ALL_TOKENS"
+            assert False, f"Token {self.token_list[self.curr_token_pos - 1]} not in ALL_TOKENS"
         return root_node
+
 
 ##########
 # Compiler
@@ -395,7 +417,6 @@ class Compiler:
 
     def __init__(self, ast):
         self.ast = ast
-        # TODO(map) Make this a relative path in the future
         self.output_path = os.getcwd() + "/out.asm"
 
     def compile(self):
@@ -537,7 +558,10 @@ if __name__ == "__main__":
         token_list = None
         ast = None
         if args.lex or args.parse or args.compile:
-            lexer = Lexer(program.read())
+            lines = program.readlines()
+            if len(lines) > 1:
+                assert False, "Multi-line processing not enabled."
+            lexer = Lexer(lines)
             token_list = lexer.lex()
             print(token_list)
         if args.parse or args.compile:
