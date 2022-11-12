@@ -127,6 +127,17 @@ class Node:
         return priority_equal and token_equal
 
 
+class NoOpNode(Node):
+    """
+    Node that functionally does nothing. This is in case I want to preserve
+    data across the compilation much like with useless tokens.
+    """
+    def __init__(self,
+                 token: Token) -> None:
+        self.token: Token = token
+        super().__init__(token, NO_OP, None)
+
+
 class ExpressionNode(Node):
     """
     Superclass that represents an expression that is some sort of arithmetic.
@@ -340,7 +351,7 @@ class Parser:
         while self.has_next_token:
             self.advance_token()
             node = self.process_token(root_node)
-            if node:
+            if node and type(node) != NoOpNode:
                 root_node = node
         return root_node
 
@@ -363,8 +374,9 @@ class Parser:
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
         elif self.curr_token.ttype in IGNORE_OPS:
-            pass
+            node = NoOpNode(self.curr_token)
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
+            node = NoOpNode(self.curr_token)
             self.has_next_token = False
         else:
             assert False, f"Unknown token type {self.curr_token.ttype}"
