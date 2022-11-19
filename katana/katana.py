@@ -1,10 +1,5 @@
-# TODO(map) Remove when I get to Python 3.11 as this is implicit
-from __future__ import annotations
-
-from enum import Enum
 import argparse
 import os
-from typing import Any, Union
 # TODO(map) Move all the classes and enums outs so imports are nice
 ###########
 # Constants
@@ -73,10 +68,24 @@ class UnclosedParenthesisError(Exception):
         super().__init__("Unclosed parenthesis in program.")
 
 
+class InvalidTokenException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid token.")
+        self.line_num = line_num
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Invalid token at {self.line_num}:{self.col_num}."
+
+
 class NoTerminatorError(Exception):
-    # TODO(map) This should probably take a line number and column number.
-    def __init__(self):
+    def __init__(self, line_num, col_num):
         super().__init__("Line is not terminted with a semicolon.")
+        self.line_num = line_num
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
 
 
 ########
@@ -305,31 +314,41 @@ class Lexer:
         return token
 
     def generate_token(self, character) -> Token:
-        if character.isnumeric():
-            return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character == '+':
-            return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
-        elif character == '-':
-            return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
-        elif character == '*':
-            return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
-        elif character == '/':
-            return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
-        elif character == '(':
-            return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
-        elif character == ')':
-            return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
-        elif character == ';':
-            return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character == "\n":  # Don't care about return for now
-            if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
-                raise NoTerminatorError()
-            return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character.isspace():  # Never care about spaces
-            return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
-        else:
+        try:
+            if character.isnumeric():
+                return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character == '+':
+                return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+            elif character == '-':
+                return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+            elif character == '*':
+                return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
+            elif character == '/':
+                return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
+            elif character == '(':
+                return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+            elif character == ')':
+                return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+            elif character == ';':
+                return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character == "\n":  # Don't care about return for now
+                if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
+                    # Increment by one so we show the arrow at the end of line.
+                    raise NoTerminatorError(1, self.curr_pos + 1)
+                return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character.isspace():  # Never care about spaces
+                return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
+            else:
+                raise InvalidTokenException(1, self.curr_pos)
+        except NoTerminatorError as nte:
             self.print_invalid_character_error()
-            raise Exception("Invalid token")
+            print(nte)
+            exit(1)
+        except InvalidTokenException as ite:
+            print("Got the exception.")
+            self.print_invalid_character_error()
+            print(ite)
+            exit(1)
 
     def print_invalid_character_error(self):
         print(self.program)
@@ -447,7 +466,6 @@ class Compiler:
         self.create_empty_out_file()
         self.create_assembly_skeleton()
         self.write_assembly()
-        # self.traverse_tree(self.ast)
         self.create_assembly_for_print()
         self.create_assembly_for_exit()
         os.system("nasm -f elf64 out.asm")

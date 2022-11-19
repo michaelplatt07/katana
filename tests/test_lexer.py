@@ -329,5 +329,6 @@ class TestEndOfLineSemicolon:
     def test_error_if_line_ends_without_semicolon(self):
         program = ["3 + 4\n"]
         lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match="Line is not terminted with a semicolon."):
-            lexer.lex()
+        with pytest.raises(SystemExit) as sys_exit:
+            with pytest.raises(NoTerminatorError, match="Line is not terminted with a semicolon."):
+                lexer.lex()
