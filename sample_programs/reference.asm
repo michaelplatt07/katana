@@ -17,24 +17,25 @@
 ;        mov rdi, 0
 ;        syscall
 
-; Example of a simple multiply
-section .text
-    global _start
 
-    _start:
-        mov rax, 2
-        mov rbx, 3
-        mul rbx
-        add rax, 48
-        push rax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 4
-        syscall
-        mov rax, 60
-        mov rdi, 0
-        syscall
+; Example of a simple multiply
+; section .text
+;     global _start
+;
+;     _start:
+;         mov rax, 2
+;         mov rbx, 3
+;         mul rbx
+;         add rax, 48
+;         push rax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 4
+;         syscall
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
 
 
 ; Loops
@@ -58,6 +59,7 @@ section .text
 ;        mov rax, 60
 ;        mov rdi, 0
 ;        syscall
+
 
 ; Simple conditional
 ;section .data
@@ -101,6 +103,7 @@ section .text
 ;        syscall
 ;        ret
 
+
 ; Simple divide
 ;section .data
 ;    num dw 12
@@ -134,6 +137,7 @@ section .text
 ;        mov rax, 60
 ;        mov rdi, 0
 ;        syscall
+
 
 ; Print a number
 ;section .data
@@ -234,14 +238,15 @@ section .text
 ;        mov rdi, 0
 ;        syscall
 
+
 ; Print a number with loop
 ; section .data
 ;     num dq 12345
 ;     divisor dq 10
-
+;
 ; section .text
 ;     global _start
-    
+;    
 ;     _start:
 ;         ; Put initial values into the registers
 ;         mov rax, [num]
@@ -253,7 +258,6 @@ section .text
 ;         ; Push the remainder onto the stack
 ;         add rdx, 48
 ;         push rdx
-
 ;     l1:
 ;         mov rax, rbx 
 ;         mov rbx, [divisor]
@@ -304,3 +308,66 @@ section .text
 ;         mov rax, 60
 ;         mov rdi, 0
 ;         syscall
+
+
+;; Print command line arg count, program name, and all command
+;; line args. Must be run as ./reference arg1 arg2 arg3 arg4
+section .text
+    global _start
+    _start:
+        ;; Pop argc
+        pop rbx 
+        add rbx, 48
+        push rbx
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 4
+        syscall
+
+        ;; Pop function name
+        pop rbx
+        mov rsi, [rsp]
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 5
+        syscall
+
+        ;; Pop arg 1
+        pop rbx
+        mov rsi, [rsp]
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; Pop arg 2
+        pop rbx
+        mov rsi, [rsp]
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; Pop arg 3
+        pop rbx
+        mov rsi, [rsp]
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; Pop arg 4
+        pop rbx
+        mov rsi, [rsp]
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; Exit
+        mov rax, 60
+        mov rdi, 0
+        syscall
+
+
