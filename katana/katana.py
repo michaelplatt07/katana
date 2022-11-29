@@ -6,13 +6,16 @@ import os
 ###########
 EOF = "EOF"
 
-#################
-# Node Priorities
-#################
+
+#######################
+# Token/Node Priorities
+#######################
 VERY_HIGH = 3
 HIGH = 2
 MEDIUM = 1
 LOW = 0
+NO_OP = None
+
 
 #############
 # Token Types
@@ -30,6 +33,10 @@ SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
 
+
+##############
+# Const tuples
+##############
 ALL_TOKENS = (
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
@@ -61,10 +68,24 @@ class UnclosedParenthesisError(Exception):
         super().__init__("Unclosed parenthesis in program.")
 
 
+class InvalidTokenException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid token.")
+        self.line_num = line_num
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Invalid token at {self.line_num}:{self.col_num}."
+
+
 class NoTerminatorError(Exception):
-    # TODO(map) This should probably take a line number and column number.
-    def __init__(self):
+    def __init__(self, line_num, col_num):
         super().__init__("Line is not terminted with a semicolon.")
+        self.line_num = line_num
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
 
 
 ########
@@ -113,6 +134,17 @@ class Node:
             assert False, f"Tokens {self.token} != {other.token}"
 
         return priority_equal and token_equal
+
+
+class NoOpNode(Node):
+    """
+    Node that functionally does nothing. This is in case I want to preserve
+    data across the compilation much like with useless tokens.
+    """
+    def __init__(self,
+                 token: Token) -> None:
+        self.token: Token = token
+        super().__init__(token, NO_OP, None)
 
 
 class ExpressionNode(Node):
@@ -282,31 +314,41 @@ class Lexer:
         return token
 
     def generate_token(self, character) -> Token:
-        if character.isnumeric():
-            return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character == '+':
-            return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
-        elif character == '-':
-            return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
-        elif character == '*':
-            return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
-        elif character == '/':
-            return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
-        elif character == '(':
-            return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
-        elif character == ')':
-            return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
-        elif character == ';':
-            return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character == "\n":  # Don't care about return for now
-            if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
-                raise NoTerminatorError()
-            return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
-        elif character.isspace():  # Never care about spaces
-            return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
-        else:
+        try:
+            if character.isnumeric():
+                return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character == '+':
+                return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+            elif character == '-':
+                return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+            elif character == '*':
+                return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
+            elif character == '/':
+                return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
+            elif character == '(':
+                return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+            elif character == ')':
+                return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+            elif character == ';':
+                return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character == "\n":  # Don't care about return for now
+                if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
+                    # Increment by one so we show the arrow at the end of line.
+                    raise NoTerminatorError(1, self.curr_pos + 1)
+                return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character.isspace():  # Never care about spaces
+                return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
+            else:
+                raise InvalidTokenException(1, self.curr_pos)
+        except NoTerminatorError as nte:
             self.print_invalid_character_error()
-            raise Exception("Invalid token")
+            print(nte)
+            exit(1)
+        except InvalidTokenException as ite:
+            print("Got the exception.")
+            self.print_invalid_character_error()
+            print(ite)
+            exit(1)
 
     def print_invalid_character_error(self):
         print(self.program)
@@ -328,7 +370,7 @@ class Parser:
         while self.has_next_token:
             self.advance_token()
             node = self.process_token(root_node)
-            if node:
+            if node and type(node) != NoOpNode:
                 root_node = node
         return root_node
 
@@ -351,8 +393,9 @@ class Parser:
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
         elif self.curr_token.ttype in IGNORE_OPS:
-            pass
+            node = NoOpNode(self.curr_token)
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
+            node = NoOpNode(self.curr_token)
             self.has_next_token = False
         else:
             assert False, f"Unknown token type {self.curr_token.ttype}"
@@ -423,7 +466,6 @@ class Compiler:
         self.create_empty_out_file()
         self.create_assembly_skeleton()
         self.write_assembly()
-        # self.traverse_tree(self.ast)
         self.create_assembly_for_print()
         self.create_assembly_for_exit()
         os.system("nasm -f elf64 out.asm")
