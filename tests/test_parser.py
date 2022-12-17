@@ -2,10 +2,15 @@ import pytest
 from katana.katana import (
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
+    KEYWORD_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE,
+    NO_OP,
     RIGHT_PAREN_TOKEN_TYPE,
+    ULTRA_HIGH,
     VERY_HIGH,
     LiteralNode,
     MINUS_TOKEN_TYPE,
@@ -14,6 +19,7 @@ from katana.katana import (
     MultiplyDivideNode,
     Parser,
     PlusMinusNode,
+    KeywordNode,
     Token,
     HIGH,
     MEDIUM,
@@ -397,5 +403,29 @@ class TestParserParenthesis:
             token_list[2], "+", one_node, two_node)
         ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
         parser = Parser(token_list)
-        result = parser.parse()
-        assert ast == result
+        assert ast == parser.parse()
+
+
+class TestKeywordParser:
+
+    def test_keyword_print_with_literal(self):
+        """
+        Given a program like:
+        print(3)
+        Expected to return an AST like:
+        (print(3))
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 6, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, ")", HIGH),
+            Token(EOL_TOKEN_TYPE, 8, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 9, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 10, "EOF", LOW),
+        ]
+        three_node = LiteralNode(token_list[2], "3")
+        ast = KeywordNode(token_list[0], "print", three_node)
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+

@@ -332,6 +332,38 @@ class TestEndOfLineSemicolon:
     def test_error_if_line_ends_without_semicolon(self):
         program = ["3 + 4\n"]
         lexer = Lexer(program)
-        with pytest.raises(SystemExit) as sys_exit:
+        with pytest.raises(SystemExit):
             with pytest.raises(NoTerminatorError, match="Line is not terminted with a semicolon."):
                 lexer.lex()
+
+
+class TestKeywordPrint:
+
+    def test_invalid_keyword(self):
+        """
+        Ensuring an error is raised if an unrecognized keyword is in program.
+        """
+        program = ["foo(3+4);\n"]
+        lexer = Lexer(program)
+        with pytest.raises(SystemExit):
+            with pytest.raises(UnknownKeywordError, match="Unknown keyword 'foo' at 1:0 in program."):
+                lexer.lex()
+
+    def test_print_function_keyword(self):
+        """
+        Ensures the print keyword for the function is parsed.
+        """
+        program = ["print(3 + 4);\n"]
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 6, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 8, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 10, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 14, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
