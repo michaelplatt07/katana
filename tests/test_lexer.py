@@ -5,6 +5,7 @@ from katana.katana import (
     DIVIDE_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
+    KEYWORD_TOKEN_TYPE,
     Lexer,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
@@ -14,12 +15,14 @@ from katana.katana import (
     EOL_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     Token,
+    ULTRA_HIGH,
     VERY_HIGH,
     HIGH,
     MEDIUM,
     LOW,
     UnclosedParenthesisError,
     NoTerminatorError,
+    UnknownKeywordError,
 )
 
 

@@ -10,6 +10,7 @@ EOF = "EOF"
 #######################
 # Token/Node Priorities
 #######################
+ULTRA_HIGH = 4
 VERY_HIGH = 3
 HIGH = 2
 MEDIUM = 1
@@ -27,6 +28,7 @@ MULTIPLY_TOKEN_TYPE = "MULTIPLY"
 NUM_TOKEN_TYPE = "NUM"
 NEW_LINE_TOKEN_TYPE = "NEWLINE"
 PLUS_TOKEN_TYPE = "PLUS"
+KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 SPACE_TOKEN_TYPE = "SPACE"
@@ -58,6 +60,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
+KEYWORDS = ("print")
 
 
 ############
@@ -68,6 +71,7 @@ class UnclosedParenthesisError(Exception):
         super().__init__("Unclosed parenthesis in program.")
 
 
+# TODO(map) Probably a chance to make the init method more DRY
 class InvalidTokenException(Exception):
     def __init__(self, line_num, col_num):
         super().__init__("Invalid token.")
@@ -88,6 +92,16 @@ class NoTerminatorError(Exception):
         return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
 
 
+class UnknownKeywordError(Exception):
+    def __init__(self, line_num, col_num, keyword):
+        super().__init__("Unknown keyword")
+        self.line_num = line_num
+        self.col_num = col_num
+        self.keyword = keyword
+
+    def __str__(self):
+        return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
+
 ########
 # TOKENS
 ########
@@ -99,7 +113,7 @@ class Token:
         self.priority = priority
 
     def __repr__(self):
-        return f"[{self.ttype}, {self.position}, {self.value}]"
+        return f"[{self.ttype}, {self.position}, {self.value}, {self.priority}]"
 
     def __eq__(self, other):
         return (self.ttype == other.ttype
@@ -145,6 +159,25 @@ class NoOpNode(Node):
                  token: Token) -> None:
         self.token: Token = token
         super().__init__(token, NO_OP, None)
+
+
+class KeywordNode(Node):
+    """
+    Node for keyword in the Katana language.
+    """
+
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, ULTRA_HIGH, parent_node)
+        self.value = value
+        self.child_node = child_node
+
+    def __eq__(self, other):
+        child_equal = self.child_node == other.child_node
+        values_equal = self.value == other.value
+        return child_equal and values_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"({self.value}({self.child_node}))"
 
 
 class ExpressionNode(Node):
@@ -331,6 +364,8 @@ class Lexer:
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character.isalpha():
+                return self.generate_keyword_token()
             elif character == "\n":  # Don't care about return for now
                 if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
                     # Increment by one so we show the arrow at the end of line.
@@ -345,10 +380,28 @@ class Lexer:
             print(nte)
             exit(1)
         except InvalidTokenException as ite:
-            print("Got the exception.")
             self.print_invalid_character_error()
             print(ite)
             exit(1)
+        except UnknownKeywordError as uke:
+            self.print_invalid_character_error()
+            print(uke)
+            exit(1)
+
+    def generate_keyword_token(self):
+        keyword = ""
+        original_pos = self.curr_pos
+        while self.program[self.curr_pos].isalpha():
+            keyword += self.program[self.curr_pos]
+            # TODO(map) De-couple the advance from generating the token
+            self.curr_pos += 1
+
+        # TODO(map) This is a dirty hack and will be resolved when I decouple
+        # the problem in the TODO above.
+        self.curr_pos -= 1
+        if keyword not in KEYWORDS:
+            raise UnknownKeywordError(1, original_pos, keyword)
+        return Token(KEYWORD_TOKEN_TYPE, original_pos, keyword, ULTRA_HIGH)
 
     def print_invalid_character_error(self):
         print(self.program)
@@ -392,6 +445,8 @@ class Parser:
             node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
+            node = self.handle_keyword()
         elif self.curr_token.ttype in IGNORE_OPS:
             node = NoOpNode(self.curr_token)
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -453,6 +508,22 @@ class Parser:
         return root_node
 
 
+    def handle_keyword(self):
+        root_node = None
+        keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
+        # Move past keyword token
+        self.advance_token()
+        # Move past the parenthesis
+        self.advance_token()
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                root_node = self.process_token(root_node)
+                self.advance_token()
+
+        keyword_node.child_node = root_node
+        root_node.parent_node = keyword_node
+        return keyword_node
+
+
 ##########
 # Compiler
 ##########
@@ -487,13 +558,19 @@ class Compiler:
             node.visited = True
             print(f"Pushing {node.value} onto stack.")
             return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
+        elif type(node) is KeywordNode and not node.visited:
+            node.visited = True
+            return self.traverse_tree(node.child_node)
+        elif type(node) is KeywordNode and node.visited:
+            return self.get_keyword_asm()
+        # TODO(map) This should maybe all be under the condition for ExpressionNodes
         elif node.left_side and not node.left_side.visited:
             print(
-                f"Tranversing from {node} to left side node {node.left_side}")
+                f"Traversing from {node} to left side node {node.left_side}")
             return self.traverse_tree(node.left_side)
         elif node.right_side and not node.right_side.visited:
             print(
-                f"Tranversing from {node} to right side node {node.right_side}")
+                f"Traversing from {node} to right side node {node.right_side}")
             return self.traverse_tree(node.right_side)
         elif node.left_side.visited and node.right_side.visited and node.parent_node:
             node.visited = True
@@ -560,6 +637,11 @@ class Compiler:
                 "    pop rax\n",
                 "    div rbx\n",
                 "    push rax\n"]
+
+    # TODO(map) I think I need two lists here, the variables and text of the code.
+    def get_keyword_asm(self):
+        return ["    ;; Keyword Func\n",
+                ]
 
     def create_assembly_for_print(self):
         with open(self.output_path, 'a') as compiled_program:

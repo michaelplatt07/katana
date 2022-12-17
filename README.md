@@ -84,8 +84,10 @@ Returns
 - [x] Implement multiply in asssembly
 - [x] Implement divide in asssembly
 - [x] Handle parenthesis moving order of operations
-- [ ] Handle semicolon token to end a line
+- [x] Handle semicolon token to end a line
 - [ ] Change the program parsing to read line by line
+- [ ] Do type parsing in declaration, things like uint32 and such
+- [ ] Set up printing in assembly
 - [ ] Enable printing for numbers
 - [ ] Store values as variables in assembly
 - [ ] Add additional mathematics like double and float math
