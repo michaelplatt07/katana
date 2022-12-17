@@ -539,16 +539,12 @@ class Compiler:
         self.write_assembly()
         self.create_assembly_for_print()
         self.create_assembly_for_exit()
-        os.system("nasm -f elf64 out.asm")
-        os.system("ld -o out out.o")
-        os.system("./out")
 
     def create_empty_out_file(self):
         with open(self.output_path, 'w') as compiled_program:
             compiled_program.write(";; Start of program\n")
 
     def write_assembly(self):
-        self.create_assembly_skeleton()
         with open(self.output_path, 'a') as compiled_program:
             for line in self.traverse_tree(self.ast):
                 compiled_program.write(line)
@@ -663,6 +659,12 @@ class Compiler:
             compiled_program.write("    syscall\n")
 
 
+def run_program():
+    os.system("nasm -f elf64 out.asm")
+    os.system("ld -o out out.o")
+    os.system("./out")
+
+
 ######
 # main
 ######
@@ -676,22 +678,26 @@ if __name__ == "__main__":
                             help="Return the program and print the AST.")
     arg_parser.add_argument("--compile", action="store_true",
                             help="Compile the program and create assembly.")
+    arg_parser.add_argument("--run", action="store_true",
+                            help="Run the assembled program.")
     args = arg_parser.parse_args()
 
     with open(args.program, 'r') as program:
         token_list = None
         ast = None
-        if args.lex or args.parse or args.compile:
+        if args.lex or args.parse or args.compile or args.run:
             lines = program.readlines()
             if len(lines) > 1:
                 assert False, "Multi-line processing not enabled."
             lexer = Lexer(lines)
             token_list = lexer.lex()
             print(token_list)
-        if args.parse or args.compile:
+        if args.parse or args.compile or args.run:
             parser = Parser(token_list)
             ast = parser.parse()
             print(ast)
-        if args.compile:
+        if args.compile or args.run:
             compiler = Compiler(ast)
             compiler.compile()
+        if args.run:
+            run_program()
