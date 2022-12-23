@@ -6,6 +6,7 @@ from katana.katana import (
     EOF_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
+    InvalidTokenException,
     Lexer,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
@@ -332,9 +333,22 @@ class TestEndOfLineSemicolon:
     def test_error_if_line_ends_without_semicolon(self):
         program = ["3 + 4\n"]
         lexer = Lexer(program)
-        with pytest.raises(SystemExit):
-            with pytest.raises(NoTerminatorError, match="Line is not terminted with a semicolon."):
-                lexer.lex()
+        # with pytest.raises(SystemExit):
+        with pytest.raises(NoTerminatorError, match="Line 1:5 must end with a semicolon."):
+            lexer.lex()
+
+
+class TestInvalidTokenException:
+
+    def test_invalid_token_raises_exception(self):
+        """
+        Ensures that if an unknown token shows up an exception is raised.
+        """
+        program = ["\"string\";"]
+        lexer = Lexer(program)
+        # with pytest.raises(SystemExit):
+        with pytest.raises(InvalidTokenException, match="Invalid token '\"' at 1:0."):
+            lexer.lex()
 
 
 class TestKeywordPrint:
@@ -345,9 +359,9 @@ class TestKeywordPrint:
         """
         program = ["foo(3+4);\n"]
         lexer = Lexer(program)
-        with pytest.raises(SystemExit):
-            with pytest.raises(UnknownKeywordError, match="Unknown keyword 'foo' at 1:0 in program."):
-                lexer.lex()
+        # with pytest.raises(SystemExit):
+        with pytest.raises(UnknownKeywordError, match="Unknown keyword 'foo' at 1:0 in program."):
+            lexer.lex()
 
     def test_print_function_keyword(self):
         """

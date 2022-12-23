@@ -73,13 +73,14 @@ class UnclosedParenthesisError(Exception):
 
 # TODO(map) Probably a chance to make the init method more DRY
 class InvalidTokenException(Exception):
-    def __init__(self, line_num, col_num):
+    def __init__(self, line_num, col_num, character):
         super().__init__("Invalid token.")
         self.line_num = line_num
         self.col_num = col_num
+        self.character = character
 
     def __str__(self):
-        return f"Invalid token at {self.line_num}:{self.col_num}."
+        return f"Invalid token '{self.character}' at {self.line_num}:{self.col_num}."
 
 
 class NoTerminatorError(Exception):
@@ -323,6 +324,9 @@ class Lexer:
                     self.curr_pos += 1
                     token.position += 1
             elif token.ttype == DIVIDE_TOKEN_TYPE:
+                # TODO(map) This wouldn't be necessary with a good pre-processor.
+                # Instead we should split the line on // and then pass the second
+                # array (if one exists) or the first if number of arrays == 1
                 if self.peek().ttype == DIVIDE_TOKEN_TYPE:
                     token = self.get_single_line_comment_token()
             elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
@@ -337,6 +341,9 @@ class Lexer:
         if self.curr_pos + 1 < self.end_pos:
             peek_token = self.generate_token(self.program[self.curr_pos + 1])
         return peek_token
+
+    def process_comment(self) -> Token:
+        assert False, "Not implemented."
 
     def get_single_line_comment_token(self) -> Token:
         end_of_comment_pos = self.program[self.curr_pos:].index(
@@ -374,19 +381,23 @@ class Lexer:
             elif character.isspace():  # Never care about spaces
                 return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
             else:
-                raise InvalidTokenException(1, self.curr_pos)
+                raise InvalidTokenException(1, self.curr_pos, character)
+        # TODO(map) Should we call exit() or just let the exception bubble?
         except NoTerminatorError as nte:
             self.print_invalid_character_error()
             print(nte)
-            exit(1)
+            # exit(1)
+            raise nte
         except InvalidTokenException as ite:
             self.print_invalid_character_error()
             print(ite)
-            exit(1)
+            # exit(1)
+            raise ite
         except UnknownKeywordError as uke:
             self.print_invalid_character_error()
             print(uke)
-            exit(1)
+            # exit(1)
+            raise uke
 
     def generate_keyword_token(self):
         keyword = ""
@@ -558,6 +569,8 @@ class Compiler:
             node.visited = True
             return self.traverse_tree(node.child_node)
         elif type(node) is KeywordNode and node.visited:
+            print(
+                f"Traversing from {node} to child node {node.child_node}")
             return self.get_keyword_asm()
         # TODO(map) This should maybe all be under the condition for ExpressionNodes
         elif node.left_side and not node.left_side.visited:
@@ -659,6 +672,7 @@ class Compiler:
 
     # TODO(map) I think I need two lists here, the variables and text of the code.
     def get_keyword_asm(self):
+        # TODO(map) Should this have the conditionals for all keywords?
         return ["    ;; Keyword Func\n",
                 "    call print\n"
                 ]
