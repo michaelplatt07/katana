@@ -85,9 +85,9 @@ Returns
 - [x] Implement divide in asssembly
 - [x] Handle parenthesis moving order of operations
 - [x] Handle semicolon token to end a line
+- [x] Set up printing in assembly
 - [ ] Change the program parsing to read line by line
 - [ ] Do type parsing in declaration, things like uint32 and such
-- [ ] Set up printing in assembly
 - [ ] Enable printing for numbers
 - [ ] Store values as variables in assembly
 - [ ] Add additional mathematics like double and float math
