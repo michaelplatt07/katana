@@ -535,9 +535,9 @@ class Compiler:
 
     def compile(self):
         self.create_empty_out_file()
+        self.create_keyword_functions()
         self.create_assembly_skeleton()
         self.write_assembly()
-        self.create_assembly_for_print()
         self.create_assembly_for_exit()
 
     def create_empty_out_file(self):
@@ -597,11 +597,34 @@ class Compiler:
             assert False, (f"This node type {type(node)} is"
                            "not yet implemented.")
 
-    def create_assembly_skeleton(self):
+    def create_keyword_functions(self):
+        # TODO(map) I should do a check to see if the section text already exits.
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
+            compiled_program.write("    print:\n")
+            compiled_program.write("        ;; Print function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Do the print with the value\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        add rax, 48\n")
+            compiled_program.write("        push rax\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Push return address back.\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+
+
+    def create_assembly_skeleton(self):
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    global _start\n")
-            compiled_program.write("    _start:\n")
+            compiled_program.write("        _start:\n")
 
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
@@ -637,19 +660,8 @@ class Compiler:
     # TODO(map) I think I need two lists here, the variables and text of the code.
     def get_keyword_asm(self):
         return ["    ;; Keyword Func\n",
+                "    call print\n"
                 ]
-
-    def create_assembly_for_print(self):
-        with open(self.output_path, 'a') as compiled_program:
-            compiled_program.write("    ;; Print\n")
-            compiled_program.write("    pop rax\n")
-            compiled_program.write("    add rax, 48\n")
-            compiled_program.write("    push rax\n")
-            compiled_program.write("    mov rsi, rsp\n")
-            compiled_program.write("    mov rax, 1\n")
-            compiled_program.write("    mov rdi, 1\n")
-            compiled_program.write("    mov rdx, 4\n")
-            compiled_program.write("    syscall\n")
 
     def create_assembly_for_exit(self):
         with open(self.output_path, 'a') as compiled_program:
