@@ -90,6 +90,10 @@ print(3+4); // prints the number 7
 print(3*2); // prints the number 6
 print(3-1); // prints the number 2
 ```
+Hello, World example in Katana
+```
+print("Hello, World!")
+```
 
 ## TODO: Features to Implement
 - [x] Implement subtract in asssembly
@@ -98,7 +102,7 @@ print(3-1); // prints the number 2
 - [x] Handle parenthesis moving order of operations
 - [x] Handle semicolon token to end a line
 - [x] Set up printing in assembly
-- [ ] Handle string literals
+- [x] Handle string literals
 - [ ] Change the program parsing to read line by line
 - [ ] Do type parsing in declaration, things like uint32 and such
 - [ ] Enable printing for numbers

@@ -109,6 +109,7 @@ class UnknownKeywordError(Exception):
     def __str__(self):
         return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
 
+
 class KeywordMisuseException(Exception):
     def __init__(self, line_num, col_num, keyword):
         super().__init__("Improper use of keyword.")
@@ -118,7 +119,6 @@ class KeywordMisuseException(Exception):
 
     def __str__(self):
         return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. 'print' should have one parameter"
-
 
 
 class UnclosedQuotationException(Exception):
@@ -454,21 +454,17 @@ class Lexer:
                 return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
             else:
                 raise InvalidTokenException(1, self.curr_pos, character)
-        # TODO(map) Should we call exit() or just let the exception bubble?
         except NoTerminatorError as nte:
             self.print_invalid_character_error(self.program, self.curr_pos)
             print(nte)
-            # exit(1)
             raise nte
         except InvalidTokenException as ite:
             self.print_invalid_character_error(self.program, self.curr_pos)
             print(ite)
-            # exit(1)
             raise ite
         except UnknownKeywordError as uke:
             self.print_invalid_character_error(self.program, self.curr_pos)
             print(uke)
-            # exit(1)
             raise uke
         except UnclosedQuotationException as uqe:
             self.print_invalid_character_error(self.program, self.curr_pos)
@@ -506,7 +502,6 @@ class Lexer:
             self.curr_pos += 1
 
         return Token(STRING_TOKEN_TYPE, original_pos, string, LOW)
-
 
 
 ########
@@ -632,6 +627,7 @@ class Parser:
     def handle_string(self):
         return StringNode(self.curr_token, self.curr_token.value, None)
 
+
 ##########
 # Compiler
 ##########
@@ -640,11 +636,15 @@ class Compiler:
     def __init__(self, ast):
         self.ast = ast
         self.output_path = os.getcwd() + "/out.asm"
+        self.variables = {}
 
     def compile(self):
         self.create_empty_out_file()
+        # Declare the global start only.
         self.create_global_start()
+        # Set up the keyword built in functions
         self.create_keyword_functions()
+        # Write the program
         self.write_assembly()
         self.create_assembly_for_exit()
 
@@ -652,10 +652,20 @@ class Compiler:
         with open(self.output_path, 'w') as compiled_program:
             compiled_program.write(";; Start of program\n")
 
+    def create_start_point(self, compiled_program):
+        compiled_program.write("section .text\n")
+        compiled_program.write("    _start:\n")
+
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
-            # for line in self.traverse_tree(self.ast):
-            for line in self.traverse_tree(self.ast):
+            asm = self.traverse_tree(self.ast)
+            # Write the variables first, them move to assembly.
+            for key in self.variables:
+                # Write the assembly for the string.
+                for line in self.variables[key][1]:
+                    compiled_program.write(line)
+            self.create_start_point(compiled_program)
+            for line in asm:
                 compiled_program.write(line)
 
     def traverse_tree(self, node):
@@ -694,10 +704,12 @@ class Compiler:
             # we need to track all the strings along with their associated name
             string_count = 1
             node.visited = True
+            key = f"string_{string_count}"
+            self.variables[node.value] = (key, self.get_string_asm(node.value, len(node.value), string_count))
             if node.parent_node:
-                return self.get_string_asm(node.value, len(node.value), string_count) + self.traverse_tree(node.parent_node)
+                return self.get_push_string_asm(string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_string_asm(node.value, len(node.value), string_count)
+                return self.get_push_string_asm(string_count, len(node.value))
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -714,22 +726,35 @@ class Compiler:
             assert False, f"Unrecognized root node value {node.value}"
 
     def create_keyword_functions(self):
-        # TODO(map) I should do a check to see if the section text already exits.
+        # TODO(map) This doesn't work for numbers above 9
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
             compiled_program.write("    print:\n")
             compiled_program.write("        ;; Print function\n")
             compiled_program.write("        ;; Save return address\n")
             compiled_program.write("        pop rbx\n")
-            compiled_program.write("        ;; Do the print with the value\n")
+            compiled_program.write("        ;; Get variable value\n")
             compiled_program.write("        pop rax\n")
-            # TODO(map) This should conditionally be used to print a number.
-            # compiled_program.write("        add rax, 48\n")
-            # compiled_program.write("        push rax\n")
+            compiled_program.write("        ;; Check if this is a number\n")
+            compiled_program.write("        cmp rax, 10\n")
+            compiled_program.write("        jl number\n")
+            compiled_program.write("        jge str\n")
+            compiled_program.write("    ;; If number add 48 to print\n")
+            compiled_program.write("    number:\n")
+            compiled_program.write("        add rax, 48\n")
+            compiled_program.write("        push rax\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        jmp finish\n")
+            compiled_program.write("   ;; If string get the value\n")
+            compiled_program.write("   str:\n")
+            compiled_program.write("        ;; Get variable length\n")
+            compiled_program.write("        pop rdx\n")
             compiled_program.write("        mov rsi, rax\n")
+            compiled_program.write("   ;; Finish the print\n")
+            compiled_program.write("   finish:\n")
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
-            compiled_program.write("        mov rdx, 4\n")
             compiled_program.write("        syscall\n")
             compiled_program.write("        ;; Remove value at top of stack.\n")
             compiled_program.write("        pop rax\n")
@@ -773,9 +798,7 @@ class Compiler:
                 "    div rbx\n",
                 "    push rax\n"]
 
-    # TODO(map) I think I need two lists here, the variables and text of the code.
     def get_keyword_asm(self):
-        # TODO(map) Should this have the conditionals for all keywords?
         return ["    ;; Keyword Func\n",
                 "    call print\n"
                 ]
@@ -785,6 +808,12 @@ class Compiler:
             f"section .string_{string_count}\n",
             f"    string_{string_count} db '{string}', {string_length}\n",
             f"    len_{string_count} equ $ - string_{string_count}\n"
+        ]
+
+    def get_push_string_asm(self, string_count, string_length):
+        return [
+            f"push {string_length}\n",
+            f"push string_{string_count}\n",
         ]
 
     def create_assembly_for_exit(self):

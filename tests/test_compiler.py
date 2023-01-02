@@ -28,6 +28,14 @@ def get_assembly_for_program(program):
     return compiler.traverse_tree(ast)
 
 
+def get_compiler(program):
+    lexer = Lexer(program)
+    token_list = lexer.lex()
+    parser = Parser(token_list)
+    ast = parser.parse()
+    return Compiler(ast)
+
+
 class TestComiplerSingleNodes:
 
     def test_literal_nubmer(self):
@@ -189,9 +197,10 @@ class TestCompilerString:
     def test_string(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
-            assembly = get_assembly_for_program(f.readlines())
+            compiler = get_compiler(f.readlines())
+            # assembly = get_assembly_for_program(f.readlines())
+            assembly = compiler.traverse_tree(compiler.ast)
             assert assembly == [
-                "section .string_1\n",
-                "    string_1 db 'Hello, World!', 13\n",
-                "    len_1 equ $ - string_1\n"
+                "push 13\n",
+                "push string_1\n",
             ]
