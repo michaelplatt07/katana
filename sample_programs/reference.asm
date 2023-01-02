@@ -312,62 +312,112 @@
 
 ;; Print command line arg count, program name, and all command
 ;; line args. Must be run as ./reference arg1 arg2 arg3 arg4
-section .text
-    global _start
-    _start:
-        ;; Pop argc
-        pop rbx 
-        add rbx, 48
-        push rbx
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 4
-        syscall
+; section .text
+;     global _start
+;     _start:
+;         ;; Pop argc
+;         pop rbx 
+;         add rbx, 48
+;         push rbx
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 4
+;         syscall
 
-        ;; Pop function name
-        pop rbx
-        mov rsi, [rsp]
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 5
-        syscall
+;         ;; Pop function name
+;         pop rbx
+;         mov rsi, [rsp]
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 5
+;         syscall
 
-        ;; Pop arg 1
-        pop rbx
-        mov rsi, [rsp]
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
+;         ;; Pop arg 1
+;         pop rbx
+;         mov rsi, [rsp]
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
 
-        ;; Pop arg 2
-        pop rbx
-        mov rsi, [rsp]
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
+;         ;; Pop arg 2
+;         pop rbx
+;         mov rsi, [rsp]
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
 
-        ;; Pop arg 3
-        pop rbx
-        mov rsi, [rsp]
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
+;         ;; Pop arg 3
+;         pop rbx
+;         mov rsi, [rsp]
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
 
-        ;; Pop arg 4
-        pop rbx
-        mov rsi, [rsp]
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
+;         ;; Pop arg 4
+;         pop rbx
+;         mov rsi, [rsp]
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
 
-        ;; Exit
-        mov rax, 60
-        mov rdi, 0
-        syscall
+;         ;; Exit
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
 
+
+; Example of function calls
+; section .text
+
+;     print:
+;         add rax, 48
+;         push rax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 4
+;         syscall
+;         pop rax
+;         ret
+ 
+;     global _start
+
+;     _start:
+;         mov rax, 2
+;         mov rbx, 3
+;         add rax, rbx
+;         call print
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+; While loops
+; section .text
+;     global _start
+
+;     _start:
+;         ;; Initialize the registry
+;         mov rcx, 0
+;         loop:
+;             mov rbx, rcx
+;             push 49
+;             mov rsi, rsp
+;             mov rax, 1
+;             mov rdi, 1
+;             mov rdx, 4
+;             syscall
+;             mov rcx, rbx
+;             inc rcx
+;             cmp rcx, 5
+;             jl loop
+
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
 

@@ -10,6 +10,7 @@ EOF = "EOF"
 #######################
 # Token/Node Priorities
 #######################
+ULTRA_HIGH = 4
 VERY_HIGH = 3
 HIGH = 2
 MEDIUM = 1
@@ -27,6 +28,7 @@ MULTIPLY_TOKEN_TYPE = "MULTIPLY"
 NUM_TOKEN_TYPE = "NUM"
 NEW_LINE_TOKEN_TYPE = "NEWLINE"
 PLUS_TOKEN_TYPE = "PLUS"
+KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 SPACE_TOKEN_TYPE = "SPACE"
@@ -58,6 +60,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
+KEYWORDS = ("print")
 
 
 ############
@@ -68,14 +71,16 @@ class UnclosedParenthesisError(Exception):
         super().__init__("Unclosed parenthesis in program.")
 
 
+# TODO(map) Probably a chance to make the init method more DRY
 class InvalidTokenException(Exception):
-    def __init__(self, line_num, col_num):
+    def __init__(self, line_num, col_num, character):
         super().__init__("Invalid token.")
         self.line_num = line_num
         self.col_num = col_num
+        self.character = character
 
     def __str__(self):
-        return f"Invalid token at {self.line_num}:{self.col_num}."
+        return f"Invalid token '{self.character}' at {self.line_num}:{self.col_num}."
 
 
 class NoTerminatorError(Exception):
@@ -88,6 +93,16 @@ class NoTerminatorError(Exception):
         return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
 
 
+class UnknownKeywordError(Exception):
+    def __init__(self, line_num, col_num, keyword):
+        super().__init__("Unknown keyword")
+        self.line_num = line_num
+        self.col_num = col_num
+        self.keyword = keyword
+
+    def __str__(self):
+        return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
+
 ########
 # TOKENS
 ########
@@ -99,7 +114,7 @@ class Token:
         self.priority = priority
 
     def __repr__(self):
-        return f"[{self.ttype}, {self.position}, {self.value}]"
+        return f"[{self.ttype}, {self.position}, {self.value}, {self.priority}]"
 
     def __eq__(self, other):
         return (self.ttype == other.ttype
@@ -145,6 +160,25 @@ class NoOpNode(Node):
                  token: Token) -> None:
         self.token: Token = token
         super().__init__(token, NO_OP, None)
+
+
+class KeywordNode(Node):
+    """
+    Node for keyword in the Katana language.
+    """
+
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, ULTRA_HIGH, parent_node)
+        self.value = value
+        self.child_node = child_node
+
+    def __eq__(self, other):
+        child_equal = self.child_node == other.child_node
+        values_equal = self.value == other.value
+        return child_equal and values_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"({self.value}({self.child_node}))"
 
 
 class ExpressionNode(Node):
@@ -290,6 +324,9 @@ class Lexer:
                     self.curr_pos += 1
                     token.position += 1
             elif token.ttype == DIVIDE_TOKEN_TYPE:
+                # TODO(map) This wouldn't be necessary with a good pre-processor.
+                # Instead we should split the line on // and then pass the second
+                # array (if one exists) or the first if number of arrays == 1
                 if self.peek().ttype == DIVIDE_TOKEN_TYPE:
                     token = self.get_single_line_comment_token()
             elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
@@ -304,6 +341,9 @@ class Lexer:
         if self.curr_pos + 1 < self.end_pos:
             peek_token = self.generate_token(self.program[self.curr_pos + 1])
         return peek_token
+
+    def process_comment(self) -> Token:
+        assert False, "Not implemented."
 
     def get_single_line_comment_token(self) -> Token:
         end_of_comment_pos = self.program[self.curr_pos:].index(
@@ -331,6 +371,8 @@ class Lexer:
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character.isalpha():
+                return self.generate_keyword_token()
             elif character == "\n":  # Don't care about return for now
                 if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
                     # Increment by one so we show the arrow at the end of line.
@@ -339,16 +381,38 @@ class Lexer:
             elif character.isspace():  # Never care about spaces
                 return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
             else:
-                raise InvalidTokenException(1, self.curr_pos)
+                raise InvalidTokenException(1, self.curr_pos, character)
+        # TODO(map) Should we call exit() or just let the exception bubble?
         except NoTerminatorError as nte:
             self.print_invalid_character_error()
             print(nte)
-            exit(1)
+            # exit(1)
+            raise nte
         except InvalidTokenException as ite:
-            print("Got the exception.")
             self.print_invalid_character_error()
             print(ite)
-            exit(1)
+            # exit(1)
+            raise ite
+        except UnknownKeywordError as uke:
+            self.print_invalid_character_error()
+            print(uke)
+            # exit(1)
+            raise uke
+
+    def generate_keyword_token(self):
+        keyword = ""
+        original_pos = self.curr_pos
+        while self.program[self.curr_pos].isalpha():
+            keyword += self.program[self.curr_pos]
+            # TODO(map) De-couple the advance from generating the token
+            self.curr_pos += 1
+
+        # TODO(map) This is a dirty hack and will be resolved when I decouple
+        # the problem in the TODO above.
+        self.curr_pos -= 1
+        if keyword not in KEYWORDS:
+            raise UnknownKeywordError(1, original_pos, keyword)
+        return Token(KEYWORD_TOKEN_TYPE, original_pos, keyword, ULTRA_HIGH)
 
     def print_invalid_character_error(self):
         print(self.program)
@@ -392,6 +456,8 @@ class Parser:
             node = self.parse_op(MultiplyDivideNode, root_node)
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             node = self.handle_parenthesis()
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
+            node = self.handle_keyword()
         elif self.curr_token.ttype in IGNORE_OPS:
             node = NoOpNode(self.curr_token)
         elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -453,6 +519,22 @@ class Parser:
         return root_node
 
 
+    def handle_keyword(self):
+        root_node = None
+        keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
+        # Move past keyword token
+        self.advance_token()
+        # Move past the parenthesis
+        self.advance_token()
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                root_node = self.process_token(root_node)
+                self.advance_token()
+
+        keyword_node.child_node = root_node
+        root_node.parent_node = keyword_node
+        return keyword_node
+
+
 ##########
 # Compiler
 ##########
@@ -464,20 +546,16 @@ class Compiler:
 
     def compile(self):
         self.create_empty_out_file()
+        self.create_keyword_functions()
         self.create_assembly_skeleton()
         self.write_assembly()
-        self.create_assembly_for_print()
         self.create_assembly_for_exit()
-        os.system("nasm -f elf64 out.asm")
-        os.system("ld -o out out.o")
-        os.system("./out")
 
     def create_empty_out_file(self):
         with open(self.output_path, 'w') as compiled_program:
             compiled_program.write(";; Start of program\n")
 
     def write_assembly(self):
-        self.create_assembly_skeleton()
         with open(self.output_path, 'a') as compiled_program:
             for line in self.traverse_tree(self.ast):
                 compiled_program.write(line)
@@ -487,13 +565,21 @@ class Compiler:
             node.visited = True
             print(f"Pushing {node.value} onto stack.")
             return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
+        elif type(node) is KeywordNode and not node.visited:
+            node.visited = True
+            return self.traverse_tree(node.child_node)
+        elif type(node) is KeywordNode and node.visited:
+            print(
+                f"Traversing from {node} to child node {node.child_node}")
+            return self.get_keyword_asm()
+        # TODO(map) This should maybe all be under the condition for ExpressionNodes
         elif node.left_side and not node.left_side.visited:
             print(
-                f"Tranversing from {node} to left side node {node.left_side}")
+                f"Traversing from {node} to left side node {node.left_side}")
             return self.traverse_tree(node.left_side)
         elif node.right_side and not node.right_side.visited:
             print(
-                f"Tranversing from {node} to right side node {node.right_side}")
+                f"Traversing from {node} to right side node {node.right_side}")
             return self.traverse_tree(node.right_side)
         elif node.left_side.visited and node.right_side.visited and node.parent_node:
             node.visited = True
@@ -524,11 +610,34 @@ class Compiler:
             assert False, (f"This node type {type(node)} is"
                            "not yet implemented.")
 
-    def create_assembly_skeleton(self):
+    def create_keyword_functions(self):
+        # TODO(map) I should do a check to see if the section text already exits.
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
+            compiled_program.write("    print:\n")
+            compiled_program.write("        ;; Print function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Do the print with the value\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        add rax, 48\n")
+            compiled_program.write("        push rax\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Push return address back.\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+
+
+    def create_assembly_skeleton(self):
+        with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    global _start\n")
-            compiled_program.write("    _start:\n")
+            compiled_program.write("        _start:\n")
 
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
@@ -561,17 +670,12 @@ class Compiler:
                 "    div rbx\n",
                 "    push rax\n"]
 
-    def create_assembly_for_print(self):
-        with open(self.output_path, 'a') as compiled_program:
-            compiled_program.write("    ;; Print\n")
-            compiled_program.write("    pop rax\n")
-            compiled_program.write("    add rax, 48\n")
-            compiled_program.write("    push rax\n")
-            compiled_program.write("    mov rsi, rsp\n")
-            compiled_program.write("    mov rax, 1\n")
-            compiled_program.write("    mov rdi, 1\n")
-            compiled_program.write("    mov rdx, 4\n")
-            compiled_program.write("    syscall\n")
+    # TODO(map) I think I need two lists here, the variables and text of the code.
+    def get_keyword_asm(self):
+        # TODO(map) Should this have the conditionals for all keywords?
+        return ["    ;; Keyword Func\n",
+                "    call print\n"
+                ]
 
     def create_assembly_for_exit(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -579,6 +683,12 @@ class Compiler:
             compiled_program.write("    mov rax, 60\n")
             compiled_program.write("    mov rdi, 0\n")
             compiled_program.write("    syscall\n")
+
+
+def run_program():
+    os.system("nasm -f elf64 out.asm")
+    os.system("ld -o out out.o")
+    os.system("./out")
 
 
 ######
@@ -594,22 +704,26 @@ if __name__ == "__main__":
                             help="Return the program and print the AST.")
     arg_parser.add_argument("--compile", action="store_true",
                             help="Compile the program and create assembly.")
+    arg_parser.add_argument("--run", action="store_true",
+                            help="Run the assembled program.")
     args = arg_parser.parse_args()
 
     with open(args.program, 'r') as program:
         token_list = None
         ast = None
-        if args.lex or args.parse or args.compile:
+        if args.lex or args.parse or args.compile or args.run:
             lines = program.readlines()
             if len(lines) > 1:
                 assert False, "Multi-line processing not enabled."
             lexer = Lexer(lines)
             token_list = lexer.lex()
             print(token_list)
-        if args.parse or args.compile:
+        if args.parse or args.compile or args.run:
             parser = Parser(token_list)
             ast = parser.parse()
             print(ast)
-        if args.compile:
+        if args.compile or args.run:
             compiler = Compiler(ast)
             compiler.compile()
+        if args.run:
+            run_program()

@@ -22,7 +22,7 @@ Katana supports all the usual mathematic operations.
 ### Simple Addition
 Input
 ```
-1 + 2 + 3
+1 + 2 + 3;
 ```
 Returns
 ```
@@ -32,7 +32,7 @@ Returns
 ### Simple Subtraction
 Input
 ```
-4 - 1 - 1
+4 - 1 - 1;
 ```
 Returns
 ```
@@ -42,7 +42,7 @@ Returns
 ### Simple Multiplication
 Input
 ```
-4 * 2
+4 * 2;
 ```
 Returns
 ```
@@ -52,7 +52,7 @@ Returns
 ### Simple Division
 Input
 ```
-8 / 8
+8 / 8;
 ```
 Returns
 ```
@@ -62,7 +62,7 @@ Returns
 ### Advance Arithmetic
 Katana respects order of operations for arithmetic
 ```
-4 / 1 + 3 * 2
+4 / 1 + 3 * 2;
 ```
 Returns
 ```
@@ -71,21 +71,36 @@ Returns
 
 Using parenthesis changes the outcome of the arithmetic
 ```
-4 / (1 + 3) * 2
+4 / (1 + 3) * 2;
 ```
 Returns
 ```
 2
 ```
 
+## Keywords
+### print
+Katana supports printing both numbers and strings
+```
+print(3); // prints the number 3
+```
+Katana will print mathematic expressions as well
+```
+print(3+4); // prints the number 7
+print(3*2); // prints the number 6
+print(3-1); // prints the number 2
+```
 
 ## TODO: Features to Implement
 - [x] Implement subtract in asssembly
 - [x] Implement multiply in asssembly
 - [x] Implement divide in asssembly
 - [x] Handle parenthesis moving order of operations
-- [ ] Handle semicolon token to end a line
+- [x] Handle semicolon token to end a line
+- [x] Set up printing in assembly
+- [ ] Handle string literals
 - [ ] Change the program parsing to read line by line
+- [ ] Do type parsing in declaration, things like uint32 and such
 - [ ] Enable printing for numbers
 - [ ] Store values as variables in assembly
 - [ ] Add additional mathematics like double and float math
