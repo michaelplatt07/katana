@@ -1,21 +1,8 @@
 import os
-import pytest
 from katana.katana import (
-    DIVIDE_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
+    Compiler,
     Lexer,
-    LiteralNode,
-    MINUS_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    MultiplyDivideNode,
-    Parser,
-    PlusMinusNode,
-    Token,
-    HIGH,
-    MEDIUM,
-    LOW,
-    Compiler
+    Parser
 )
 
 
@@ -26,14 +13,6 @@ def get_assembly_for_program(program):
     ast = parser.parse()
     compiler = Compiler(ast)
     return compiler.traverse_tree(ast)
-
-
-def get_compiler(program):
-    lexer = Lexer(program)
-    token_list = lexer.lex()
-    parser = Parser(token_list)
-    ast = parser.parse()
-    return Compiler(ast)
 
 
 class TestComiplerSingleNodes:
@@ -197,9 +176,7 @@ class TestCompilerString:
     def test_string(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
-            compiler = get_compiler(f.readlines())
-            # assembly = get_assembly_for_program(f.readlines())
-            assembly = compiler.traverse_tree(compiler.ast)
+            assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
                 "push 13\n",
                 "push string_1\n",
