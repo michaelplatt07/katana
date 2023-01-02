@@ -421,3 +421,54 @@
 ;         mov rdi, 0
 ;         syscall
 
+
+; ; Strings
+; section .text
+;     global _start
+
+; section .something_1
+;     msg db  'Hello, world!', 10 ;our dear string
+;     len equ $ - msg         ;length of our dear string
+
+; section .text
+;     _start:
+;         mov rsi, msg
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, len
+;         syscall
+
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+; Function params
+section .text
+    global _start
+
+section .string_1
+    string_1 db  'Hello, world!', 10 ;our dear string
+    len_1 equ $ - string_1         ;length of our dear string
+
+section .text
+
+    print:
+        pop rbx
+        pop rax
+        mov rsi, rax
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, len_1
+        syscall
+        push rbx
+        ret
+ 
+    _start:
+        push string_1
+        call print
+        mov rax, 60
+        mov rdi, 0
+        syscall
+
+

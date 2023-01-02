@@ -1,29 +1,29 @@
-import pytest
 from katana.katana import (
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    EOF_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    NEW_LINE_TOKEN_TYPE,
-    NO_OP,
-    RIGHT_PAREN_TOKEN_TYPE,
-    ULTRA_HIGH,
-    VERY_HIGH,
+    KeywordNode,
     LiteralNode,
-    MINUS_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
     MultiplyDivideNode,
     Parser,
     PlusMinusNode,
-    KeywordNode,
+    StringNode,
     Token,
+    COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
+    EOF_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    KEYWORD_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE,
+    NUM_TOKEN_TYPE,
+    PLUS_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    STRING_TOKEN_TYPE,
+    LOW,
     HIGH,
     MEDIUM,
-    LOW
+    VERY_HIGH,
+    ULTRA_HIGH,
 )
 
 
@@ -429,3 +429,22 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+
+class TestQuotationParser:
+
+    def test_quotation(self):
+        """
+        Given a program like:
+        ""Hello, World!""
+        Expected to return an AST like:
+        ("Hello, World!")
+        """
+        token_list = [
+            Token(STRING_TOKEN_TYPE, 0, "Hello, World!", 0),
+            Token(EOL_TOKEN_TYPE, 14, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 15, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 16, "EOF", 0)
+        ]
+        ast = StringNode(token_list[0], "Hello, World!")
+        parser = Parser(token_list)
+        assert ast == parser.parse()

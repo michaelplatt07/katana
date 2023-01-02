@@ -1,205 +1,183 @@
-import pytest
+import os
 from katana.katana import (
-    DIVIDE_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
+    Compiler,
     Lexer,
-    LiteralNode,
-    MINUS_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    MultiplyDivideNode,
-    Parser,
-    PlusMinusNode,
-    Token,
-    HIGH,
-    MEDIUM,
-    LOW
+    Parser
 )
 
 
-class TestCompilerAddSubOnly:
-    def test_simple_math_program(self):
-        """
-        Given a simple mathmatics program like:
-        1 + 2 + 3 - 4
-        Expected result of:
-        (((1+2)+3)-4)
-        """
-        lexer = Lexer(["1 + 2 + 3 - 4;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 4, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 8, "3", LOW), "3")
-        literal_four = LiteralNode(Token(NUM_TOKEN_TYPE, 12, "4", LOW), "4")
-        plus_node_one = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM), "+", literal_one, literal_two
-        )
-        plus_node_two = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 6, "+",
-                  MEDIUM), "+", plus_node_one, literal_three
-        )
-        minus_node_one = PlusMinusNode(
-            Token(MINUS_TOKEN_TYPE, 10, "-",
-                  MEDIUM), "-", plus_node_two, literal_four
-        )
-        expected_ast = minus_node_one
-        assert expected_ast == parser.parse()
-
-    def test_simple_math_program_bad_format(self):
-        """
-        Given a simple mathmatics program with extra spaces like:
-        1 +      2  +     3 -      4
-        Expected result of:
-        (((1+2)+3)-4)
-        """
-        lexer = Lexer(["1 +      2  +     3 -      4;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 9, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 18, "3", LOW), "3")
-        literal_four = LiteralNode(Token(NUM_TOKEN_TYPE, 27, "4", LOW), "4")
-        plus_node_one = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM), "+", literal_one, literal_two
-        )
-        plus_node_two = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 12, "+",
-                  MEDIUM), "+", plus_node_one, literal_three
-        )
-        minus_node_one = PlusMinusNode(
-            Token(MINUS_TOKEN_TYPE, 20, "-",
-                  MEDIUM), "-", plus_node_two, literal_four
-        )
-        expected_ast = minus_node_one
-        assert expected_ast == parser.parse()
+def get_assembly_for_program(program):
+    lexer = Lexer(program)
+    token_list = lexer.lex()
+    parser = Parser(token_list)
+    ast = parser.parse()
+    compiler = Compiler(ast)
+    return compiler.traverse_tree(ast)
 
 
-class TestCompilerMultDivOnly:
+class TestComiplerSingleNodes:
+
+    def test_literal_nubmer(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_literal.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 3\n",
+            ]
+
+
+class TestCompilerMathematics:
+
+    def test_simple_add(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_add.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "    push 3\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+            ]
+
+    def test_simple_sub(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_sub.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Subtract\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    sub rbx, rax\n",
+                "    push rbx\n",
+                "    push 3\n",
+                "    ;; Subtract\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    sub rbx, rax\n",
+                "    push rbx\n",
+            ]
+
     def test_simple_multiply(self):
-        """
-        Given a simple mathmatics program like:
-        1 * 2 * 3
-        Expected result of:
-        ((1*2)*3)
-        """
-        lexer = Lexer(["1 * 2 * 3;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 4, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 8, "3", LOW), "3")
-        mul_node_one = MultiplyDivideNode(
-            Token(MULTIPLY_TOKEN_TYPE, 2, "*",
-                  HIGH), "*", literal_one, literal_two
-        )
-        mul_node_two = MultiplyDivideNode(
-            Token(MULTIPLY_TOKEN_TYPE, 6, "*",
-                  HIGH), "*", mul_node_one, literal_three
-        )
-        expected_ast = mul_node_two
-        assert expected_ast == parser.parse()
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_multiply.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Multiply\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mul rbx\n",
+                "    push rax\n",
+                "    push 3\n",
+                "    ;; Multiply\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mul rbx\n",
+                "    push rax\n",
+            ]
 
     def test_simple_divide(self):
-        """
-        Given a simple mathmatics program like:
-        1 / 2 / 3
-        Expected result of:
-        ((1/2)/3)
-        """
-        lexer = Lexer(["1 / 2 / 3;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 4, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 8, "3", LOW), "3")
-        div_node_one = MultiplyDivideNode(
-            Token(DIVIDE_TOKEN_TYPE, 2, "/",
-                  HIGH), "/", literal_one, literal_two
-        )
-        div_node_two = MultiplyDivideNode(
-            Token(DIVIDE_TOKEN_TYPE, 6, "/",
-                  HIGH), "/", div_node_one, literal_three
-        )
-        expected_ast = div_node_two
-        assert expected_ast == parser.parse()
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_divide.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Divide\n",
+                "    pop rbx\n",
+                "    pop rax\n",
+                "    div rbx\n",
+                "    push rax\n",
+                "    push 3\n",
+                "    ;; Divide\n",
+                "    pop rbx\n",
+                "    pop rax\n",
+                "    div rbx\n",
+                "    push rax\n",
+            ]
+
+    def test_complicated_mathematics(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_mathematics.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Multiply\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mul rbx\n",
+                "    push rax\n",
+                "    push 3\n",
+                "    push 4\n",
+                "    ;; Divide\n",
+                "    pop rbx\n",
+                "    pop rax\n",
+                "    div rbx\n",
+                "    push rax\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+            ]
 
 
-class TestCompilerAdvancedMath:
-    def test_mul_add_div_program(self):
-        """
-        Given a simple mathmatics program like:
-        1 * 2 + 3 / 4
-        Expected result of:
-        ((1+2)-(4*3))
-        """
-        lexer = Lexer(["1 * 2 + 3 / 4;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 4, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 8, "3", LOW), "3")
-        literal_four = LiteralNode(Token(NUM_TOKEN_TYPE, 12, "4", LOW), "4")
-        mul_node = MultiplyDivideNode(
-            Token(MULTIPLY_TOKEN_TYPE, 2, "*",
-                  HIGH), "*", literal_one, literal_two
-        )
-        div_node = MultiplyDivideNode(
-            Token(DIVIDE_TOKEN_TYPE, 10, "/",
-                  HIGH), "/", literal_three, literal_four
-        )
-        plus_node = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 6, "+", MEDIUM), "+", mul_node, div_node
-        )
-        expected_ast = plus_node
-        assert expected_ast == parser.parse()
-
-    def test_add_sub_div_program(self):
-        """
-        Given a simple mathmatics program like:
-        1 + 2 - 3 / 4
-        Expected result of:
-        ((1+2)-(3/4))
-        """
-        lexer = Lexer(["1 + 2 - 3 / 4;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        literal_one = LiteralNode(Token(NUM_TOKEN_TYPE, 0, "1", LOW), "1")
-        literal_two = LiteralNode(Token(NUM_TOKEN_TYPE, 4, "2", LOW), "2")
-        literal_three = LiteralNode(Token(NUM_TOKEN_TYPE, 8, "3", LOW), "3")
-        literal_four = LiteralNode(Token(NUM_TOKEN_TYPE, 12, "4", LOW), "4")
-        plus_node = PlusMinusNode(
-            Token(PLUS_TOKEN_TYPE, 2, "+",
-                  MEDIUM), "+", literal_one, literal_two
-        )
-        div_node = MultiplyDivideNode(
-            Token(DIVIDE_TOKEN_TYPE, 10, "/",
-                  HIGH), "/", literal_three, literal_four
-        )
-        minus_node = PlusMinusNode(
-            Token(MINUS_TOKEN_TYPE, 6, "-", MEDIUM), "-", plus_node, div_node
-        )
-        expected_ast = minus_node
-        assert expected_ast == parser.parse()
-
-
-class TestParenthesis:
+class TestCompilerParenthesis:
 
     def test_add_higher_prio_than_mult_with_paren(self):
-        """
-        Given a program like:
-        (1 + 2) * 3)
-        Expected to return an AST like:
-        ((1+2)*3)
-        """
-        lexer = Lexer(["(1 + 2) * 3;\n"])
-        token_list = lexer.lex()
-        parser = Parser(token_list)
-        one_node = LiteralNode(token_list[1], "1")
-        two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[6], "3")
-        first_plus = PlusMinusNode(
-            token_list[2], "+", one_node, two_node)
-        ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
-        parser = Parser(token_list)
-        assert ast == parser.parse()
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_parenthesis.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 1\n",
+                "    push 2\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "    push 3\n",
+                "    ;; Multiply\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mul rbx\n",
+                "    push rax\n",
+            ]
+
+
+class TestCompilerKeywords:
+
+    def test_print_keyword(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_print.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 3\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+            ]
+
+
+class TestCompilerString:
+
+    def test_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "push 13\n",
+                "push string_1\n",
+            ]
