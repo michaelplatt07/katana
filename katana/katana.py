@@ -31,6 +31,7 @@ PLUS_TOKEN_TYPE = "PLUS"
 KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
+STRING_TOKEN_TYPE = "STRING"
 SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
@@ -67,8 +68,13 @@ KEYWORDS = ("print")
 # Exceptions
 ############
 class UnclosedParenthesisError(Exception):
-    def __init__(self):
+    def __init__(self, line_num, col_num):
         super().__init__("Unclosed parenthesis in program.")
+        self.line_num = line_num
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Unclosed parenthesis at {self.line_num}:{self.col_num}."
 
 
 # TODO(map) Probably a chance to make the init method more DRY
@@ -102,6 +108,29 @@ class UnknownKeywordError(Exception):
 
     def __str__(self):
         return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
+
+class KeywordMisuseException(Exception):
+    def __init__(self, line_num, col_num, keyword):
+        super().__init__("Improper use of keyword.")
+        self.line_num = line_num
+        self.col_num = col_num
+        self.keyword = keyword
+
+    def __str__(self):
+        return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. 'print' should have one parameter"
+
+
+
+class UnclosedQuotationException(Exception):
+    def __init__(self, line_num, col_num, string):
+        super().__init__("Unclosed quotation")
+        self.line_num = line_num
+        self.col_num = col_num
+        self.string = string
+
+    def __str__(self):
+        return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
+
 
 ########
 # TOKENS
@@ -179,6 +208,23 @@ class KeywordNode(Node):
 
     def __repr__(self):
         return f"({self.value}({self.child_node}))"
+
+
+class StringNode(Node):
+    """
+    Node for strings in the Katana language.
+    """
+
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+
+    def __eq__(self, other):
+        values_equal = self.value == other.value
+        return values_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"'{self.value}'"
 
 
 class ExpressionNode(Node):
@@ -290,6 +336,15 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
+########
+# UTILS
+########
+def print_exception_message(program, position, exception):
+    print(program)
+    print(" "*position + "^")
+    print(exception)
+
+
 #######
 # LEXER
 #######
@@ -302,12 +357,27 @@ class Lexer:
         self.token_list = []
         self.has_next_char = True
         self.unpaired_parens = 0
+        self.misused_keywords = 0
 
     def lex(self):
+        paren_error_loc = 0
         while self.has_next_char:
             self.advance()
+
+        for token in self.token_list:
+            if token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                self.unpaired_parens += 1
+                paren_error_loc = token.position
+            elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                self.unpaired_parens -= 1
+                paren_error_loc = token.position
+
         if self.unpaired_parens != 0:
-            raise UnclosedParenthesisError()
+            upe = UnclosedParenthesisError(1, 5)
+            self.print_invalid_character_error(self.program, paren_error_loc)
+            print(upe)
+            raise upe
+
         return self.token_list
 
     def advance(self):
@@ -371,6 +441,8 @@ class Lexer:
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+            elif character == '"':
+                return self.generate_string_token()
             elif character.isalpha():
                 return self.generate_keyword_token()
             elif character == "\n":  # Don't care about return for now
@@ -384,20 +456,28 @@ class Lexer:
                 raise InvalidTokenException(1, self.curr_pos, character)
         # TODO(map) Should we call exit() or just let the exception bubble?
         except NoTerminatorError as nte:
-            self.print_invalid_character_error()
+            self.print_invalid_character_error(self.program, self.curr_pos)
             print(nte)
             # exit(1)
             raise nte
         except InvalidTokenException as ite:
-            self.print_invalid_character_error()
+            self.print_invalid_character_error(self.program, self.curr_pos)
             print(ite)
             # exit(1)
             raise ite
         except UnknownKeywordError as uke:
-            self.print_invalid_character_error()
+            self.print_invalid_character_error(self.program, self.curr_pos)
             print(uke)
             # exit(1)
             raise uke
+        except UnclosedQuotationException as uqe:
+            self.print_invalid_character_error(self.program, self.curr_pos)
+            print(uqe)
+            raise uqe
+
+    def print_invalid_character_error(self, program, position):
+        print(program)
+        print(" "*position + "^")
 
     def generate_keyword_token(self):
         keyword = ""
@@ -414,9 +494,19 @@ class Lexer:
             raise UnknownKeywordError(1, original_pos, keyword)
         return Token(KEYWORD_TOKEN_TYPE, original_pos, keyword, ULTRA_HIGH)
 
-    def print_invalid_character_error(self):
-        print(self.program)
-        print(" "*self.curr_pos + "^")
+    def generate_string_token(self):
+        string = ""
+        original_pos = self.curr_pos
+        self.curr_pos += 1
+
+        while self.program[self.curr_pos] != '"':
+            if self.program[self.curr_pos] == ";" or self.program[self.curr_pos] == "\n":
+                raise UnclosedQuotationException(1, self.curr_pos, string)
+            string += self.program[self.curr_pos]
+            self.curr_pos += 1
+
+        return Token(STRING_TOKEN_TYPE, original_pos, string, LOW)
+
 
 
 ########
@@ -443,29 +533,34 @@ class Parser:
         self.curr_token = self.token_list[self.curr_token_pos]
 
     def process_token(self, root_node):
-        node = None
-        if self.curr_token.ttype == NUM_TOKEN_TYPE:
-            node = self.parse_literal()
-        elif self.curr_token.ttype == PLUS_TOKEN_TYPE:
-            node = self.parse_op(PlusMinusNode, root_node)
-        elif self.curr_token.ttype == MINUS_TOKEN_TYPE:
-            node = self.parse_op(PlusMinusNode, root_node)
-        elif self.curr_token.ttype == MULTIPLY_TOKEN_TYPE:
-            node = self.parse_op(MultiplyDivideNode, root_node)
-        elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
-            node = self.parse_op(MultiplyDivideNode, root_node)
-        elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            node = self.handle_parenthesis()
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
-            node = self.handle_keyword()
-        elif self.curr_token.ttype in IGNORE_OPS:
-            node = NoOpNode(self.curr_token)
-        elif self.curr_token.ttype == EOF_TOKEN_TYPE:
-            node = NoOpNode(self.curr_token)
-            self.has_next_token = False
-        else:
-            assert False, f"Unknown token type {self.curr_token.ttype}"
-        return node
+        try:
+            node = None
+            if self.curr_token.ttype == NUM_TOKEN_TYPE:
+                node = self.parse_literal()
+            elif self.curr_token.ttype == PLUS_TOKEN_TYPE:
+                node = self.parse_op(PlusMinusNode, root_node)
+            elif self.curr_token.ttype == MINUS_TOKEN_TYPE:
+                node = self.parse_op(PlusMinusNode, root_node)
+            elif self.curr_token.ttype == MULTIPLY_TOKEN_TYPE:
+                node = self.parse_op(MultiplyDivideNode, root_node)
+            elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
+                node = self.parse_op(MultiplyDivideNode, root_node)
+            elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                node = self.handle_parenthesis()
+            elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
+                node = self.handle_keyword()
+            elif self.curr_token.ttype == STRING_TOKEN_TYPE:
+                node = self.handle_string()
+            elif self.curr_token.ttype in IGNORE_OPS:
+                node = NoOpNode(self.curr_token)
+            elif self.curr_token.ttype == EOF_TOKEN_TYPE:
+                node = NoOpNode(self.curr_token)
+                self.has_next_token = False
+            else:
+                assert False, f"Unknown token type {self.curr_token.ttype}"
+            return node
+        except KeywordMisuseException as kme:
+            print_exception_message(("\n").join(program_lines), kme.col_num, kme)
 
     def parse_literal(self):
         """
@@ -518,7 +613,6 @@ class Parser:
             assert False, f"Token {self.token_list[self.curr_token_pos - 1]} not in ALL_TOKENS"
         return root_node
 
-
     def handle_keyword(self):
         root_node = None
         keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
@@ -527,13 +621,16 @@ class Parser:
         # Move past the parenthesis
         self.advance_token()
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                root_node = self.process_token(root_node)
-                self.advance_token()
-
+            root_node = self.process_token(root_node)
+            self.advance_token()
+        if not root_node:
+            raise KeywordMisuseException(1, keyword_node.token.position, keyword_node.value)
         keyword_node.child_node = root_node
         root_node.parent_node = keyword_node
         return keyword_node
 
+    def handle_string(self):
+        return StringNode(self.curr_token, self.curr_token.value, None)
 
 ##########
 # Compiler
@@ -546,8 +643,8 @@ class Compiler:
 
     def compile(self):
         self.create_empty_out_file()
+        self.create_global_start()
         self.create_keyword_functions()
-        self.create_assembly_skeleton()
         self.write_assembly()
         self.create_assembly_for_exit()
 
@@ -557,58 +654,64 @@ class Compiler:
 
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
+            # for line in self.traverse_tree(self.ast):
             for line in self.traverse_tree(self.ast):
                 compiled_program.write(line)
 
     def traverse_tree(self, node):
-        if type(node) is LiteralNode:
-            node.visited = True
-            print(f"Pushing {node.value} onto stack.")
-            return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
-        elif type(node) is KeywordNode and not node.visited:
-            node.visited = True
-            return self.traverse_tree(node.child_node)
-        elif type(node) is KeywordNode and node.visited:
-            print(
-                f"Traversing from {node} to child node {node.child_node}")
-            return self.get_keyword_asm()
-        # TODO(map) This should maybe all be under the condition for ExpressionNodes
-        elif node.left_side and not node.left_side.visited:
-            print(
-                f"Traversing from {node} to left side node {node.left_side}")
-            return self.traverse_tree(node.left_side)
-        elif node.right_side and not node.right_side.visited:
-            print(
-                f"Traversing from {node} to right side node {node.right_side}")
-            return self.traverse_tree(node.right_side)
-        elif node.left_side.visited and node.right_side.visited and node.parent_node:
-            node.visited = True
-            print(f"Performing node {node.value} op for {node}.")
-            if node.value == "+":
-                return self.get_add_asm() + self.traverse_tree(node.parent_node)
-            elif node.value == "-":
-                return self.get_sub_asm() + self.traverse_tree(node.parent_node)
-            elif node.value == "*":
-                return self.get_mul_asm() + self.traverse_tree(node.parent_node)
-            elif node.value == "/":
-                return self.get_div_asm() + self.traverse_tree(node.parent_node)
+        if isinstance(node, ExpressionNode):
+            if node.left_side and not node.left_side.visited:
+                print(
+                    f"Traversing from {node} to left side node {node.left_side}")
+                return self.traverse_tree(node.left_side)
+            elif node.right_side and not node.right_side.visited:
+                print(
+                    f"Traversing from {node} to right side node {node.right_side}")
+                return self.traverse_tree(node.right_side)
             else:
-                assert False, f"Unrecognized node value {node.value}"
-        elif not node.parent_node:
-            print(f"Performing root node {node.value} op.")
-            if node.value == "+":
-                return self.get_add_asm()
-            elif node.value == "-":
-                return self.get_sub_asm()
-            elif node.value == "*":
-                return self.get_mul_asm()
-            elif node.value == "/":
-                return self.get_div_asm()
+                node.visited = True
+                if node.parent_node:
+                    return self.process_op_node(node) + self.traverse_tree(node.parent_node)
+                else:
+                    return self.process_op_node(node)
+        elif isinstance(node, LiteralNode):
+            node.visited = True
+            if node.parent_node:
+                return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
-                assert False, f"Unrecognized root node value {node.value}"
+                return self.get_push_number_onto_stack_asm(node.value)
+        elif isinstance(node, KeywordNode):
+            if node.child_node and not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            elif node.parent_node:
+                node.visited = True
+                return self.get_keyword_asm() + self.traverse_tree(node.parent_node)
+            else:
+                node.visted = True
+                return self.get_keyword_asm()
+        elif isinstance(node, StringNode):
+            # TODO(map) This is bad for multiple strings and multi line because
+            # we need to track all the strings along with their associated name
+            string_count = 1
+            node.visited = True
+            if node.parent_node:
+                return self.get_string_asm(node.value, len(node.value), string_count) + self.traverse_tree(node.parent_node)
+            else:
+                return self.get_string_asm(node.value, len(node.value), string_count)
         else:
-            assert False, (f"This node type {type(node)} is"
-                           "not yet implemented.")
+            assert False, (f"This node type {type(node)} is not yet implemented.")
+
+    def process_op_node(self, node):
+        if node.value == "+":
+            return self.get_add_asm()
+        elif node.value == "-":
+            return self.get_sub_asm()
+        elif node.value == "*":
+            return self.get_mul_asm()
+        elif node.value == "/":
+            return self.get_div_asm()
+        else:
+            assert False, f"Unrecognized root node value {node.value}"
 
     def create_keyword_functions(self):
         # TODO(map) I should do a check to see if the section text already exits.
@@ -620,9 +723,10 @@ class Compiler:
             compiled_program.write("        pop rbx\n")
             compiled_program.write("        ;; Do the print with the value\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        add rax, 48\n")
-            compiled_program.write("        push rax\n")
-            compiled_program.write("        mov rsi, rsp\n")
+            # TODO(map) This should conditionally be used to print a number.
+            # compiled_program.write("        add rax, 48\n")
+            # compiled_program.write("        push rax\n")
+            compiled_program.write("        mov rsi, rax\n")
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        mov rdx, 4\n")
@@ -633,11 +737,10 @@ class Compiler:
             compiled_program.write("        push rbx\n")
             compiled_program.write("        ret\n")
 
-
-    def create_assembly_skeleton(self):
+    def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
             compiled_program.write("    global _start\n")
-            compiled_program.write("        _start:\n")
 
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
@@ -677,6 +780,13 @@ class Compiler:
                 "    call print\n"
                 ]
 
+    def get_string_asm(self, string, string_length, string_count):
+        return [
+            f"section .string_{string_count}\n",
+            f"    string_{string_count} db '{string}', {string_length}\n",
+            f"    len_{string_count} equ $ - string_{string_count}\n"
+        ]
+
     def create_assembly_for_exit(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    ;; Exit\n")
@@ -694,6 +804,7 @@ def run_program():
 ######
 # main
 ######
+program_lines = None
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
@@ -709,13 +820,14 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     with open(args.program, 'r') as program:
+        raw_program = program
         token_list = None
         ast = None
         if args.lex or args.parse or args.compile or args.run:
-            lines = program.readlines()
-            if len(lines) > 1:
+            program_lines = program.readlines()
+            if len(program_lines) > 1:
                 assert False, "Multi-line processing not enabled."
-            lexer = Lexer(lines)
+            lexer = Lexer(program_lines)
             token_list = lexer.lex()
             print(token_list)
         if args.parse or args.compile or args.run:

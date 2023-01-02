@@ -6,6 +6,7 @@ from katana.katana import (
     EOF_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
+    STRING_TOKEN_TYPE,
     InvalidTokenException,
     Lexer,
     MINUS_TOKEN_TYPE,
@@ -23,6 +24,7 @@ from katana.katana import (
     LOW,
     UnclosedParenthesisError,
     NoTerminatorError,
+    UnclosedQuotationException,
     UnknownKeywordError,
 )
 
@@ -305,13 +307,13 @@ class TestLexerParenthesis:
     def test_unclosed_paren_error(self):
         program = ["1 + (2 + 3;"]
         lexer = Lexer(program)
-        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis in program."):
+        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:5."):
             lexer.lex()
 
     def test_unclosed_paren_error_other_side(self):
-        program = ["1 + )2 + 3;"]
+        program = ["1 + 2) + 3;"]
         lexer = Lexer(program)
-        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis in program."):
+        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:5."):
             lexer.lex()
 
 
@@ -344,10 +346,10 @@ class TestInvalidTokenException:
         """
         Ensures that if an unknown token shows up an exception is raised.
         """
-        program = ["\"string\";"]
+        program = ["';"]
         lexer = Lexer(program)
         # with pytest.raises(SystemExit):
-        with pytest.raises(InvalidTokenException, match="Invalid token '\"' at 1:0."):
+        with pytest.raises(InvalidTokenException, match="Invalid token ''' at 1:0."):
             lexer.lex()
 
 
@@ -381,3 +383,29 @@ class TestKeywordPrint:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+
+class TestQuotationCharacter:
+
+    def test_quote_character(self):
+        program = ["\"test string\";\n"]
+        token_list = [
+            Token(STRING_TOKEN_TYPE, 0, "test string", LOW),
+            Token(EOL_TOKEN_TYPE, 13, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 15, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_exception_raised_with_no_closing_quote_eol(self):
+        program = ["\"test string;\n"]
+        lexer = Lexer(program)
+        with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
+            lexer.lex()
+
+    def test_exception_raised_with_no_closing_quote_new_line(self):
+        program = ["\"test string\n"]
+        lexer = Lexer(program)
+        with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
+            lexer.lex()
