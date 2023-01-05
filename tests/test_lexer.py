@@ -35,6 +35,7 @@ class TestComments:
     def test_single_line_comment(self):
         program = ["// Comment\n"]
         token_list = [Token(COMMENT_TOKEN_TYPE, 0, "// Comment", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 10, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 11, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -46,6 +47,7 @@ class TestComments:
                       Token(NUM_TOKEN_TYPE, 4, "2", LOW),
                       Token(EOL_TOKEN_TYPE, 5, ";", LOW),
                       Token(COMMENT_TOKEN_TYPE, 7, "// Comment", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 17, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 18, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -53,19 +55,22 @@ class TestComments:
     # TODO(map) This doesn't work yet because I don't have multi-line process
     @ pytest.mark.skip
     def test_comment_before_program(self):
-        program = ["// Comment\n1 + 2\n"]
+        program = ["// Comment\n", "1 + 2;\n"]
         token_list = [Token(COMMENT_TOKEN_TYPE, 0, "// Comment", LOW),
-                      Token(NUM_TOKEN_TYPE, 11, "1", LOW),
-                      Token(PLUS_TOKEN_TYPE, 13, "+", MEDIUM),
-                      Token(NUM_TOKEN_TYPE, 15, "2", LOW),
-                      Token(EOF_TOKEN_TYPE, 17, "EOF", LOW)]
+                      Token(NEW_LINE_TOKEN_TYPE, 10, "\n", LOW),
+                      Token(NUM_TOKEN_TYPE, 0, "1", LOW),
+                      Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
+                      Token(NUM_TOKEN_TYPE, 4, "2", LOW),
+                      Token(EOL_TOKEN_TYPE, 5, ";", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 6, "\n", LOW),
+                      Token(EOF_TOKEN_TYPE, 18, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
     # TODO(map) This doesn't work yet because I don't have multi-line process
     @ pytest.mark.skip
     def test_comment_after_program(self):
-        program = "1 + 2\n// Comment\n"
+        program = "1 + 2;\n// Comment\n"
         token_list = [Token(NUM_TOKEN_TYPE, 0, "1", LOW),
                       Token(PLUS_TOKEN_TYPE, 2, "+", MEDIUM),
                       Token(NUM_TOKEN_TYPE, 4, "2", LOW),
@@ -305,13 +310,13 @@ class TestLexerParenthesis:
         assert token_list == lexer.lex()
 
     def test_unclosed_paren_error(self):
-        program = ["1 + (2 + 3;"]
+        program = ["1 + (2 + 3;\n"]
         lexer = Lexer(program)
         with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:5."):
             lexer.lex()
 
     def test_unclosed_paren_error_other_side(self):
-        program = ["1 + 2) + 3;"]
+        program = ["1 + 2) + 3;\n"]
         lexer = Lexer(program)
         with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:5."):
             lexer.lex()

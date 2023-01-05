@@ -352,17 +352,61 @@ class Lexer:
     def __init__(self, program):
         self.start_pos = -1
         self.curr_pos = -1
-        self.program = program[0]
-        self.end_pos = len(program[0])
+        self.curr_line = 0
+        self.curr_line_len = len(program[0])
+        self.program = program
+        self.end_pos = sum(len(line) for line in program)
+        self.end_line = len(program)
         self.token_list = []
         self.has_next_char = True
+        self.has_next_line = True
         self.unpaired_parens = 0
         self.misused_keywords = 0
+        self.comment_index = -1
 
     def lex(self):
         paren_error_loc = 0
-        while self.has_next_char:
-            self.advance()
+        while self.has_next_char and self.has_next_line:
+            self.advance_character()
+            self.update_comment_index()
+            # There is only a comment on this line and nothing else.
+            if self.comment_index == 0:
+                if self.comment_index == 0:
+                    token = Token(COMMENT_TOKEN_TYPE, self.curr_pos, self.program[self.curr_line][:-1], LOW)
+                    if token.ttype not in IGNORE_TOKENS:
+                        self.token_list.append(token)
+                    token = Token(NEW_LINE_TOKEN_TYPE, len(self.program[self.curr_line]) - 1, self.program[self.curr_line][-1:], LOW)
+                    if token.ttype not in IGNORE_TOKENS:
+                        self.token_list.append(token)
+                    self.advance_line()
+            elif self.comment_index > 0 and self.curr_pos == self.comment_index:
+                token = Token(COMMENT_TOKEN_TYPE, self.curr_pos, self.program[self.curr_line][self.comment_index:-1], LOW)
+                if token.ttype not in IGNORE_TOKENS:
+                    self.token_list.append(token)
+                token = Token(NEW_LINE_TOKEN_TYPE, len(self.program[self.curr_line]) - 1, self.program[self.curr_line][-1:], LOW)
+                if token.ttype not in IGNORE_TOKENS:
+                    self.token_list.append(token)
+                self.advance_line()
+            else:
+                token = self.generate_token(self.program[self.curr_line][self.curr_pos])
+                # Advance the line if we have an EOL token
+                if token.ttype == NEW_LINE_TOKEN_TYPE:
+                    self.advance_line()
+                else:
+                    if token.ttype == NUM_TOKEN_TYPE:
+                        while self.peek().ttype == NUM_TOKEN_TYPE:
+                            token.value += self.peek().value
+                            self.curr_pos += 1
+                            token.position += 1
+                    elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                        self.unpaired_parens += 1
+                    elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                        self.unpaired_parens -= 1
+                if token.ttype not in IGNORE_TOKENS:
+                    self.token_list.append(token)
+
+        # Always add end of file token to list
+        self.token_list.append(Token(EOF_TOKEN_TYPE, self.end_pos, EOF, LOW))
 
         for token in self.token_list:
             if token.ttype == LEFT_PAREN_TOKEN_TYPE:
@@ -380,36 +424,32 @@ class Lexer:
 
         return self.token_list
 
-    def advance(self):
+    def advance_character(self):
+        # NOTE: This method is not smart enough to know break out of the parent
+        # loop so we need to check the conditions mid loop before processing
+        # the new character to get the token.
+        # Check advance based on curr_pos and end_pos
         self.curr_pos += 1
-        if self.curr_pos == self.end_pos:
+        if self.curr_pos >= self.end_pos:
             self.has_next_char = False
-            self.token_list.append(
-                Token(EOF_TOKEN_TYPE, self.curr_pos, EOF, LOW))
-        else:
-            token = self.generate_token(self.program[self.curr_pos])
-            if token.ttype == NUM_TOKEN_TYPE:
-                while self.peek().ttype == NUM_TOKEN_TYPE:
-                    token.value += self.peek().value
-                    self.curr_pos += 1
-                    token.position += 1
-            elif token.ttype == DIVIDE_TOKEN_TYPE:
-                # TODO(map) This wouldn't be necessary with a good pre-processor.
-                # Instead we should split the line on // and then pass the second
-                # array (if one exists) or the first if number of arrays == 1
-                if self.peek().ttype == DIVIDE_TOKEN_TYPE:
-                    token = self.get_single_line_comment_token()
-            elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                self.unpaired_parens += 1
-            elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-                self.unpaired_parens -= 1
-            if token.ttype not in IGNORE_TOKENS:
-                self.token_list.append(token)
+
+    def advance_line(self):
+        # Go to the next line and reset the column and comment index.
+        self.comment_index = -1
+        self.curr_pos = -1
+        self.curr_line += 1
+        # Check to see if we are over the number of lines in the program.
+        if self.curr_line >= self.end_line:
+            self.has_next_line = False
+
+    def update_comment_index(self):
+        if "//" in self.program[self.curr_line]:
+            self.comment_index = self.program[self.curr_line].index("//")
 
     def peek(self) -> Token:
         peek_token = Token(EOF_TOKEN_TYPE, self.curr_pos + 1, EOF, LOW)
         if self.curr_pos + 1 < self.end_pos:
-            peek_token = self.generate_token(self.program[self.curr_pos + 1])
+            peek_token = self.generate_token(self.program[self.curr_line][self.curr_pos + 1])
         return peek_token
 
     def process_comment(self) -> Token:
@@ -478,8 +518,8 @@ class Lexer:
     def generate_keyword_token(self):
         keyword = ""
         original_pos = self.curr_pos
-        while self.program[self.curr_pos].isalpha():
-            keyword += self.program[self.curr_pos]
+        while self.program[self.curr_line][self.curr_pos].isalpha():
+            keyword += self.program[self.curr_line][self.curr_pos]
             # TODO(map) De-couple the advance from generating the token
             self.curr_pos += 1
 
@@ -495,10 +535,10 @@ class Lexer:
         original_pos = self.curr_pos
         self.curr_pos += 1
 
-        while self.program[self.curr_pos] != '"':
-            if self.program[self.curr_pos] == ";" or self.program[self.curr_pos] == "\n":
+        while self.program[self.curr_line][self.curr_pos] != '"':
+            if self.program[self.curr_line][self.curr_pos] == ";" or self.program[self.curr_line][self.curr_pos] == "\n":
                 raise UnclosedQuotationException(1, self.curr_pos, string)
-            string += self.program[self.curr_pos]
+            string += self.program[self.curr_line][self.curr_pos]
             self.curr_pos += 1
 
         return Token(STRING_TOKEN_TYPE, original_pos, string, LOW)
@@ -849,13 +889,10 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     with open(args.program, 'r') as program:
-        raw_program = program
         token_list = None
         ast = None
         if args.lex or args.parse or args.compile or args.run:
             program_lines = program.readlines()
-            if len(program_lines) > 1:
-                assert False, "Multi-line processing not enabled."
             lexer = Lexer(program_lines)
             token_list = lexer.lex()
             print(token_list)
