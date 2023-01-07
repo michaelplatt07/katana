@@ -2,11 +2,13 @@ import os
 from katana.katana import (
     Compiler,
     Lexer,
-    Parser
+    Parser,
+    Program
 )
 
 
-def get_assembly_for_program(program):
+def get_assembly_for_program(lines):
+    program = Program(lines)
     lexer = Lexer(program)
     token_list = lexer.lex()
     parser = Parser(token_list)

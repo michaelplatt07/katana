@@ -70,7 +70,7 @@ KEYWORDS = ("print")
 class UnclosedParenthesisError(Exception):
     def __init__(self, line_num, col_num):
         super().__init__("Unclosed parenthesis in program.")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
 
     def __str__(self):
@@ -78,10 +78,11 @@ class UnclosedParenthesisError(Exception):
 
 
 # TODO(map) Probably a chance to make the init method more DRY
+# TODO(map) Because the line_num in the program starts at 0 we add 1 for now.
 class InvalidTokenException(Exception):
     def __init__(self, line_num, col_num, character):
         super().__init__("Invalid token.")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
         self.character = character
 
@@ -92,7 +93,7 @@ class InvalidTokenException(Exception):
 class NoTerminatorError(Exception):
     def __init__(self, line_num, col_num):
         super().__init__("Line is not terminted with a semicolon.")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
 
     def __str__(self):
@@ -102,7 +103,7 @@ class NoTerminatorError(Exception):
 class UnknownKeywordError(Exception):
     def __init__(self, line_num, col_num, keyword):
         super().__init__("Unknown keyword")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
         self.keyword = keyword
 
@@ -113,7 +114,7 @@ class UnknownKeywordError(Exception):
 class KeywordMisuseException(Exception):
     def __init__(self, line_num, col_num, keyword):
         super().__init__("Improper use of keyword.")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
         self.keyword = keyword
 
@@ -124,7 +125,7 @@ class KeywordMisuseException(Exception):
 class UnclosedQuotationException(Exception):
     def __init__(self, line_num, col_num, string):
         super().__init__("Unclosed quotation")
-        self.line_num = line_num
+        self.line_num = line_num + 1
         self.col_num = col_num
         self.string = string
 
@@ -136,18 +137,20 @@ class UnclosedQuotationException(Exception):
 # TOKENS
 ########
 class Token:
-    def __init__(self, ttype, position, value, priority):
+    def __init__(self, ttype, col, row, value, priority):
         self.ttype = ttype
-        self.position = position
+        self.col = col
+        self.row = row
         self.value = value
         self.priority = priority
 
     def __repr__(self):
-        return f"[{self.ttype}, {self.position}, {self.value}, {self.priority}]"
+        return f"[{self.ttype}, {self.row}, {self.col}, {self.value}, {self.priority}]"
 
     def __eq__(self, other):
         return (self.ttype == other.ttype
-                and self.position == other.position
+                and self.row == other.row
+                and self.col == other.col
                 and self.value == other.value
                 and self.priority == other.priority)
 
@@ -336,6 +339,48 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
+#########
+# PROGRAM
+#########
+class Program:
+    """
+    Helper class to track relevant information on the program that is being
+    compiled.
+    """
+
+    def __init__(self, lines):
+        self.lines = lines
+        self.curr_col = -1
+        self.curr_line = 0
+        self.curr_line_len = len(lines[0])
+        self.line_count = len(lines)
+        self.end_pos = sum(len(line) for line in lines)
+
+    def advance_line(self):
+        self.curr_line += 1
+
+    def advance_character(self):
+        self.curr_col += 1
+
+    def get_curr_char(self):
+        return self.lines[self.curr_line][self.curr_col]
+
+    def get_next_char(self):
+        return self.lines[self.curr_line][self.curr_col + 1]
+
+    def has_next_char(self):
+        return self.curr_col + 1 < self.curr_line_len
+
+    def get_curr_line(self):
+        return self.lines[self.curr_line]
+
+    def get_next_line(self):
+        return self.lines[self.curr_line + 1]
+
+    def has_next_line(self):
+        return self.curr_line + 1 < self.line_count + 1
+
+
 ########
 # UTILS
 ########
@@ -350,54 +395,51 @@ def print_exception_message(program, position, exception):
 #######
 class Lexer:
     def __init__(self, program):
-        self.start_pos = -1
-        self.curr_pos = -1
-        self.curr_line = 0
-        self.curr_line_len = len(program[0])
         self.program = program
-        self.end_pos = sum(len(line) for line in program)
-        self.end_line = len(program)
         self.token_list = []
-        self.has_next_char = True
-        self.has_next_line = True
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
 
     def lex(self):
-        paren_error_loc = 0
-        while self.has_next_char and self.has_next_line:
-            self.advance_character()
+        paren_error_row = 0
+        paren_error_col = 0
+        # import pdb; pdb.set_trace()
+        while self.program.has_next_char() and self.program.has_next_line():
+            self.program.advance_character()
             self.update_comment_index()
             # There is only a comment on this line and nothing else.
             if self.comment_index == 0:
                 if self.comment_index == 0:
-                    token = Token(COMMENT_TOKEN_TYPE, self.curr_pos, self.program[self.curr_line][:-1], LOW)
+                    token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, self.program.get_curr_line()[:-1], LOW)
                     if token.ttype not in IGNORE_TOKENS:
                         self.token_list.append(token)
-                    token = Token(NEW_LINE_TOKEN_TYPE, len(self.program[self.curr_line]) - 1, self.program[self.curr_line][-1:], LOW)
+                    token = Token(NEW_LINE_TOKEN_TYPE, len(self.program.get_curr_line()) - 1, self.program.curr_line, self.program.get_curr_line()[-1:], LOW)
                     if token.ttype not in IGNORE_TOKENS:
                         self.token_list.append(token)
-                    self.advance_line()
-            elif self.comment_index > 0 and self.curr_pos == self.comment_index:
-                token = Token(COMMENT_TOKEN_TYPE, self.curr_pos, self.program[self.curr_line][self.comment_index:-1], LOW)
+                    self.program.advance_line()
+                    self.comment_index = -1
+            elif self.comment_index > 0 and self.program.curr_col == self.comment_index:
+                token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, self.program.get_curr_line()[self.comment_index:-1], LOW)
                 if token.ttype not in IGNORE_TOKENS:
                     self.token_list.append(token)
-                token = Token(NEW_LINE_TOKEN_TYPE, len(self.program[self.curr_line]) - 1, self.program[self.curr_line][-1:], LOW)
+                token = Token(NEW_LINE_TOKEN_TYPE, len(self.program.get_curr_line()) - 1, self.program.curr_line, self.program.get_curr_line()[-1:], LOW)
                 if token.ttype not in IGNORE_TOKENS:
                     self.token_list.append(token)
-                self.advance_line()
+                self.program.advance_line()
+                self.comment_index = -1
             else:
-                token = self.generate_token(self.program[self.curr_line][self.curr_pos])
+                token = self.generate_token(self.program.get_curr_char())
                 # Advance the line if we have an EOL token
                 if token.ttype == NEW_LINE_TOKEN_TYPE:
-                    self.advance_line()
+                    self.program.advance_line()
+                    self.comment_index = -1
                 else:
                     if token.ttype == NUM_TOKEN_TYPE:
                         while self.peek().ttype == NUM_TOKEN_TYPE:
                             token.value += self.peek().value
-                            self.curr_pos += 1
-                            token.position += 1
+                            self.program.curr_col += 1
+                            # token.col += 1
                     elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
                         self.unpaired_parens += 1
                     elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
@@ -406,81 +448,65 @@ class Lexer:
                     self.token_list.append(token)
 
         # Always add end of file token to list
-        self.token_list.append(Token(EOF_TOKEN_TYPE, self.end_pos, EOF, LOW))
+        self.token_list.append(Token(EOF_TOKEN_TYPE, 0, self.program.curr_line, EOF, LOW))
 
         for token in self.token_list:
             if token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 self.unpaired_parens += 1
-                paren_error_loc = token.position
+                paren_error_row = token.row
+                paren_error_col = token.col
             elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
                 self.unpaired_parens -= 1
-                paren_error_loc = token.position
+                paren_error_row = token.row
+                paren_error_col = token.col
 
         if self.unpaired_parens != 0:
-            upe = UnclosedParenthesisError(1, 5)
-            self.print_invalid_character_error(self.program, paren_error_loc)
+            upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
+            self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
             print(upe)
             raise upe
 
         return self.token_list
 
-    def advance_character(self):
-        # NOTE: This method is not smart enough to know break out of the parent
-        # loop so we need to check the conditions mid loop before processing
-        # the new character to get the token.
-        # Check advance based on curr_pos and end_pos
-        self.curr_pos += 1
-        if self.curr_pos >= self.end_pos:
-            self.has_next_char = False
-
-    def advance_line(self):
-        # Go to the next line and reset the column and comment index.
-        self.comment_index = -1
-        self.curr_pos = -1
-        self.curr_line += 1
-        # Check to see if we are over the number of lines in the program.
-        if self.curr_line >= self.end_line:
-            self.has_next_line = False
-
     def update_comment_index(self):
-        if "//" in self.program[self.curr_line]:
-            self.comment_index = self.program[self.curr_line].index("//")
+        if "//" in self.program.get_curr_line():
+            self.comment_index = self.program.get_curr_line().index("//")
 
     def peek(self) -> Token:
-        peek_token = Token(EOF_TOKEN_TYPE, self.curr_pos + 1, EOF, LOW)
-        if self.curr_pos + 1 < self.end_pos:
-            peek_token = self.generate_token(self.program[self.curr_line][self.curr_pos + 1])
+        peek_token = Token(EOF_TOKEN_TYPE, self.program.curr_col + 1, self.program.curr_line, EOF, LOW)
+        if self.program.curr_col + 1 < self.program.end_pos:
+            peek_token = self.generate_token(self.program.get_next_char())
         return peek_token
 
     def process_comment(self) -> Token:
         assert False, "Not implemented."
 
     def get_single_line_comment_token(self) -> Token:
-        end_of_comment_pos = self.program[self.curr_pos:].index(
-            "\n") + self.curr_pos
-        token = Token(COMMENT_TOKEN_TYPE, self.curr_pos,
-                      self.program[self.curr_pos:end_of_comment_pos], LOW)
-        self.curr_pos = end_of_comment_pos
+        end_of_comment_pos = self.program.get_curr_line()[self.program.curr_col:].index(
+            "\n") + self.program.curr_col
+        token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line,
+                      self.program.get_curr_line()[self.program.curr_col:end_of_comment_pos], LOW)
+        self.program.curr_col = end_of_comment_pos
         return token
 
     def generate_token(self, character) -> Token:
         try:
             if character.isnumeric():
-                return Token(NUM_TOKEN_TYPE, self.curr_pos, character, LOW)
+                return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '+':
-                return Token(PLUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+                return Token(PLUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
             elif character == '-':
-                return Token(MINUS_TOKEN_TYPE, self.curr_pos, character, MEDIUM)
+                return Token(MINUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
             elif character == '*':
-                return Token(MULTIPLY_TOKEN_TYPE, self.curr_pos, character, HIGH)
+                return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
-                return Token(DIVIDE_TOKEN_TYPE, self.curr_pos, character, HIGH)
+                return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '(':
-                return Token(LEFT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+                return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
-                return Token(RIGHT_PAREN_TOKEN_TYPE, self.curr_pos, character, VERY_HIGH)
+                return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
-                return Token(EOL_TOKEN_TYPE, self.curr_pos, character, LOW)
+                return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '"':
                 return self.generate_string_token()
             elif character.isalpha():
@@ -488,60 +514,60 @@ class Lexer:
             elif character == "\n":  # Don't care about return for now
                 if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
                     # Increment by one so we show the arrow at the end of line.
-                    raise NoTerminatorError(1, self.curr_pos + 1)
-                return Token(NEW_LINE_TOKEN_TYPE, self.curr_pos, character, LOW)
+                    raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
+                return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isspace():  # Never care about spaces
-                return Token(SPACE_TOKEN_TYPE, self.curr_pos, character, LOW)
+                return Token(SPACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             else:
-                raise InvalidTokenException(1, self.curr_pos, character)
+                raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
         except NoTerminatorError as nte:
-            self.print_invalid_character_error(self.program, self.curr_pos)
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(nte)
             raise nte
         except InvalidTokenException as ite:
-            self.print_invalid_character_error(self.program, self.curr_pos)
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(ite)
             raise ite
         except UnknownKeywordError as uke:
-            self.print_invalid_character_error(self.program, self.curr_pos)
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(uke)
             raise uke
         except UnclosedQuotationException as uqe:
-            self.print_invalid_character_error(self.program, self.curr_pos)
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(uqe)
             raise uqe
 
-    def print_invalid_character_error(self, program, position):
+    def print_invalid_character_error(self, program, row, col):
         print(program)
-        print(" "*position + "^")
+        print(" "*row + "^")
 
     def generate_keyword_token(self):
         keyword = ""
-        original_pos = self.curr_pos
-        while self.program[self.curr_line][self.curr_pos].isalpha():
-            keyword += self.program[self.curr_line][self.curr_pos]
+        original_pos = self.program.curr_col
+        while self.program.get_curr_char().isalpha():
+            keyword += self.program.get_curr_char()
             # TODO(map) De-couple the advance from generating the token
-            self.curr_pos += 1
+            self.program.curr_col += 1
 
         # TODO(map) This is a dirty hack and will be resolved when I decouple
         # the problem in the TODO above.
-        self.curr_pos -= 1
+        self.program.curr_col -= 1
         if keyword not in KEYWORDS:
-            raise UnknownKeywordError(1, original_pos, keyword)
-        return Token(KEYWORD_TOKEN_TYPE, original_pos, keyword, ULTRA_HIGH)
+            raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
+        return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
 
     def generate_string_token(self):
         string = ""
-        original_pos = self.curr_pos
-        self.curr_pos += 1
+        original_pos = self.program.curr_col
+        self.program.curr_col += 1
 
-        while self.program[self.curr_line][self.curr_pos] != '"':
-            if self.program[self.curr_line][self.curr_pos] == ";" or self.program[self.curr_line][self.curr_pos] == "\n":
-                raise UnclosedQuotationException(1, self.curr_pos, string)
-            string += self.program[self.curr_line][self.curr_pos]
-            self.curr_pos += 1
+        while self.program.get_curr_char() != '"':
+            if self.program.get_curr_char() == ";" or self.program.get_curr_char() == "\n":
+                raise UnclosedQuotationException(self.program.curr_line, self.program.curr_col, string)
+            string += self.program.get_curr_char()
+            self.program.curr_col += 1
 
-        return Token(STRING_TOKEN_TYPE, original_pos, string, LOW)
+        return Token(STRING_TOKEN_TYPE, original_pos, self.program.curr_line, string, LOW)
 
 
 ########
@@ -888,12 +914,12 @@ if __name__ == "__main__":
                             help="Run the assembled program.")
     args = arg_parser.parse_args()
 
-    with open(args.program, 'r') as program:
+    with open(args.program, 'r') as code:
         token_list = None
         ast = None
         if args.lex or args.parse or args.compile or args.run:
-            program_lines = program.readlines()
-            lexer = Lexer(program_lines)
+            program = Program(code.readlines())
+            lexer = Lexer(program)
             token_list = lexer.lex()
             print(token_list)
         if args.parse or args.compile or args.run:
