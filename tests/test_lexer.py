@@ -53,30 +53,29 @@ class TestComments:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    # TODO(map) This doesn't work yet because I don't have multi-line process
-    @ pytest.mark.skip
     def test_comment_before_program(self):
         program = Program(["// Comment\n", "1 + 2;\n"])
         token_list = [Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
                       Token(NEW_LINE_TOKEN_TYPE, 10, 0, "\n", LOW),
-                      Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
-                      Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
-                      Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
-                      Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
-                      Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]
+                      Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
+                      Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
+                      Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
+                      Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 6, 1, "\n", LOW),
+                      Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    # TODO(map) This doesn't work yet because I don't have multi-line process
-    @ pytest.mark.skip
     def test_comment_after_program(self):
         program = Program(["1 + 2;\n", "// Comment\n"])
         token_list = [Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
                       Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
                       Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
-                      Token(COMMENT_TOKEN_TYPE, 6, 0, "// Comment", LOW),
-                      Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]
+                      Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
+                      Token(COMMENT_TOKEN_TYPE, 0, 1, "// Comment", LOW),
+                      Token(NEW_LINE_TOKEN_TYPE, 10, 1, "\n", LOW),
+                      Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 

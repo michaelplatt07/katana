@@ -357,6 +357,7 @@ class Program:
         self.end_pos = sum(len(line) for line in lines)
 
     def advance_line(self):
+        self.curr_col = -1
         self.curr_line += 1
 
     def advance_character(self):
