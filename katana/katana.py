@@ -29,7 +29,9 @@ NUM_TOKEN_TYPE = "NUM"
 NEW_LINE_TOKEN_TYPE = "NEWLINE"
 PLUS_TOKEN_TYPE = "PLUS"
 KEYWORD_TOKEN_TYPE = "KEYWORD"
+LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_PAREN"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
+RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_PAREN"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 STRING_TOKEN_TYPE = "STRING"
 SPACE_TOKEN_TYPE = "SPACE"
@@ -61,7 +63,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-KEYWORDS = ("print")
+KEYWORDS = ("print", "main")
 
 
 ############
@@ -502,8 +504,12 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '{':
+                return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
                 return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
+            elif character == '}':
+                return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
@@ -538,9 +544,9 @@ class Lexer:
             print(uqe)
             raise uqe
 
-    def print_invalid_character_error(self, program, row, col):
-        print(program)
-        print(" "*row + "^")
+    def print_invalid_character_error(self, program, col, row):
+        print(program.lines[row])
+        print(" "*col + "^")
 
     def generate_keyword_token(self):
         keyword = ""

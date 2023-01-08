@@ -1,6 +1,9 @@
+from typing import NewType
 import pytest
 
 from katana.katana import (
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     Lexer,
     Program,
     Token,
@@ -362,7 +365,7 @@ class TestInvalidTokenException:
             lexer.lex()
 
 
-class TestKeywordPrint:
+class TestKeyword:
 
     def test_invalid_keyword(self):
         """
@@ -388,6 +391,31 @@ class TestKeywordPrint:
             Token(EOL_TOKEN_TYPE, 12, 0, ";", LOW),
             Token(NEW_LINE_TOKEN_TYPE, 13, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_main_function_keyword(self):
+        """
+        Ensures the main method keyword is lexed correctly.
+        """
+        program = Program(["main() {print(1+2);};\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 8, 0, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 0, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 14, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 15, 0, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 16, 0, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 0, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 18, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 19, 0, "}", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 20, 0, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 21, 0, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
