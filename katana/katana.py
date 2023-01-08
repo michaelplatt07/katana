@@ -114,14 +114,15 @@ class UnknownKeywordError(Exception):
 
 
 class KeywordMisuseException(Exception):
-    def __init__(self, line_num, col_num, keyword):
+    def __init__(self, line_num, col_num, keyword, usage):
         super().__init__("Improper use of keyword.")
         self.line_num = line_num + 1
         self.col_num = col_num
         self.keyword = keyword
+        self.usage = usage
 
     def __str__(self):
-        return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. 'print' should have one parameter"
+        return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. \n   Sample Usage: {self.usage}"
 
 
 class UnclosedQuotationException(Exception):
@@ -686,16 +687,35 @@ class Parser:
         keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
         # Move past keyword token
         self.advance_token()
-        # Move past the parenthesis
+
+        if keyword_node.value == "print":
+            contents = self.handle_print_keyword(keyword_node.token)
+            keyword_node.child_node = contents
+            contents.parent_node = keyword_node
+        else:
+            assert False, f"Keyword {keyword_node.value} not implemented"
+
+        return keyword_node
+
+    def handle_print_keyword(self, keyword_token):
+        """Signature is `print(VALUE)`"""
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE): prints the VALUE to the screen")
+
+        # Move past the left paren.
         self.advance_token()
+
+        # Case where `print` was called with nothing to print.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE): prints the VALUE to the screen")
+
+        # Parse the inner parts of the print function
+        root_node = None
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
             root_node = self.process_token(root_node)
             self.advance_token()
-        if not root_node:
-            raise KeywordMisuseException(1, keyword_node.token.position, keyword_node.value)
-        keyword_node.child_node = root_node
-        root_node.parent_node = keyword_node
-        return keyword_node
+        return root_node
 
     def handle_string(self):
         return StringNode(self.curr_token, self.curr_token.value, None)
@@ -926,6 +946,7 @@ if __name__ == "__main__":
         ast = None
         if args.lex or args.parse or args.compile or args.run:
             program = Program(code.readlines())
+            program_lines = program.lines
             lexer = Lexer(program)
             token_list = lexer.lex()
             print(token_list)

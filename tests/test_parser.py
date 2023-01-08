@@ -1,4 +1,6 @@
 from katana.katana import (
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     KeywordNode,
     LiteralNode,
     MultiplyDivideNode,
@@ -426,6 +428,30 @@ class TestKeywordParser:
         ]
         three_node = LiteralNode(token_list[2], "3")
         ast = KeywordNode(token_list[0], "print", three_node)
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_main_with_literal(self):
+        """
+        Given a program like:
+        main() { 3; };
+        Expected to return an AST like:
+        (main(3))
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 0, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        three_node = LiteralNode(token_list[4], "3")
+        ast = KeywordNode(token_list[0], "main", three_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
 
