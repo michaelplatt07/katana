@@ -386,7 +386,6 @@ class Program:
     def advance_line(self):
         self.curr_col = -1
         self.curr_line += 1
-        # TODO(map) Is this normal to use methods for checks?
         if self.has_next_line():
             self.curr_line_len = len(self.get_curr_line())
 
@@ -428,6 +427,8 @@ class Lexer:
     def __init__(self, program):
         self.program = program
         self.token_list = []
+        self.left_paren_idx_list = []
+        self.right_paren_idx_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
@@ -467,50 +468,43 @@ class Lexer:
                     self.comment_index = -1
                 else:
                     if token.ttype == NUM_TOKEN_TYPE:
-                        while self.peek().ttype == NUM_TOKEN_TYPE:
-                            token.value += self.peek().value
+                        while self.program.get_next_char().isnumeric():
+                            token.value += self.program.get_next_char()
                             self.program.curr_col += 1
-                            # token.col += 1
                     elif token.ttype == LEFT_PAREN_TOKEN_TYPE:
                         self.unpaired_parens += 1
+                        self.left_paren_idx_list.append(len(self.token_list))
                     elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
                         self.unpaired_parens -= 1
+                        self.right_paren_idx_list.append(len(self.token_list))
                 if token.ttype not in IGNORE_TOKENS:
                     self.token_list.append(token)
 
         # Always add end of file token to list
         self.token_list.append(Token(EOF_TOKEN_TYPE, 0, self.program.curr_line, EOF, LOW))
 
-        for token in self.token_list:
-            if token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                self.unpaired_parens += 1
-                paren_error_row = token.row
-                paren_error_col = token.col
-            elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-                self.unpaired_parens -= 1
-                paren_error_row = token.row
-                paren_error_col = token.col
+        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
+            for token in self.token_list:
+                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens += 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
+                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens -= 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
 
-        if self.unpaired_parens != 0:
-            upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-            self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
-            print(upe)
-            raise upe
+            if self.unpaired_parens != 0:
+                upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
+                self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
+                print(upe)
+                raise upe
 
         return self.token_list
 
     def update_comment_index(self):
         if "//" in self.program.get_curr_line():
             self.comment_index = self.program.get_curr_line().index("//")
-
-    def peek(self) -> Token:
-        peek_token = Token(EOF_TOKEN_TYPE, self.program.curr_col + 1, self.program.curr_line, EOF, LOW)
-        if self.program.curr_col + 1 < self.program.end_pos:
-            peek_token = self.generate_token(self.program.get_next_char())
-        return peek_token
-
-    def process_comment(self) -> Token:
-        assert False, "Not implemented."
 
     def get_single_line_comment_token(self) -> Token:
         end_of_comment_pos = self.program.get_curr_line()[self.program.curr_col:].index(
@@ -539,6 +533,7 @@ class Lexer:
             elif character == '}':
                 return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
+                self.check_for_valid_termination(character)
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -547,12 +542,7 @@ class Lexer:
             elif character.isalpha():
                 return self.generate_keyword_token()
             elif character == "\n":
-                # Check if there is a continuation character meaning we can go
-                # to next line without needing a semicolon.
-                cont_char_ends_line = self.token_list[len(self.token_list) - 1].ttype in CONTINUATION_TOKENS
-                if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE and not cont_char_ends_line:
-                    # Increment by one so we show the arrow at the end of line.
-                    raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
+                self.check_for_valid_termination(character)
                 return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isspace():  # Never care about spaces
                 return Token(SPACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -578,6 +568,28 @@ class Lexer:
     def print_invalid_character_error(self, program, col, row):
         print(program.lines[row])
         print(" "*col + "^")
+
+    def check_for_valid_termination(self, value):
+        if value == "\n":
+            is_previous_token_continuation_type = self.token_list[len(self.token_list) - 1].ttype in CONTINUATION_TOKENS
+            is_previous_token_eol = self.token_list[len(self.token_list) - 1].ttype == EOL_TOKEN_TYPE
+            # TODO(map) Should I check to make sure there is not a semicolon?
+            if not is_previous_token_continuation_type and not is_previous_token_eol:
+                raise NoTerminatorError(self.program.curr_line, self.program.curr_col)
+            elif is_previous_token_continuation_type or is_previous_token_eol:
+                pass
+            else:
+                assert False, "Don't know how to handle new line termination."
+        elif value == ")":
+            if len(self.left_paren_idx_list) > 0:
+                terminator_present = self.program.get_next_char() == ";"
+                left_paren_first_token = self.left_paren_idx_list[-1] == 0
+                left_paren_has_keyword = self.token_list[self.left_paren_idx_list[-1] - 1].ttype == KEYWORD_TOKEN_TYPE
+                keyword_is_main = self.token_list[self.left_paren_idx_list[-1] - 1].value == "main"
+                if not terminator_present and not left_paren_first_token and left_paren_has_keyword and not keyword_is_main:
+                    raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
+        else:
+            assert False, "Invalid scenario to check for termination."
 
     def generate_keyword_token(self):
         keyword = ""

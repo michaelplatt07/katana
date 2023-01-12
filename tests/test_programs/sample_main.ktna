@@ -1,1 +1,1 @@
-main() { print("Hello, Katana!") };
+main() { print("Hello, Katana!"); }

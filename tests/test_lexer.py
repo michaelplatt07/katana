@@ -445,14 +445,13 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @pytest.mark.skip
     def test_main_should_error_all_one_line(self):
         """
         Tests the continuation logic if everything is on one line.
         """
         program = Program(["main() {print(1+2)}\n"])
         lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match=""):
+        with pytest.raises(NoTerminatorError, match="Line 1:18 must end with a semicolon."):
             lexer.lex()
 
     def test_main_function_should_error_multi_line(self):
@@ -462,7 +461,7 @@ class TestKeyword:
         """
         program = Program(["main() {\n", "print(1+2)\n", "}\n"])
         lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match="Line 2:11 must end with a semicolon."):
+        with pytest.raises(NoTerminatorError, match="Line 2:10 must end with a semicolon."):
             lexer.lex()
 
 
