@@ -1,6 +1,8 @@
 import pytest
 
 from katana.katana import (
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     Lexer,
     Program,
     Token,
@@ -362,7 +364,7 @@ class TestInvalidTokenException:
             lexer.lex()
 
 
-class TestKeywordPrint:
+class TestKeyword:
 
     def test_invalid_keyword(self):
         """
@@ -391,6 +393,77 @@ class TestKeywordPrint:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_main_function_keyword(self):
+        """
+        Ensures the main method keyword is lexed correctly.
+        """
+        program = Program(["main() {print(1+2);};\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 8, 0, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 0, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 14, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 15, 0, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 16, 0, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 0, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 18, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 19, 0, "}", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 20, 0, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 21, 0, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_main_function_with_new_lines(self):
+        """
+        Same program as above test but with new lines.
+        """
+        program = Program(["main() {\n", "print(1+2);\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 6, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 7, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 10, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 11, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    @pytest.mark.skip
+    def test_main_should_error_all_one_line(self):
+        """
+        Tests the continuation logic if everything is on one line.
+        """
+        program = Program(["main() {print(1+2)}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(NoTerminatorError, match=""):
+            lexer.lex()
+
+    def test_main_function_should_error_multi_line(self):
+        """
+        If there is no semicolon ending the line, an error should be raised for
+        multiline program.
+        """
+        program = Program(["main() {\n", "print(1+2)\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(NoTerminatorError, match="Line 2:11 must end with a semicolon."):
+            lexer.lex()
 
 
 class TestQuotationCharacter:
