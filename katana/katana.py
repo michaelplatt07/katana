@@ -10,6 +10,7 @@ EOF = "EOF"
 #######################
 # Token/Node Priorities
 #######################
+HIGHEST = 9000  # It's over 9000 -_-
 ULTRA_HIGH = 4
 VERY_HIGH = 3
 HIGH = 2
@@ -29,9 +30,9 @@ NUM_TOKEN_TYPE = "NUM"
 NEW_LINE_TOKEN_TYPE = "NEWLINE"
 PLUS_TOKEN_TYPE = "PLUS"
 KEYWORD_TOKEN_TYPE = "KEYWORD"
-LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_PAREN"
+LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
-RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_PAREN"
+RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_CURL_BRACE"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 STRING_TOKEN_TYPE = "STRING"
 SPACE_TOKEN_TYPE = "SPACE"
@@ -55,6 +56,11 @@ ALL_TOKENS = (
     SPACE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     EOF_TOKEN_TYPE
+)
+CONTINUATION_TOKENS = (
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
 )
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
 IGNORE_OPS = (
@@ -216,6 +222,24 @@ class KeywordNode(Node):
         return f"({self.value}({self.child_node}))"
 
 
+class StartNode(Node):
+    """
+    Special node that represents the `main` keyword that starts the program.
+    """
+    def __init__(self, token, value, child_node):
+        super().__init__(token, HIGHEST, None)
+        self.value = value
+        self.child_node = child_node
+
+    def __eq__(self, other):
+        child_equal = self.child_node == other.child_node
+        values_equal = self.value == other.value
+        return child_equal and values_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"({self.value}{self.child_node})"
+
+
 class StringNode(Node):
     """
     Node for strings in the Katana language.
@@ -362,6 +386,9 @@ class Program:
     def advance_line(self):
         self.curr_col = -1
         self.curr_line += 1
+        # TODO(map) Is this normal to use methods for checks?
+        if self.has_next_line():
+            self.curr_line_len = len(self.get_curr_line())
 
     def advance_character(self):
         self.curr_col += 1
@@ -408,10 +435,10 @@ class Lexer:
     def lex(self):
         paren_error_row = 0
         paren_error_col = 0
-        # import pdb; pdb.set_trace()
         while self.program.has_next_char() and self.program.has_next_line():
             self.program.advance_character()
             self.update_comment_index()
+
             # There is only a comment on this line and nothing else.
             if self.comment_index == 0:
                 if self.comment_index == 0:
@@ -519,8 +546,11 @@ class Lexer:
                 return self.generate_string_token()
             elif character.isalpha():
                 return self.generate_keyword_token()
-            elif character == "\n":  # Don't care about return for now
-                if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE:
+            elif character == "\n":
+                # Check if there is a continuation character meaning we can go
+                # to next line without needing a semicolon.
+                cont_char_ends_line = self.token_list[len(self.token_list) - 1].ttype in CONTINUATION_TOKENS
+                if self.token_list[len(self.token_list) - 1].ttype != EOL_TOKEN_TYPE and not cont_char_ends_line:
                     # Increment by one so we show the arrow at the end of line.
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
                 return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -616,6 +646,10 @@ class Parser:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
+            elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+                node = NoOpNode(self.curr_token)
+            elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+                node = NoOpNode(self.curr_token)
             elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
@@ -682,18 +716,29 @@ class Parser:
             assert False, f"Token {self.token_list[self.curr_token_pos - 1]} not in ALL_TOKENS"
         return root_node
 
-    def handle_keyword(self):
-        root_node = None
-        keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
-        # Move past keyword token
-        self.advance_token()
+    def handle_string(self):
+        return StringNode(self.curr_token, self.curr_token.value, None)
 
-        if keyword_node.value == "print":
+    def handle_keyword(self):
+        node_value = self.curr_token.value
+        
+        # TODO(map) Move the methods to a map based on the keyword.
+        if node_value == "print":
+            keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
+            # Move past keyword token
+            self.advance_token()
             contents = self.handle_print_keyword(keyword_node.token)
             keyword_node.child_node = contents
             contents.parent_node = keyword_node
+        elif node_value == "main":
+            keyword_node = StartNode(self.curr_token, self.curr_token.value, None)
+            # Move past keyword token
+            self.advance_token()
+            contents = self.handle_main_keyword(keyword_node.token)
+            keyword_node.child_node = contents
+            contents.parent_node = keyword_node
         else:
-            assert False, f"Keyword {keyword_node.value} not implemented"
+            assert False, f"Keyword {node_value} not implemented"
 
         return keyword_node
 
@@ -708,7 +753,7 @@ class Parser:
 
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE): prints the VALUE to the screen")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE);: prints the VALUE to the screen")
 
         # Parse the inner parts of the print function
         root_node = None
@@ -717,8 +762,37 @@ class Parser:
             self.advance_token()
         return root_node
 
-    def handle_string(self):
-        return StringNode(self.curr_token, self.curr_token.value, None)
+    def handle_main_keyword(self, keyword_token):
+        """Signature is `main() { BODY };`"""
+        # Confirm the left paren is right after the main keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Confirm the right paren closes the left.
+        if not self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+
+        # Move pas the right paren
+        self.advance_token()
+
+        # Confirm left curl brack is present.
+        if not self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+
+        # Move past the left curl brace
+        self.advance_token()
+
+        # Parse the body.
+        root_node = None
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if node and type(node) != NoOpNode:
+                root_node = node 
+            self.advance_token()
+        return root_node
 
 
 ##########
@@ -792,6 +866,12 @@ class Compiler:
             else:
                 node.visted = True
                 return self.get_keyword_asm()
+        elif isinstance(node, StartNode):
+            if node.child_node and not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            else:
+                node.visited = True
+                return []
         elif isinstance(node, StringNode):
             # TODO(map) This is bad for multiple strings and multi line because
             # we need to track all the strings along with their associated name
@@ -905,8 +985,8 @@ class Compiler:
 
     def get_push_string_asm(self, string_count, string_length):
         return [
-            f"push {string_length}\n",
-            f"push string_{string_count}\n",
+            f"    push {string_length}\n",
+            f"    push string_{string_count}\n",
         ]
 
     def create_assembly_for_exit(self):

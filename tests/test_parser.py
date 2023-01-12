@@ -6,6 +6,7 @@ from katana.katana import (
     MultiplyDivideNode,
     Parser,
     PlusMinusNode,
+    StartNode,
     StringNode,
     Token,
     COMMENT_TOKEN_TYPE,
@@ -451,7 +452,7 @@ class TestKeywordParser:
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
         three_node = LiteralNode(token_list[4], "3")
-        ast = KeywordNode(token_list[0], "main", three_node)
+        ast = StartNode(token_list[0], "main", three_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
 
