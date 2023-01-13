@@ -14,7 +14,7 @@ def get_assembly_for_program(lines):
     parser = Parser(token_list)
     ast = parser.parse()
     compiler = Compiler(ast)
-    return compiler.traverse_tree(ast)
+    return compiler.get_assembly()
 
 
 class TestComiplerSingleNodes:

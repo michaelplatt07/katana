@@ -844,11 +844,16 @@ class Compiler:
         compiled_program.write("section .text\n")
         compiled_program.write("    _start:\n")
 
-    def write_assembly(self):
+    def get_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
             asm = []
             for node in self.ast.children_nodes:
                 asm.extend(self.traverse_tree(node))
+            return asm
+
+    def write_assembly(self):
+        with open(self.output_path, 'a') as compiled_program:
+            asm = self.get_assembly()
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
