@@ -212,6 +212,7 @@ class KeywordNode(Node):
         super().__init__(token, ULTRA_HIGH, parent_node)
         self.value = value
         self.child_node = child_node
+        self.child_node.parent_node = self
 
     def __eq__(self, other):
         child_equal = self.child_node == other.child_node
@@ -226,18 +227,24 @@ class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
     """
-    def __init__(self, token, value, child_node):
+    def __init__(self, token, value, children_nodes):
         super().__init__(token, HIGHEST, None)
         self.value = value
-        self.child_node = child_node
+        self.children_nodes = children_nodes
+        for node in self.children_nodes:
+            node.parent_node = self
 
     def __eq__(self, other):
-        child_equal = self.child_node == other.child_node
+        children_equal = self.children_nodes == other.children_nodes
         values_equal = self.value == other.value
-        return child_equal and values_equal and super().__eq__(other)
+        return children_equal and values_equal and super().__eq__(other)
 
     def __repr__(self):
-        return f"({self.value}{self.child_node})"
+        children_nodes = "["
+        for node in self.children_nodes:
+            children_nodes += node.__repr__() + ","
+        children_nodes += "]"
+        return f"({self.value}{self.children_nodes})"
 
 
 class StringNode(Node):
@@ -733,22 +740,22 @@ class Parser:
 
     def handle_keyword(self):
         node_value = self.curr_token.value
-        
+
         # TODO(map) Move the methods to a map based on the keyword.
         if node_value == "print":
-            keyword_node = KeywordNode(self.curr_token, self.curr_token.value, None, None)
+            keyword_token = self.curr_token
             # Move past keyword token
             self.advance_token()
-            contents = self.handle_print_keyword(keyword_node.token)
-            keyword_node.child_node = contents
-            contents.parent_node = keyword_node
+            contents = self.handle_print_keyword(keyword_token)
+            keyword_node = KeywordNode(keyword_token, keyword_token.value, contents, None)
+            # keyword_node.child_node = contents
+            # contents.parent_node = keyword_node
         elif node_value == "main":
-            keyword_node = StartNode(self.curr_token, self.curr_token.value, None)
+            keyword_token = self.curr_token
             # Move past keyword token
             self.advance_token()
-            contents = self.handle_main_keyword(keyword_node.token)
-            keyword_node.child_node = contents
-            contents.parent_node = keyword_node
+            children_nodes = self.handle_main_keyword(keyword_token)
+            keyword_node = StartNode(keyword_token, keyword_token.value, children_nodes)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -797,14 +804,18 @@ class Parser:
         # Move past the left curl brace
         self.advance_token()
 
+        node_list = []
         # Parse the body.
         root_node = None
         while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
             node = self.process_token(root_node)
             if node and type(node) != NoOpNode:
-                root_node = node 
+                root_node = node
+            if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                node_list.append(root_node)
+                root_node = None
             self.advance_token()
-        return root_node
+        return node_list
 
 
 ##########
@@ -879,11 +890,12 @@ class Compiler:
                 node.visted = True
                 return self.get_keyword_asm()
         elif isinstance(node, StartNode):
-            if node.child_node and not node.child_node.visited:
-                return self.traverse_tree(node.child_node)
-            else:
-                node.visited = True
-                return []
+            for a_node in node.children_nodes:
+                if a_node.child_node and not a_node.child_node.visited:
+                    return self.traverse_tree(a_node.child_node)
+                else:
+                    node.visited = True
+                    return []
         elif isinstance(node, StringNode):
             # TODO(map) This is bad for multiple strings and multi line because
             # we need to track all the strings along with their associated name

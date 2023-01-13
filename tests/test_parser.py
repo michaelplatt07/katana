@@ -452,7 +452,7 @@ class TestKeywordParser:
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
         three_node = LiteralNode(token_list[4], "3")
-        ast = StartNode(token_list[0], "main", three_node)
+        ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -473,5 +473,61 @@ class TestQuotationParser:
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", 0)
         ]
         ast = StringNode(token_list[0], "Hello, World!")
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+
+class TestMultiLineParser:
+
+    def test_simple_multi_line(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            print(1+2);
+            print(3+4);
+        }
+        ```
+        Expected to return an AST like:
+        (main (print(1+2)), (print(3+4)))
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 10, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 1, 11, "+", 1),
+            Token(NUM_TOKEN_TYPE, 1, 12, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 14, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 15, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 9, "(", 3),
+            Token(NUM_TOKEN_TYPE, 2, 10, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 11, "+", 1),
+            Token(NUM_TOKEN_TYPE, 2, 12, "4", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 13, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 14, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 15, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+        ]
+
+        one_node = LiteralNode(token_list[7], "1")
+        two_node = LiteralNode(token_list[9], "2")
+        first_plus = PlusMinusNode(token_list[8], "+", one_node, two_node)
+        first_print = KeywordNode(token_list[5], "print", first_plus)
+
+        three_node = LiteralNode(token_list[15], "3")
+        four_node = LiteralNode(token_list[17], "4")
+        second_plus = PlusMinusNode(token_list[16], "+", three_node, four_node)
+        second_print = KeywordNode(token_list[13], "print", second_plus)
+
+        ast = StartNode(token_list[0], "main", [first_print, second_print])
         parser = Parser(token_list)
         assert ast == parser.parse()
