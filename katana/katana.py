@@ -845,10 +845,9 @@ class Compiler:
         compiled_program.write("    _start:\n")
 
     def get_assembly(self):
-        with open(self.output_path, 'a') as compiled_program:
-            asm = []
-            for node in self.ast.children_nodes:
-                asm.extend(self.traverse_tree(node))
+        asm = []
+        for node in self.ast.children_nodes:
+            asm.extend(self.traverse_tree(node))
             return asm
 
     def write_assembly(self):
