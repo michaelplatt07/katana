@@ -824,6 +824,7 @@ class Compiler:
     def __init__(self, ast):
         self.ast = ast
         self.output_path = os.getcwd() + "/out.asm"
+        self.string_count = 0
         self.variables = {}
 
     def compile(self):
@@ -848,7 +849,7 @@ class Compiler:
         asm = []
         for node in self.ast.children_nodes:
             asm.extend(self.traverse_tree(node))
-            return asm
+        return asm
 
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -898,14 +899,14 @@ class Compiler:
         elif isinstance(node, StringNode):
             # TODO(map) This is bad for multiple strings and multi line because
             # we need to track all the strings along with their associated name
-            string_count = 1
+            self.string_count += 1
             node.visited = True
-            key = f"string_{string_count}"
-            self.variables[node.value] = (key, self.get_string_asm(node.value, len(node.value), string_count))
+            key = f"string_{self.string_count}"
+            self.variables[node.value] = (key, self.get_string_asm(node.value, len(node.value), self.string_count))
             if node.parent_node:
-                return self.get_push_string_asm(string_count, len(node.value)) + self.traverse_tree(node.parent_node)
+                return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_string_asm(string_count, len(node.value))
+                return self.get_push_string_asm(self.string_count, len(node.value))
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
