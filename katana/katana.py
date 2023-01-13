@@ -748,8 +748,6 @@ class Parser:
             self.advance_token()
             contents = self.handle_print_keyword(keyword_token)
             keyword_node = KeywordNode(keyword_token, keyword_token.value, contents, None)
-            # keyword_node.child_node = contents
-            # contents.parent_node = keyword_node
         elif node_value == "main":
             keyword_token = self.curr_token
             # Move past keyword token
@@ -848,7 +846,9 @@ class Compiler:
 
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
-            asm = self.traverse_tree(self.ast)
+            asm = []
+            for node in self.ast.children_nodes:
+                asm.extend(self.traverse_tree(node))
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
@@ -859,7 +859,9 @@ class Compiler:
                 compiled_program.write(line)
 
     def traverse_tree(self, node):
-        if isinstance(node, ExpressionNode):
+        if isinstance(node, StartNode):
+            return []
+        elif isinstance(node, ExpressionNode):
             if node.left_side and not node.left_side.visited:
                 print(
                     f"Traversing from {node} to left side node {node.left_side}")
@@ -889,13 +891,6 @@ class Compiler:
             else:
                 node.visted = True
                 return self.get_keyword_asm()
-        elif isinstance(node, StartNode):
-            for a_node in node.children_nodes:
-                if a_node.child_node and not a_node.child_node.visited:
-                    return self.traverse_tree(a_node.child_node)
-                else:
-                    node.visited = True
-                    return []
         elif isinstance(node, StringNode):
             # TODO(map) This is bad for multiple strings and multi line because
             # we need to track all the strings along with their associated name
