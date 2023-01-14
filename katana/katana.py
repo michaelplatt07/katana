@@ -45,6 +45,7 @@ SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
 VARIABLE_NAME_TOKEN_TYPE = "VARIABLE_NAME"
+VARIABLE_REFERENCE_TOKEN_TYPE = "VARIABLE_REFERENCE"
 
 
 ##############
@@ -64,7 +65,8 @@ ALL_TOKENS = (
     SPACE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
-    VARIABLE_NAME_TOKEN_TYPE
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE
 )
 CONTINUATION_TOKENS = (
     LEFT_CURL_BRACE_TOKEN_TYPE,
@@ -522,6 +524,7 @@ class Lexer:
         self.token_list = []
         self.left_paren_idx_list = []
         self.right_paren_idx_list = []
+        self.variable_name_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
@@ -709,7 +712,10 @@ class Lexer:
         elif keyword in VARIABLE_KEYWORDS:
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
+            self.variable_name_list.append(keyword)
             return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword in self.variable_name_list:
+            return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
