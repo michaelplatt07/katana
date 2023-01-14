@@ -1,5 +1,6 @@
 from katana.katana import (
     AssignmentNode,
+    FunctionKeywordNode,
     KeywordNode,
     LiteralNode,
     MultiplyDivideNode,
@@ -8,6 +9,7 @@ from katana.katana import (
     StartNode,
     StringNode,
     VariableNode,
+    VariableKeywordNode,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
@@ -432,7 +434,7 @@ class TestKeywordParser:
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
         three_node = LiteralNode(token_list[2], "3")
-        ast = KeywordNode(token_list[0], "print", three_node)
+        ast = FunctionKeywordNode(token_list[0], "print", three_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -499,7 +501,7 @@ class TestKeywordParser:
         three_node = LiteralNode(token_list[8], "3")
         x_node = VariableNode(token_list[6], "x")
         assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
-        keyword_node = KeywordNode(token_list[5], "int16", assignment_node)
+        keyword_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         x = parser.parse()
@@ -569,12 +571,12 @@ class TestMultiLineParser:
         one_node = LiteralNode(token_list[7], "1")
         two_node = LiteralNode(token_list[9], "2")
         first_plus = PlusMinusNode(token_list[8], "+", one_node, two_node)
-        first_print = KeywordNode(token_list[5], "print", first_plus)
+        first_print = FunctionKeywordNode(token_list[5], "print", first_plus)
 
         three_node = LiteralNode(token_list[15], "3")
         four_node = LiteralNode(token_list[17], "4")
         second_plus = PlusMinusNode(token_list[16], "+", three_node, four_node)
-        second_print = KeywordNode(token_list[13], "print", second_plus)
+        second_print = FunctionKeywordNode(token_list[13], "print", second_plus)
 
         ast = StartNode(token_list[0], "main", [first_print, second_print])
         parser = Parser(token_list)

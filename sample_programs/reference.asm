@@ -444,29 +444,53 @@
 
 
 ; Function params
+; section .text
+;     global _start
+
+; section .string_1
+;     string_1 db  'Hello, world!', 10 ;our dear string
+;     len_1 equ $ - string_1         ;length of our dear string
+
+; section .text
+
+;     print:
+;         pop rbx
+;         pop rax
+;         mov rsi, rax
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, len_1
+;         syscall
+;         push rbx
+;         ret
+ 
+;     _start:
+;         push string_1
+;         call print
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+; Printing a variable
 section .text
     global _start
 
-section .string_1
-    string_1 db  'Hello, world!', 10 ;our dear string
-    len_1 equ $ - string_1         ;length of our dear string
+section .var_1
+    number_1 dw 4
 
 section .text
-
-    print:
-        pop rbx
-        pop rax
-        mov rsi, rax
+    _start:
+        mov rax, [number_1]
+        add rax, 48
+        push rax
+        mov rsi, rsp
         mov rax, 1
         mov rdi, 1
-        mov rdx, len_1
+        mov rdx, 4
         syscall
-        push rbx
-        ret
- 
-    _start:
-        push string_1
-        call print
+        syscall
+
         mov rax, 60
         mov rdi, 0
         syscall

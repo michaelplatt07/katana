@@ -243,6 +243,28 @@ class KeywordNode(Node):
         return f"({self.value}({self.child_node}))"
 
 
+class FunctionKeywordNode(KeywordNode):
+    """
+    More specialized node for Function keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, value, child_node, parent_node)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and super().__eq__(other)
+
+
+class VariableKeywordNode(KeywordNode):
+    """
+    More specialized node for Variable keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, value, child_node, parent_node)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and super().__eq__(other)
+
+
 class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
@@ -257,7 +279,8 @@ class StartNode(Node):
     def __eq__(self, other):
         children_equal = self.children_nodes == other.children_nodes
         values_equal = self.value == other.value
-        return children_equal and values_equal and super().__eq__(other)
+        types_equal = type(self) == type(other)
+        return types_equal and children_equal and values_equal and super().__eq__(other)
 
     def __repr__(self):
         children_nodes = "["
@@ -828,7 +851,7 @@ class Parser:
             # Move past keyword token
             self.advance_token()
             contents = self.handle_print_keyword(keyword_token)
-            keyword_node = KeywordNode(keyword_token, keyword_token.value, contents, None)
+            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
         elif node_value == "main":
             keyword_token = self.curr_token
             # Move past keyword token
@@ -844,7 +867,7 @@ class Parser:
             while self.curr_token.ttype != EOL_TOKEN_TYPE:
                 child_node = self.process_token(child_node)
                 self.advance_token()
-            keyword_node = KeywordNode(keyword_token, keyword_token.value, child_node, None)
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -916,6 +939,7 @@ class Compiler:
         self.ast = ast
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
+        self.var_count = 0
         self.variables = {}
 
     def compile(self):
@@ -948,7 +972,7 @@ class Compiler:
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
-                for line in self.variables[key][1]:
+                for line in self.variables[key]:
                     compiled_program.write(line)
             self.create_start_point(compiled_program)
             for line in asm:
@@ -978,7 +1002,7 @@ class Compiler:
                 return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_number_onto_stack_asm(node.value)
-        elif isinstance(node, KeywordNode):
+        elif isinstance(node, FunctionKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
             elif node.parent_node:
@@ -987,17 +1011,36 @@ class Compiler:
             else:
                 node.visted = True
                 return self.get_keyword_asm()
+        elif isinstance(node, VariableKeywordNode):
+            if node.child_node and not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            elif node.parent_node:
+                node.visited = True
+                return self.traverse_tree(node.parent_node)
+            else:
+                node.visted = True
+                return []
         elif isinstance(node, StringNode):
-            # TODO(map) This is bad for multiple strings and multi line because
-            # we need to track all the strings along with their associated name
             self.string_count += 1
             node.visited = True
             key = f"string_{self.string_count}"
-            self.variables[node.value] = (key, self.get_string_asm(node.value, len(node.value), self.string_count))
+            self.variables[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
             if node.parent_node:
                 return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_string_asm(self.string_count, len(node.value))
+        elif isinstance(node, VariableNode):
+            self.var_count += 1
+            node.visited = True
+            key = f"var_{self.var_count}"
+            # Go to the right side of the assignment expression, mark the node
+            # as visited so we don't push onto the stack since we are just
+            # assigning, and pass that value to the variable declaration.
+            value_node = node.parent_node.right_side
+            print_verbose_message(f"Traversing from {node.parent_node} to right side node {value_node}")
+            value_node.visited = True
+            self.variables[key] = self.get_assignment_asm(self.var_count, value_node.value)
+            return self.traverse_tree(node.parent_node)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1010,6 +1053,9 @@ class Compiler:
             return self.get_mul_asm()
         elif node.value == "/":
             return self.get_div_asm()
+        elif node.value == "=":
+            # We don't actually need to do any ops for this node right now.
+            return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
 
@@ -1102,6 +1148,12 @@ class Compiler:
         return [
             f"    push {string_length}\n",
             f"    push string_{string_count}\n",
+        ]
+
+    def get_assignment_asm(self, var_count, value):
+        return [
+            f"section .var_{var_count}\n",
+            f"    number_{var_count} dw {value}\n"
         ]
 
     def create_assembly_for_exit(self):

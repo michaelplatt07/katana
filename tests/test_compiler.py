@@ -1,3 +1,4 @@
+import pytest
 import os
 from katana.katana import (
     Compiler,
@@ -7,13 +8,17 @@ from katana.katana import (
 )
 
 
-def get_assembly_for_program(lines):
+def get_compiler_class(lines):
     program = Program(lines)
     lexer = Lexer(program)
     token_list = lexer.lex()
     parser = Parser(token_list)
     ast = parser.parse()
-    compiler = Compiler(ast)
+    return Compiler(ast)
+
+
+def get_assembly_for_program(lines):
+    compiler = get_compiler_class(lines)
     return compiler.get_assembly()
 
 
@@ -181,6 +186,35 @@ class TestCompilerKeywords:
                 "    push string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
+            ]
+
+    def test_assignment_keyword(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "var_1": [
+                    "section .var_1\n",
+                    "    number_1 dw 3\n"
+                ]
+            }
+            assert assembly == [
+            ]
+
+    @pytest.mark.skip
+    def test_assignment_keyword_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_assignment_used.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "var_1": [
+                    "section .var_1\n",
+                    "    number_1 dw 3\n"
+                ]
+            }
+            assert assembly == [
             ]
 
 
