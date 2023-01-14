@@ -27,6 +27,7 @@ from katana.katana import (
     VERY_HIGH,
     ULTRA_HIGH,
     InvalidTokenException,
+    InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
     UnclosedQuotationException,
@@ -479,7 +480,7 @@ class TestKeyword:
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
             Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
@@ -490,6 +491,29 @@ class TestKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_invalid_int_16_variable_name_with_underscore(self):
+        """
+        Test to make sure if a variable is anything other than alpha numeric
+        an error is raised.
+        """
+        program = Program(
+            ["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(InvalidTokenException, match="Invalid token '_' at 2:9."):
+            lexer.lex()
+
+    def test_invalid_int_16_variable_name_starts_with_number(self):
+        """
+        Test to make sure that a variable name starting with a number raises
+        an exception.
+        """
+        program = Program(
+            ["main() {\n", "int16 1_var = 3;\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
+            lexer.lex()
+
 
 
 class TestQuotationCharacter:

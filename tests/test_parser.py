@@ -1,6 +1,5 @@
 from katana.katana import (
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
+    AssignmentNode,
     KeywordNode,
     LiteralNode,
     MultiplyDivideNode,
@@ -8,20 +7,25 @@ from katana.katana import (
     PlusMinusNode,
     StartNode,
     StringNode,
+    VariableNode,
     Token,
+    ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     RIGHT_PAREN_TOKEN_TYPE,
     STRING_TOKEN_TYPE,
+    VARIABLE_NAME_TOKEN_TYPE,
     LOW,
     HIGH,
     MEDIUM,
@@ -456,6 +460,50 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_keyword_int_16_declaration(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 3;
+        }
+        Expected to return an AST like:
+        (main[(x=3])
+
+        token, value, child_node, parent_node
+        KeywordNode()
+            - token = keyword int16
+            - value = int16
+            - Parent node = main
+            - Child node = AssignmentNode
+        AssignmentNode() <- Similar to an OpNode
+            - token = assignment token type
+            - left_side = variable
+            - right_side = literal/string
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        three_node = LiteralNode(token_list[8], "3")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
+        keyword_node = KeywordNode(token_list[5], "int16", assignment_node)
+        ast = StartNode(token_list[0], "main", [keyword_node])
+        parser = Parser(token_list)
+        x = parser.parse()
+        assert ast == x
 
 class TestQuotationParser:
 

@@ -124,6 +124,16 @@ class UnknownKeywordError(Exception):
         return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
 
 
+class InvalidVariableNameError(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid variable name")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Variable name at {self.line_num}:{self.col_num} cannot start with digit."
+
+
 class KeywordMisuseException(Exception):
     def __init__(self, line_num, col_num, keyword, usage):
         super().__init__("Improper use of keyword.")
@@ -323,6 +333,25 @@ class ExpressionNode(Node):
         return f"({self.left_side}{self.value}{self.right_side})"
 
 
+class AssignmentNode(ExpressionNode):
+    """
+    Node for assigning values to variables. The left side is always the
+    variable with the right side being the value.
+    """
+
+    def __init__(self, token, value, left_side=None, right_side=None, parent_node=None):
+        super().__init__(token, value, MEDIUM, left_side, right_side, parent_node)
+
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+
+
 class PlusMinusNode(ExpressionNode):
     """
     Node specific for plus minus. Doing this because of PEMDAS.
@@ -360,6 +389,25 @@ class MultiplyDivideNode(ExpressionNode):
 
 
 class LiteralNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class VariableNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
@@ -529,7 +577,10 @@ class Lexer:
     def generate_token(self, character) -> Token:
         try:
             if character.isnumeric():
-                return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                if len(self.token_list) > 0 and not self.token_list[-1].ttype != KEYWORD_TOKEN_TYPE:
+                    raise InvalidVariableNameError(self.program.curr_line, self.program.curr_col)
+                else:
+                    return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '+':
                 return Token(PLUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
             elif character == '-':
@@ -562,6 +613,10 @@ class Lexer:
                 return Token(SPACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             else:
                 raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
+        except InvalidVariableNameError as ivne:
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
+            print(ivne)
+            raise ivne
         except NoTerminatorError as nte:
             self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(nte)
@@ -621,7 +676,7 @@ class Lexer:
         elif keyword in VARIABLE_KEYWORDS:
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
-            return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+            return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -675,6 +730,8 @@ class Parser:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
                 node = self.parse_op(MultiplyDivideNode, root_node)
+            elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
+                node = self.parse_op(AssignmentNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -685,6 +742,8 @@ class Parser:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
                 node = self.handle_string()
+            elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
+                node = VariableNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype in IGNORE_OPS:
                 node = NoOpNode(self.curr_token)
             elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -710,7 +769,7 @@ class Parser:
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = (
-                type(root_node) != LiteralNode
+                type(root_node) not in [LiteralNode, VariableNode]
                 and root_node.priority < self.curr_token.priority
                 and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
                 )
@@ -766,6 +825,16 @@ class Parser:
             self.advance_token()
             children_nodes = self.handle_main_keyword(keyword_token)
             keyword_node = StartNode(keyword_token, keyword_token.value, children_nodes)
+        elif node_value == "int16":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            keyword_node = KeywordNode(keyword_token, keyword_token.value, child_node, None)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
