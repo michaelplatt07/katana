@@ -1,6 +1,11 @@
 import argparse
 import os
 # TODO(map) Move all the classes and enums outs so imports are nice
+#########
+# GLOBALS
+#########
+verbose_flag = False
+
 ###########
 # Constants
 ###########
@@ -474,6 +479,11 @@ class Program:
 ########
 # UTILS
 ########
+def print_verbose_message(message):
+    if verbose_flag:
+        print(message)
+
+
 def print_exception_message(program, position, exception):
     print(program)
     print(" "*position + "^")
@@ -949,11 +959,11 @@ class Compiler:
             return []
         elif isinstance(node, ExpressionNode):
             if node.left_side and not node.left_side.visited:
-                print(
+                print_verbose_message(
                     f"Traversing from {node} to left side node {node.left_side}")
                 return self.traverse_tree(node.left_side)
             elif node.right_side and not node.right_side.visited:
-                print(
+                print_verbose_message(
                     f"Traversing from {node} to right side node {node.right_side}")
                 return self.traverse_tree(node.right_side)
             else:
@@ -1116,6 +1126,8 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         "--program", help="The program that should be parse.")
+    arg_parser.add_argument("--verbose", action="store_true",
+                            help="Adds verbosity output to the steps.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
@@ -1126,6 +1138,7 @@ if __name__ == "__main__":
                             help="Run the assembled program.")
     args = arg_parser.parse_args()
 
+    verbose_flag = args.verbose
     with open(args.program, 'r') as code:
         token_list = None
         ast = None
@@ -1134,11 +1147,11 @@ if __name__ == "__main__":
             program_lines = program.lines
             lexer = Lexer(program)
             token_list = lexer.lex()
-            print(token_list)
+            print_verbose_message(token_list)
         if args.parse or args.compile or args.run:
             parser = Parser(token_list)
             ast = parser.parse()
-            print(ast)
+            print_verbose_message(ast)
         if args.compile or args.run:
             compiler = Compiler(ast)
             compiler.compile()
