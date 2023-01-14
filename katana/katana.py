@@ -456,6 +456,26 @@ class VariableNode(Node):
         return f"{self.value}"
 
 
+class VariableReferenceNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+
 #########
 # PROGRAM
 #########
@@ -783,6 +803,8 @@ class Parser:
                 node = self.handle_string()
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
                 node = VariableNode(self.curr_token, self.curr_token.value, None)
+            elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
+                node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype in IGNORE_OPS:
                 node = NoOpNode(self.curr_token)
             elif self.curr_token.ttype == EOF_TOKEN_TYPE:
