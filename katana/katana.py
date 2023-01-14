@@ -22,6 +22,7 @@ NO_OP = None
 #############
 # Token Types
 #############
+ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
 MINUS_TOKEN_TYPE = "MINUS"
@@ -38,12 +39,14 @@ STRING_TOKEN_TYPE = "STRING"
 SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
+VARIABLE_NAME_TOKEN_TYPE = "VARIABLE_NAME"
 
 
 ##############
 # Const tuples
 ##############
 ALL_TOKENS = (
+    ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
@@ -55,7 +58,8 @@ ALL_TOKENS = (
     RIGHT_PAREN_TOKEN_TYPE,
     SPACE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
-    EOF_TOKEN_TYPE
+    EOF_TOKEN_TYPE,
+    VARIABLE_NAME_TOKEN_TYPE
 )
 CONTINUATION_TOKENS = (
     LEFT_CURL_BRACE_TOKEN_TYPE,
@@ -69,7 +73,8 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-KEYWORDS = ("print", "main")
+FUNCTION_KEYWORDS = ("print", "main")
+VARIABLE_KEYWORDS = ("int16")
 
 
 ############
@@ -533,6 +538,8 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '=':
+                return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
@@ -601,7 +608,7 @@ class Lexer:
     def generate_keyword_token(self):
         keyword = ""
         original_pos = self.program.curr_col
-        while self.program.get_curr_char().isalpha():
+        while self.program.get_curr_char().isalpha() or self.program.get_curr_char().isnumeric():
             keyword += self.program.get_curr_char()
             # TODO(map) De-couple the advance from generating the token
             self.program.curr_col += 1
@@ -609,9 +616,14 @@ class Lexer:
         # TODO(map) This is a dirty hack and will be resolved when I decouple
         # the problem in the TODO above.
         self.program.curr_col -= 1
-        if keyword not in KEYWORDS:
+        if keyword in FUNCTION_KEYWORDS:
+            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        elif keyword in VARIABLE_KEYWORDS:
+            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
+            return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
-        return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
 
     def generate_string_token(self):
         string = ""
