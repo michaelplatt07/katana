@@ -2,17 +2,19 @@ import os
 from katana.katana import (
     Compiler,
     Lexer,
-    Parser
+    Parser,
+    Program
 )
 
 
-def get_assembly_for_program(program):
+def get_assembly_for_program(lines):
+    program = Program(lines)
     lexer = Lexer(program)
     token_list = lexer.lex()
     parser = Parser(token_list)
     ast = parser.parse()
     compiler = Compiler(ast)
-    return compiler.traverse_tree(ast)
+    return compiler.get_assembly()
 
 
 class TestComiplerSingleNodes:
@@ -170,6 +172,17 @@ class TestCompilerKeywords:
                 "    call print\n",
             ]
 
+    def test_main_keyword(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_main.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 14\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+            ]
+
 
 class TestCompilerString:
 
@@ -178,6 +191,6 @@ class TestCompilerString:
         with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
-                "push 13\n",
-                "push string_1\n",
+                "    push 13\n",
+                "    push string_1\n",
             ]

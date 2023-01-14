@@ -14,8 +14,19 @@ Running `pytest tests/` will run the full suite of tests. To get a more verbose 
 ### Coverage
 Katana uses `coverage` to determine which lines of code are not being tested. Specifically running `coverage run -m pytest tests` will create a coverage folder folder, then run `coverage html` to get a nice output view.
 
-## Coding in Katana
+## Code Structure
+### Basic layout
+Katana has a single point of entry, the `main` method. Without it, the program is unsure about where to start to build the AST. 
+
+## Code API
 ---
+## Obligatory Hello Program
+As with most languages, here's how one would write the hello world program:
+```
+main() {
+    print("Hello, Katana!");
+}
+```
 ## Basic Arithmetic
 Katana supports all the usual mathematic operations.
 
@@ -103,7 +114,8 @@ print("Hello, World!")
 - [x] Handle semicolon token to end a line
 - [x] Set up printing in assembly
 - [x] Handle string literals
-- [ ] Change the program parsing to read line by line
+- [x] Change the program parsing to read line by line
+- [ ] Implement a printl for print line that adds new line on to end
 - [ ] Do type parsing in declaration, things like uint32 and such
 - [ ] Enable printing for numbers
 - [ ] Store values as variables in assembly
