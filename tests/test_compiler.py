@@ -194,27 +194,37 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert compiler.variables == {
-                "var_1": [
-                    "section .var_1\n",
-                    "    number_1 dw 3\n"
-                ]
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dw 3\n"
+                    ]
+                }
             }
             assert assembly == [
             ]
 
-    @pytest.mark.skip
     def test_assignment_keyword_used(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_assignment_used.ktna") as f:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert compiler.variables == {
-                "var_1": [
-                    "section .var_1\n",
-                    "    number_1 dw 3\n"
-                ]
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dw 3\n"
+                    ]
+                }
             }
             assert assembly == [
+                "    push qword [number_1]\n",
+                "    ;; Keyword Func\n",
+                "    call print\n"
             ]
 
 

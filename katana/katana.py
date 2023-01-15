@@ -968,6 +968,7 @@ class Compiler:
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
         self.var_count = 0
+        self.raw_strings = {}
         self.variables = {}
 
     def compile(self):
@@ -997,10 +998,15 @@ class Compiler:
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
             asm = self.get_assembly()
+            # Write any raw strings that will be used that aren't assigned to a
+            # variable in the code.
+            for key in self.raw_strings:
+                for line in self.raw_strings[key]:
+                    compiled_program.write(line)
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
-                for line in self.variables[key]:
+                for line in self.variables[key]["asm"]:
                     compiled_program.write(line)
             self.create_start_point(compiled_program)
             for line in asm:
@@ -1052,7 +1058,7 @@ class Compiler:
             self.string_count += 1
             node.visited = True
             key = f"string_{self.string_count}"
-            self.variables[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
+            self.raw_strings[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
             if node.parent_node:
                 return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
@@ -1060,15 +1066,24 @@ class Compiler:
         elif isinstance(node, VariableNode):
             self.var_count += 1
             node.visited = True
-            key = f"var_{self.var_count}"
+            section_text = f"var_{self.var_count}"
             # Go to the right side of the assignment expression, mark the node
             # as visited so we don't push onto the stack since we are just
             # assigning, and pass that value to the variable declaration.
             value_node = node.parent_node.right_side
             print_verbose_message(f"Traversing from {node.parent_node} to right side node {value_node}")
             value_node.visited = True
-            self.variables[key] = self.get_assignment_asm(self.var_count, value_node.value)
+            # TODO(map) This uses `number` which is bad when new vars arrive.
+            self.variables[node.value] = {
+                "section":  section_text,
+                "var_name": f"number_{self.var_count}",
+                "asm": self.get_assignment_asm(self.var_count, value_node.value)
+            }
             return self.traverse_tree(node.parent_node)
+        elif isinstance(node, VariableReferenceNode):
+            node.visited = True
+            var_ref = self.variables[node.value]["var_name"]
+            return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1131,6 +1146,9 @@ class Compiler:
 
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
+
+    def get_push_var_onto_stack_asm(self, val):
+        return [f"    push qword [{val}]\n"]
 
     def get_add_asm(self):
         return ["    ;; Add\n",
