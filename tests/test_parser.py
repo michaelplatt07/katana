@@ -1,27 +1,34 @@
 from katana.katana import (
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    KeywordNode,
+    AssignmentNode,
+    FunctionKeywordNode,
     LiteralNode,
     MultiplyDivideNode,
     Parser,
     PlusMinusNode,
     StartNode,
     StringNode,
+    VariableNode,
+    VariableKeywordNode,
+    VariableReferenceNode,
     Token,
+    ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     RIGHT_PAREN_TOKEN_TYPE,
     STRING_TOKEN_TYPE,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE,
     LOW,
     HIGH,
     MEDIUM,
@@ -428,7 +435,7 @@ class TestKeywordParser:
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
         three_node = LiteralNode(token_list[2], "3")
-        ast = KeywordNode(token_list[0], "print", three_node)
+        ast = FunctionKeywordNode(token_list[0], "print", three_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -453,6 +460,81 @@ class TestKeywordParser:
         ]
         three_node = LiteralNode(token_list[4], "3")
         ast = StartNode(token_list[0], "main", [three_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_int_16_declaration(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 3;
+        }
+        Expected to return an AST like:
+        (main[(int16((x=3)))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        three_node = LiteralNode(token_list[8], "3")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
+        keyword_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        ast = StartNode(token_list[0], "main", [keyword_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_int_16_reference(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 3;
+            print(x);
+        }
+        Expected to return an AST like:
+        (main[(int16((x=3))), (print(x))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        three_node = LiteralNode(token_list[8], "3")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
+        variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[13], "x")
+        print_node = FunctionKeywordNode(token_list[11], "print", x_ref_node)
+        ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -521,12 +603,12 @@ class TestMultiLineParser:
         one_node = LiteralNode(token_list[7], "1")
         two_node = LiteralNode(token_list[9], "2")
         first_plus = PlusMinusNode(token_list[8], "+", one_node, two_node)
-        first_print = KeywordNode(token_list[5], "print", first_plus)
+        first_print = FunctionKeywordNode(token_list[5], "print", first_plus)
 
         three_node = LiteralNode(token_list[15], "3")
         four_node = LiteralNode(token_list[17], "4")
         second_plus = PlusMinusNode(token_list[16], "+", three_node, four_node)
-        second_print = KeywordNode(token_list[13], "print", second_plus)
+        second_print = FunctionKeywordNode(token_list[13], "print", second_plus)
 
         ast = StartNode(token_list[0], "main", [first_print, second_print])
         parser = Parser(token_list)

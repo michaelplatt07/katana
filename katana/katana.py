@@ -1,6 +1,11 @@
 import argparse
 import os
 # TODO(map) Move all the classes and enums outs so imports are nice
+#########
+# GLOBALS
+#########
+verbose_flag = False
+
 ###########
 # Constants
 ###########
@@ -22,6 +27,7 @@ NO_OP = None
 #############
 # Token Types
 #############
+ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
 MINUS_TOKEN_TYPE = "MINUS"
@@ -38,12 +44,15 @@ STRING_TOKEN_TYPE = "STRING"
 SPACE_TOKEN_TYPE = "SPACE"
 EOL_TOKEN_TYPE = "EOL"
 EOF_TOKEN_TYPE = "EOF"
+VARIABLE_NAME_TOKEN_TYPE = "VARIABLE_NAME"
+VARIABLE_REFERENCE_TOKEN_TYPE = "VARIABLE_REFERENCE"
 
 
 ##############
 # Const tuples
 ##############
 ALL_TOKENS = (
+    ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
@@ -55,7 +64,9 @@ ALL_TOKENS = (
     RIGHT_PAREN_TOKEN_TYPE,
     SPACE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
-    EOF_TOKEN_TYPE
+    EOF_TOKEN_TYPE,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE
 )
 CONTINUATION_TOKENS = (
     LEFT_CURL_BRACE_TOKEN_TYPE,
@@ -69,7 +80,8 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-KEYWORDS = ("print", "main")
+FUNCTION_KEYWORDS = ("print", "main")
+VARIABLE_KEYWORDS = ("int16")
 
 
 ############
@@ -117,6 +129,16 @@ class UnknownKeywordError(Exception):
 
     def __str__(self):
         return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
+
+
+class InvalidVariableNameError(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid variable name")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Variable name at {self.line_num}:{self.col_num} cannot start with digit."
 
 
 class KeywordMisuseException(Exception):
@@ -223,6 +245,28 @@ class KeywordNode(Node):
         return f"({self.value}({self.child_node}))"
 
 
+class FunctionKeywordNode(KeywordNode):
+    """
+    More specialized node for Function keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, value, child_node, parent_node)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and super().__eq__(other)
+
+
+class VariableKeywordNode(KeywordNode):
+    """
+    More specialized node for Variable keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None):
+        super().__init__(token, value, child_node, parent_node)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and super().__eq__(other)
+
+
 class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
@@ -237,7 +281,8 @@ class StartNode(Node):
     def __eq__(self, other):
         children_equal = self.children_nodes == other.children_nodes
         values_equal = self.value == other.value
-        return children_equal and values_equal and super().__eq__(other)
+        types_equal = type(self) == type(other)
+        return types_equal and children_equal and values_equal and super().__eq__(other)
 
     def __repr__(self):
         children_nodes = "["
@@ -318,6 +363,25 @@ class ExpressionNode(Node):
         return f"({self.left_side}{self.value}{self.right_side})"
 
 
+class AssignmentNode(ExpressionNode):
+    """
+    Node for assigning values to variables. The left side is always the
+    variable with the right side being the value.
+    """
+
+    def __init__(self, token, value, left_side=None, right_side=None, parent_node=None):
+        super().__init__(token, value, MEDIUM, left_side, right_side, parent_node)
+
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+
+
 class PlusMinusNode(ExpressionNode):
     """
     Node specific for plus minus. Doing this because of PEMDAS.
@@ -373,6 +437,45 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
+class VariableNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class VariableReferenceNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+
 #########
 # PROGRAM
 #########
@@ -421,6 +524,11 @@ class Program:
 ########
 # UTILS
 ########
+def print_verbose_message(message):
+    if verbose_flag:
+        print(message)
+
+
 def print_exception_message(program, position, exception):
     print(program)
     print(" "*position + "^")
@@ -436,6 +544,7 @@ class Lexer:
         self.token_list = []
         self.left_paren_idx_list = []
         self.right_paren_idx_list = []
+        self.variable_name_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
@@ -524,7 +633,10 @@ class Lexer:
     def generate_token(self, character) -> Token:
         try:
             if character.isnumeric():
-                return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                if len(self.token_list) > 0 and not self.token_list[-1].ttype != KEYWORD_TOKEN_TYPE:
+                    raise InvalidVariableNameError(self.program.curr_line, self.program.curr_col)
+                else:
+                    return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '+':
                 return Token(PLUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
             elif character == '-':
@@ -533,6 +645,8 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '=':
+                return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
@@ -555,6 +669,10 @@ class Lexer:
                 return Token(SPACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             else:
                 raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
+        except InvalidVariableNameError as ivne:
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
+            print(ivne)
+            raise ivne
         except NoTerminatorError as nte:
             self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(nte)
@@ -601,7 +719,7 @@ class Lexer:
     def generate_keyword_token(self):
         keyword = ""
         original_pos = self.program.curr_col
-        while self.program.get_curr_char().isalpha():
+        while self.program.get_curr_char().isalpha() or self.program.get_curr_char().isnumeric():
             keyword += self.program.get_curr_char()
             # TODO(map) De-couple the advance from generating the token
             self.program.curr_col += 1
@@ -609,9 +727,17 @@ class Lexer:
         # TODO(map) This is a dirty hack and will be resolved when I decouple
         # the problem in the TODO above.
         self.program.curr_col -= 1
-        if keyword not in KEYWORDS:
+        if keyword in FUNCTION_KEYWORDS:
+            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        elif keyword in VARIABLE_KEYWORDS:
+            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
+            self.variable_name_list.append(keyword)
+            return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword in self.variable_name_list:
+            return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
-        return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
 
     def generate_string_token(self):
         string = ""
@@ -663,6 +789,8 @@ class Parser:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
                 node = self.parse_op(MultiplyDivideNode, root_node)
+            elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
+                node = self.parse_op(AssignmentNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -673,6 +801,10 @@ class Parser:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
                 node = self.handle_string()
+            elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
+                node = VariableNode(self.curr_token, self.curr_token.value, None)
+            elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
+                node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype in IGNORE_OPS:
                 node = NoOpNode(self.curr_token)
             elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -698,7 +830,7 @@ class Parser:
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = (
-                type(root_node) != LiteralNode
+                type(root_node) not in [LiteralNode, VariableNode, VariableReferenceNode]
                 and root_node.priority < self.curr_token.priority
                 and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
                 )
@@ -747,13 +879,23 @@ class Parser:
             # Move past keyword token
             self.advance_token()
             contents = self.handle_print_keyword(keyword_token)
-            keyword_node = KeywordNode(keyword_token, keyword_token.value, contents, None)
+            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
         elif node_value == "main":
             keyword_token = self.curr_token
             # Move past keyword token
             self.advance_token()
             children_nodes = self.handle_main_keyword(keyword_token)
             keyword_node = StartNode(keyword_token, keyword_token.value, children_nodes)
+        elif node_value == "int16":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -825,6 +967,8 @@ class Compiler:
         self.ast = ast
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
+        self.var_count = 0
+        self.raw_strings = {}
         self.variables = {}
 
     def compile(self):
@@ -854,10 +998,15 @@ class Compiler:
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
             asm = self.get_assembly()
+            # Write any raw strings that will be used that aren't assigned to a
+            # variable in the code.
+            for key in self.raw_strings:
+                for line in self.raw_strings[key]:
+                    compiled_program.write(line)
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
-                for line in self.variables[key][1]:
+                for line in self.variables[key]["asm"]:
                     compiled_program.write(line)
             self.create_start_point(compiled_program)
             for line in asm:
@@ -868,11 +1017,11 @@ class Compiler:
             return []
         elif isinstance(node, ExpressionNode):
             if node.left_side and not node.left_side.visited:
-                print(
+                print_verbose_message(
                     f"Traversing from {node} to left side node {node.left_side}")
                 return self.traverse_tree(node.left_side)
             elif node.right_side and not node.right_side.visited:
-                print(
+                print_verbose_message(
                     f"Traversing from {node} to right side node {node.right_side}")
                 return self.traverse_tree(node.right_side)
             else:
@@ -887,7 +1036,7 @@ class Compiler:
                 return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_number_onto_stack_asm(node.value)
-        elif isinstance(node, KeywordNode):
+        elif isinstance(node, FunctionKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
             elif node.parent_node:
@@ -896,17 +1045,45 @@ class Compiler:
             else:
                 node.visted = True
                 return self.get_keyword_asm()
+        elif isinstance(node, VariableKeywordNode):
+            if node.child_node and not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            elif node.parent_node:
+                node.visited = True
+                return self.traverse_tree(node.parent_node)
+            else:
+                node.visted = True
+                return []
         elif isinstance(node, StringNode):
-            # TODO(map) This is bad for multiple strings and multi line because
-            # we need to track all the strings along with their associated name
             self.string_count += 1
             node.visited = True
             key = f"string_{self.string_count}"
-            self.variables[node.value] = (key, self.get_string_asm(node.value, len(node.value), self.string_count))
+            self.raw_strings[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
             if node.parent_node:
                 return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_string_asm(self.string_count, len(node.value))
+        elif isinstance(node, VariableNode):
+            self.var_count += 1
+            node.visited = True
+            section_text = f"var_{self.var_count}"
+            # Go to the right side of the assignment expression, mark the node
+            # as visited so we don't push onto the stack since we are just
+            # assigning, and pass that value to the variable declaration.
+            value_node = node.parent_node.right_side
+            print_verbose_message(f"Traversing from {node.parent_node} to right side node {value_node}")
+            value_node.visited = True
+            # TODO(map) This uses `number` which is bad when new vars arrive.
+            self.variables[node.value] = {
+                "section":  section_text,
+                "var_name": f"number_{self.var_count}",
+                "asm": self.get_assignment_asm(self.var_count, value_node.value)
+            }
+            return self.traverse_tree(node.parent_node)
+        elif isinstance(node, VariableReferenceNode):
+            node.visited = True
+            var_ref = self.variables[node.value]["var_name"]
+            return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -919,6 +1096,9 @@ class Compiler:
             return self.get_mul_asm()
         elif node.value == "/":
             return self.get_div_asm()
+        elif node.value == "=":
+            # We don't actually need to do any ops for this node right now.
+            return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
 
@@ -967,6 +1147,9 @@ class Compiler:
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
 
+    def get_push_var_onto_stack_asm(self, val):
+        return [f"    push qword [{val}]\n"]
+
     def get_add_asm(self):
         return ["    ;; Add\n",
                 "    pop rax\n",
@@ -1013,6 +1196,12 @@ class Compiler:
             f"    push string_{string_count}\n",
         ]
 
+    def get_assignment_asm(self, var_count, value):
+        return [
+            f"section .var_{var_count}\n",
+            f"    number_{var_count} dq {value}\n"
+        ]
+
     def create_assembly_for_exit(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("    ;; Exit\n")
@@ -1035,6 +1224,8 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(
         "--program", help="The program that should be parse.")
+    arg_parser.add_argument("--verbose", action="store_true",
+                            help="Adds verbosity output to the steps.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
@@ -1045,6 +1236,7 @@ if __name__ == "__main__":
                             help="Run the assembled program.")
     args = arg_parser.parse_args()
 
+    verbose_flag = args.verbose
     with open(args.program, 'r') as code:
         token_list = None
         ast = None
@@ -1053,11 +1245,11 @@ if __name__ == "__main__":
             program_lines = program.lines
             lexer = Lexer(program)
             token_list = lexer.lex()
-            print(token_list)
+            print_verbose_message(token_list)
         if args.parse or args.compile or args.run:
             parser = Parser(token_list)
             ast = parser.parse()
-            print(ast)
+            print_verbose_message(ast)
         if args.compile or args.run:
             compiler = Compiler(ast)
             compiler.compile()

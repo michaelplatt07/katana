@@ -1,30 +1,34 @@
 import pytest
 
 from katana.katana import (
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
     Lexer,
     Program,
     Token,
+    ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
     RIGHT_PAREN_TOKEN_TYPE,
     STRING_TOKEN_TYPE,
-    InvalidTokenException,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE,
     LOW,
     HIGH,
     MEDIUM,
     VERY_HIGH,
     ULTRA_HIGH,
+    InvalidTokenException,
+    InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
     UnclosedQuotationException,
@@ -463,6 +467,85 @@ class TestKeyword:
         lexer = Lexer(program)
         with pytest.raises(NoTerminatorError, match="Line 2:10 must end with a semicolon."):
             lexer.lex()
+
+    def test_int_16_variable_declaration(self):
+        """
+        Tests that declaring an int16 variable correctly declares the
+        appropriate tokens to be parsed.
+        """
+        program = Program(["main() {\n", "int16 x = 3;\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_int_16_variable_usage(self):
+        """
+        Tests that declaring and using an int16 variable correctly lexes to the
+        appropriate tokens.
+        """
+        program = Program(["main() {\n", "int16 x = 3;\n", "print(x);\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_invalid_int_16_variable_name_with_underscore(self):
+        """
+        Test to make sure if a variable is anything other than alpha numeric
+        an error is raised.
+        """
+        program = Program(
+            ["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(InvalidTokenException, match="Invalid token '_' at 2:9."):
+            lexer.lex()
+
+    def test_invalid_int_16_variable_name_starts_with_number(self):
+        """
+        Test to make sure that a variable name starting with a number raises
+        an exception.
+        """
+        program = Program(
+            ["main() {\n", "int16 1_var = 3;\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
+            lexer.lex()
+
 
 
 class TestQuotationCharacter:
