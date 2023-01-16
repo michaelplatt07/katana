@@ -30,6 +30,7 @@ NO_OP = None
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
+GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
 MINUS_TOKEN_TYPE = "MINUS"
 MULTIPLY_TOKEN_TYPE = "MULTIPLY"
 NUM_TOKEN_TYPE = "NUM"
@@ -81,7 +82,8 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-VARIABLE_KEYWORDS = ("int16")
+LOGIC_KEYWORDS = ("if", "else")
+VARIABLE_KEYWORDS = ("int16",)
 
 
 ############
@@ -162,6 +164,27 @@ class UnclosedQuotationException(Exception):
 
     def __str__(self):
         return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
+
+
+class BadFormattedLogicBlock(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Badly formatted logic block")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Incorrectly formatted else statement at {self.line_num}:{self.col_num}. Cannot have code between if/else block."
+
+
+class UnpairedElseError(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Unpaired else")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"else at {self.line_num}:{self.col_num} does not have a matching if block."
+
 
 
 ########
@@ -544,6 +567,8 @@ class Lexer:
         self.token_list = []
         self.left_paren_idx_list = []
         self.right_paren_idx_list = []
+        self.if_idx_list = []
+        self.else_idx_list = []
         self.variable_name_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
@@ -616,6 +641,18 @@ class Lexer:
                 print(upe)
                 raise upe
 
+        # TODO(map) Make this more robust as a method by itself.
+        if len(self.else_idx_list) > 0:
+            # TODO(map) This isn't great as it assumes the last else is the problem.
+            if len(self.if_idx_list) < len(self.else_idx_list):
+                err_token = self.token_list[self.else_idx_list[-1]]
+                raise UnpairedElseError(err_token.row, err_token.col)
+            for idx in reversed(self.else_idx_list):
+                token_list = self.token_list[:idx]
+                if token_list[idx - 2].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                    bad_token = token_list[idx - 3]
+                    raise BadFormattedLogicBlock(bad_token.row, 0)
+
         return self.token_list
 
     def update_comment_index(self):
@@ -647,6 +684,8 @@ class Lexer:
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '=':
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '>':
+                return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
@@ -708,10 +747,13 @@ class Lexer:
         elif value == ")":
             if len(self.left_paren_idx_list) > 0:
                 terminator_present = self.program.get_next_char() == ";"
-                left_paren_first_token = self.left_paren_idx_list[-1] == 0
-                left_paren_has_keyword = self.token_list[self.left_paren_idx_list[-1] - 1].ttype == KEYWORD_TOKEN_TYPE
-                keyword_is_main = self.token_list[self.left_paren_idx_list[-1] - 1].value == "main"
-                if not terminator_present and not left_paren_first_token and left_paren_has_keyword and not keyword_is_main:
+                left_paren_first_token = self.token_list[self.left_paren_idx_list[-1]].col == 0
+                left_paren_first_token_after_spaces = self.token_list[self.left_paren_idx_list[-1]].row != self.token_list[self.left_paren_idx_list[-1] - 1].row
+                left_paren_first = left_paren_first_token or left_paren_first_token_after_spaces
+                # Get the token before the left paren.
+                token = self.token_list[self.left_paren_idx_list[-1] - 1]
+                left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
+                if not terminator_present and not left_paren_first and not left_paren_has_keyword:
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
@@ -727,9 +769,11 @@ class Lexer:
         # TODO(map) This is a dirty hack and will be resolved when I decouple
         # the problem in the TODO above.
         self.program.curr_col -= 1
-        if keyword in FUNCTION_KEYWORDS:
-            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
-        elif keyword in VARIABLE_KEYWORDS:
+        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
+            if keyword == "if":
+                self.if_idx_list.append(len(self.token_list))
+            elif keyword == "else":
+                self.else_idx_list.append(len(self.token_list))
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
             self.variable_name_list.append(keyword)

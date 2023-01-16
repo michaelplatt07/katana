@@ -116,6 +116,9 @@ print("Hello, World!")
 - [x] Handle string literals
 - [x] Change the program parsing to read line by line
 - [ ] Implement a printl for print line that adds new line on to end
+- [ ] Add conditionals
+- [ ] Add loops
+- [ ] Add 32-bit processing flag
 - [ ] Do type parsing in declaration, things like uint32 and such
 - [ ] Enable printing for numbers
 - [ ] Store values as variables in assembly
