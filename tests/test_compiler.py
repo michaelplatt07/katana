@@ -199,7 +199,7 @@ class TestCompilerKeywords:
                     "var_name": "number_1",
                     "asm": [
                         "section .var_1\n",
-                        "    number_1 dw 3\n"
+                        "    number_1 dq 3\n"
                     ]
                 }
             }
@@ -217,7 +217,7 @@ class TestCompilerKeywords:
                     "var_name": "number_1",
                     "asm": [
                         "section .var_1\n",
-                        "    number_1 dw 3\n"
+                        "    number_1 dq 3\n"
                     ]
                 }
             }
