@@ -830,7 +830,7 @@ class Parser:
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = (
-                type(root_node) not in [LiteralNode, VariableNode]
+                type(root_node) not in [LiteralNode, VariableNode, VariableReferenceNode]
                 and root_node.priority < self.curr_token.priority
                 and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
                 )
@@ -1199,7 +1199,7 @@ class Compiler:
     def get_assignment_asm(self, var_count, value):
         return [
             f"section .var_{var_count}\n",
-            f"    number_{var_count} dw {value}\n"
+            f"    number_{var_count} dq {value}\n"
         ]
 
     def create_assembly_for_exit(self):
