@@ -279,6 +279,30 @@ class FunctionKeywordNode(KeywordNode):
         return type(self) == type(other) and super().__eq__(other)
 
 
+class LogicKeywordNode(KeywordNode):
+    """
+    More specialized node for Logic keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, true_side=None, false_side=None):
+        super().__init__(token, value, child_node, parent_node)
+        self.true_side = true_side
+        self.false_side = false_side
+
+        if true_side:
+            self.true_side.parent_node = self
+        if false_side:
+            self.false_side.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        true_side_equal = self.true_side == other.true_side
+        false_side_equal = self.false_side == other.false_side
+        return types_equal and true_side_equal and false_side_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"({self.value}({self.child_node}, {self.true_side}, {self.false_side}))"
+
+
 class VariableKeywordNode(KeywordNode):
     """
     More specialized node for Variable keywords vs other types of keywords.
@@ -428,6 +452,23 @@ class MultiplyDivideNode(ExpressionNode):
     Node specific for multiply divide. Doing this because of PEMDAS.
     """
 
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, HIGH, left_side, right_side,
+                         parent_node)
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+
+class CompareNode(ExpressionNode):
+    """
+    Node specific for doing comparison
+    """
     def __init__(self, token, value, left_side=None, right_side=None,
                  parent_node=None):
         super().__init__(token, value, HIGH, left_side, right_side,
@@ -835,6 +876,8 @@ class Parser:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
                 node = self.parse_op(AssignmentNode, root_node)
+            elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -940,6 +983,70 @@ class Parser:
                 child_node = self.process_token(child_node)
                 self.advance_token()
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "if":
+            keyword_token = self.curr_token
+            truth_body = None
+            false_body = None
+            # Move past keyword token
+            self.advance_token()
+
+            # TODO(map) Should I just call handle_parenthesis here?
+            # Move past paren token
+            self.advance_token()
+
+            # Get the comparison within the parens.
+            paren_contents = None
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                paren_contents = self.process_token(paren_contents)
+                self.advance_token()
+
+            # Move past closing paren on conditional check
+            self.advance_token()
+
+            # Move past left curl bracket
+            self.advance_token()
+
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ret_node = self.process_token(truth_body)
+                if type(ret_node) != NoOpNode:
+                    # TODO(map) This only allows for a single line of code to
+                    # be in the body. It will fail if there are two lines of
+                    # code.
+                    truth_body = ret_node
+                self.advance_token()
+
+            # Move past the right curl brace to close the if body.
+            self.advance_token()
+
+            # TODO(map) Handle multiple return characters between if and else.
+            # Move past the new line after the curl bracket if present.
+            if self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
+                self.advance_token()
+
+            # Flag if there is an else keyword and parse it.
+            is_else_keyword_present = self.curr_token.value == "else"
+            if is_else_keyword_present:
+                # Move past the else keyword.
+                self.advance_token()
+
+                # Move past the curl bracket that starts the else body.
+                self.advance_token()
+
+                while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                    ret_node = self.process_token(false_body)
+                    if type(ret_node) != NoOpNode:
+                        # TODO(map) This only allows for a single line of code 
+                        # to be in the body. It will fail if there are two 
+                        # lines of code.
+                        false_body = self.process_token(false_body)
+                    self.advance_token()
+            else:
+                # TODO(map) This is not clean. Find a better way to determine
+                # if there is an else without actually advancing the token.
+                self.curr_token_pos -= 1
+                self.curr_token = self.token_list[self.curr_token_pos]
+
+            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_body, false_side=false_body)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -996,6 +1103,9 @@ class Parser:
             if node and type(node) != NoOpNode:
                 root_node = node
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                node_list.append(root_node)
+                root_node = None
+            elif type(node) ==  LogicKeywordNode and node.value == "if":
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()

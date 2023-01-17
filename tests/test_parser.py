@@ -1,7 +1,11 @@
+import pytest
+
 from katana.katana import (
     AssignmentNode,
+    CompareNode,
     FunctionKeywordNode,
     LiteralNode,
+    LogicKeywordNode,
     MultiplyDivideNode,
     Parser,
     PlusMinusNode,
@@ -19,6 +23,7 @@ from katana.katana import (
     KEYWORD_TOKEN_TYPE,
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
+    GREATER_THAN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
@@ -538,6 +543,77 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_if_keyword(self):
+        """
+        Given a program like:
+        main() {
+            if (1 > 0) {
+                print("greater");
+            }
+            print("lower");
+        }
+        Expected to return an AST like:
+        (main[(if(1>0, print("greater"), None)), (print("lower"))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 1, 10, ">", 2),
+            Token(NUM_TOKEN_TYPE, 1, 12, "0", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 9, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 10, "lower", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 18, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 4, 19, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 5, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0)
+        ]
+        lower_string_node = StringNode(token_list[23], "lower")
+        second_print_node = FunctionKeywordNode(token_list[21], "print", lower_string_node)
+        greater_string_node = StringNode(token_list[15], "greater")
+        first_print_node = FunctionKeywordNode(token_list[13], "print", greater_string_node)
+        one_node = LiteralNode(token_list[7], "1")
+        zero_node = LiteralNode(token_list[7], "0")
+        greater_than_node = CompareNode(token_list[8], ">", one_node, zero_node)
+        if_node = LogicKeywordNode(token_list[5], "if", greater_than_node, None, first_print_node, None)
+        ast = StartNode(token_list[0], "main", [if_node, second_print_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    @pytest.mark.skip
+    def test_if_keyword_multi_line_body(self):
+        """
+        Given a program like:
+        main() {
+            if (1 > 0) {
+                print("greater");
+                print("second line");
+            }
+            print("lower");
+        }
+        Expected to return an AST like:
+        (main[(if(1>0, [print("greater"), print("second line")], None)), (print("lower"))])
+        """
+        assert False, "Not implemented."
 
 class TestQuotationParser:
 
