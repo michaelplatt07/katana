@@ -227,6 +227,35 @@ class TestCompilerKeywords:
                 "    call print\n"
             ]
 
+    def test_if_keyword(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_conditional_if_only.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push 1\n",
+                "    push 0\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    cmp rbx, rax\n",
+                "    jg greater\n",
+                "    jle less\n",
+                "    greater:\n",
+                "    push 7\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    jmp end\n",
+                "    less:\n",
+                "    push 0\n",
+                "    ;; End if/else block\n",
+                "    end:\n",
+                "    push 5\n",
+                "    push string_2\n",
+                "    ;; Keyword Func\n",
+                "    call print\n"
+            ]
+
 
 class TestCompilerString:
 

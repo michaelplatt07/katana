@@ -7,6 +7,7 @@ from katana.katana import (
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
+    GREATER_THAN_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
@@ -27,12 +28,14 @@ from katana.katana import (
     MEDIUM,
     VERY_HIGH,
     ULTRA_HIGH,
+    BadFormattedLogicBlock,
     InvalidTokenException,
     InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
     UnclosedQuotationException,
     UnknownKeywordError,
+    UnpairedElseError
 )
 
 
@@ -546,6 +549,162 @@ class TestKeyword:
         with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
             lexer.lex()
 
+    def test_if_keyword_success(self):
+        """
+        Test to make sure the `if` keyword by iteslfcorrectly lexes.
+        """
+        program = Program(["main() {\n", "if (1 > 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
+            Token(GREATER_THAN_TOKEN_TYPE, 6, 1, ">", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "0", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_else_with_no_if_raises_error(self):
+        """
+        If the `else` keyword is present without the `if` keyword we get an
+        exception in the lexer.
+        """
+        program = Program(["main() {\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(UnpairedElseError, match="else at 2:0 does not have a matching if block."):
+            lexer.lex()
+
+    def test_else_with_something_between_raises_error(self):
+        """
+        If the `else` keyword is present without the `if` keyword we get an
+        exception in the lexer.
+        """
+        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "print(\"really bad\");\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 5:0. Cannot have code between if/else block."):
+            lexer.lex()
+
+    def test_else_with_something_between_same_line_raises_error(self):
+        """
+        If the `else` keyword is present without the `if` keyword we get an
+        exception in the lexer.
+        """
+        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n",  "print(\"really bad\");else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 5:0. Cannot have code between if/else block."):
+            lexer.lex()
+
+    def test_if_else_success(self):
+        """
+        If there is an `if` paired with an `else` the lexer succeeds.
+        """
+        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
+            Token(GREATER_THAN_TOKEN_TYPE, 6, 1, ">", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "high", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+
+            Token(KEYWORD_TOKEN_TYPE, 0, 4, "else", ULTRA_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 4, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 6, 4, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 5, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 5, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 5, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 5, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 5, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 5, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 6, "\n", LOW),
+
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 7, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 7, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 8, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_if_else_on_same_line_success(self):
+        """
+        If there is an `if` paired with an `else` the lexer succeeds.
+        """
+        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "} else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
+            Token(GREATER_THAN_TOKEN_TYPE, 6, 1, ">", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "high", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+
+            Token(KEYWORD_TOKEN_TYPE, 2, 3, "else", ULTRA_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 3, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 4, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 4, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 4, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 4, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 4, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 5, "\n", LOW),
+
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 6, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 7, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestQuotationCharacter:

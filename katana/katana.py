@@ -30,6 +30,7 @@ NO_OP = None
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
+GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
 MINUS_TOKEN_TYPE = "MINUS"
 MULTIPLY_TOKEN_TYPE = "MULTIPLY"
 NUM_TOKEN_TYPE = "NUM"
@@ -81,7 +82,8 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-VARIABLE_KEYWORDS = ("int16")
+LOGIC_KEYWORDS = ("if", "else")
+VARIABLE_KEYWORDS = ("int16",)
 
 
 ############
@@ -164,6 +166,27 @@ class UnclosedQuotationException(Exception):
         return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
 
 
+class BadFormattedLogicBlock(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Badly formatted logic block")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Incorrectly formatted else statement at {self.line_num}:{self.col_num}. Cannot have code between if/else block."
+
+
+class UnpairedElseError(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Unpaired else")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"else at {self.line_num}:{self.col_num} does not have a matching if block."
+
+
+
 ########
 # TOKENS
 ########
@@ -213,6 +236,12 @@ class Node:
 
         return priority_equal and token_equal
 
+    def can_traverse_to_parent(self):
+        if self.parent_node:
+            return type(self.parent_node) != LogicKeywordNode
+        else:
+            return False
+
 
 class NoOpNode(Node):
     """
@@ -254,6 +283,32 @@ class FunctionKeywordNode(KeywordNode):
 
     def __eq__(self, other):
         return type(self) == type(other) and super().__eq__(other)
+
+
+class LogicKeywordNode(KeywordNode):
+    """
+    More specialized node for Logic keywords vs other types of keywords.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, true_side=None, false_side=None):
+        super().__init__(token, value, child_node, parent_node)
+        self.true_side = true_side
+        self.false_side = false_side
+
+        if true_side:
+            for node in true_side:
+                node.parent_node = self
+        if false_side:
+            for node in false_side:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        true_side_equal = self.true_side == other.true_side
+        false_side_equal = self.false_side == other.false_side
+        return types_equal and true_side_equal and false_side_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"({self.value}({self.child_node}, {self.true_side}, {self.false_side}))"
 
 
 class VariableKeywordNode(KeywordNode):
@@ -418,6 +473,28 @@ class MultiplyDivideNode(ExpressionNode):
                 super().__eq__(other))
 
 
+class CompareNode(ExpressionNode):
+    """
+    Node specific for doing comparison
+    """
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, HIGH, left_side, right_side,
+                         parent_node)
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+    def can_traverse_to_parent(self):
+        if self.parent_node:
+            return True
+        else:
+            return False
+
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
@@ -544,6 +621,8 @@ class Lexer:
         self.token_list = []
         self.left_paren_idx_list = []
         self.right_paren_idx_list = []
+        self.if_idx_list = []
+        self.else_idx_list = []
         self.variable_name_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
@@ -616,6 +695,27 @@ class Lexer:
                 print(upe)
                 raise upe
 
+        # TODO(map) Make this more robust as a method by itself.
+        if len(self.else_idx_list) > 0:
+            # TODO(map) This isn't great as it assumes the last else is the problem.
+            if len(self.if_idx_list) < len(self.else_idx_list):
+                err_token = self.token_list[self.else_idx_list[-1]]
+                raise UnpairedElseError(err_token.row, err_token.col)
+            for idx in reversed(self.else_idx_list):
+                token_list = self.token_list[:idx]
+                improperly_closed_if = False
+                bad_token = None
+                for token in reversed(token_list):
+                    if token.ttype == NEW_LINE_TOKEN_TYPE:
+                        continue
+                    elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+                        break
+                    else:
+                        bad_token = token
+                        improperly_closed_if = True
+                if improperly_closed_if:
+                    raise BadFormattedLogicBlock(bad_token.row, 0)
+
         return self.token_list
 
     def update_comment_index(self):
@@ -647,6 +747,8 @@ class Lexer:
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '=':
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '>':
+                return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
@@ -708,10 +810,13 @@ class Lexer:
         elif value == ")":
             if len(self.left_paren_idx_list) > 0:
                 terminator_present = self.program.get_next_char() == ";"
-                left_paren_first_token = self.left_paren_idx_list[-1] == 0
-                left_paren_has_keyword = self.token_list[self.left_paren_idx_list[-1] - 1].ttype == KEYWORD_TOKEN_TYPE
-                keyword_is_main = self.token_list[self.left_paren_idx_list[-1] - 1].value == "main"
-                if not terminator_present and not left_paren_first_token and left_paren_has_keyword and not keyword_is_main:
+                left_paren_first_token = self.token_list[self.left_paren_idx_list[-1]].col == 0
+                left_paren_first_token_after_spaces = self.token_list[self.left_paren_idx_list[-1]].row != self.token_list[self.left_paren_idx_list[-1] - 1].row
+                left_paren_first = left_paren_first_token or left_paren_first_token_after_spaces
+                # Get the token before the left paren.
+                token = self.token_list[self.left_paren_idx_list[-1] - 1]
+                left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
+                if not terminator_present and not left_paren_first and not left_paren_has_keyword:
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
@@ -727,9 +832,11 @@ class Lexer:
         # TODO(map) This is a dirty hack and will be resolved when I decouple
         # the problem in the TODO above.
         self.program.curr_col -= 1
-        if keyword in FUNCTION_KEYWORDS:
-            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
-        elif keyword in VARIABLE_KEYWORDS:
+        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
+            if keyword == "if":
+                self.if_idx_list.append(len(self.token_list))
+            elif keyword == "else":
+                self.else_idx_list.append(len(self.token_list))
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
             self.variable_name_list.append(keyword)
@@ -791,6 +898,8 @@ class Parser:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
                 node = self.parse_op(AssignmentNode, root_node)
+            elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -896,6 +1005,70 @@ class Parser:
                 child_node = self.process_token(child_node)
                 self.advance_token()
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "if":
+            keyword_token = self.curr_token
+            truth_body = None
+            false_body = None
+            # Move past keyword token
+            self.advance_token()
+
+            # TODO(map) Should I just call handle_parenthesis here?
+            # Move past paren token
+            self.advance_token()
+
+            # Get the comparison within the parens.
+            paren_contents = None
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                paren_contents = self.process_token(paren_contents)
+                self.advance_token()
+
+            # Move past closing paren on conditional check
+            self.advance_token()
+
+            # Move past left curl bracket
+            self.advance_token()
+
+            truth_node_list = []
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ret_node = self.process_token(truth_body)
+                if type(ret_node) != NoOpNode:
+                    # TODO(map) This only allows for a single line of code to
+                    # be in the body. It will fail if there are two lines of
+                    # code.
+                    truth_body = ret_node
+                self.advance_token()
+                if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                    truth_node_list.append(truth_body)
+                    truth_body = None
+
+            # Move past the right curl brace to close the if body.
+            self.advance_token()
+
+            # TODO(map) Handle multiple return characters between if and else.
+            # Move past the new line after the curl bracket if present.
+            if self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
+                self.advance_token()
+
+            # Flag if there is an else keyword and parse it.
+            is_else_keyword_present = self.curr_token.value == "else"
+            false_node_list = []
+            if is_else_keyword_present:
+                # Move past the else keyword.
+                self.advance_token()
+
+                # Move past the curl bracket that starts the else body.
+                self.advance_token()
+
+                while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                    ret_node = self.process_token(false_body)
+                    if type(ret_node) != NoOpNode:
+                        false_node_list.append(ret_node)
+                    self.advance_token()
+
+            self.curr_token_pos -= 1
+            self.curr_token = self.token_list[self.curr_token_pos]
+
+            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -952,6 +1125,9 @@ class Parser:
             if node and type(node) != NoOpNode:
                 root_node = node
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                node_list.append(root_node)
+                root_node = None
+            elif type(node) ==  LogicKeywordNode and node.value == "if":
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
@@ -1026,20 +1202,20 @@ class Compiler:
                 return self.traverse_tree(node.right_side)
             else:
                 node.visited = True
-                if node.parent_node:
+                if node.can_traverse_to_parent():
                     return self.process_op_node(node) + self.traverse_tree(node.parent_node)
                 else:
                     return self.process_op_node(node)
         elif isinstance(node, LiteralNode):
             node.visited = True
-            if node.parent_node:
+            if node.can_traverse_to_parent():
                 return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_number_onto_stack_asm(node.value)
         elif isinstance(node, FunctionKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            elif node.parent_node:
+            elif node.can_traverse_to_parent():
                 node.visited = True
                 return self.get_keyword_asm() + self.traverse_tree(node.parent_node)
             else:
@@ -1048,7 +1224,7 @@ class Compiler:
         elif isinstance(node, VariableKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            elif node.parent_node:
+            elif node.can_traverse_to_parent():
                 node.visited = True
                 return self.traverse_tree(node.parent_node)
             else:
@@ -1059,7 +1235,7 @@ class Compiler:
             node.visited = True
             key = f"string_{self.string_count}"
             self.raw_strings[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
-            if node.parent_node:
+            if node.can_traverse_to_parent():
                 return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_string_asm(self.string_count, len(node.value))
@@ -1084,8 +1260,28 @@ class Compiler:
             node.visited = True
             var_ref = self.variables[node.value]["var_name"]
             return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
+        elif isinstance(node, LogicKeywordNode):
+            node.visited = True
+            if not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            logic_asm = []
+            if node.true_side:
+                logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+            if node.false_side:
+                logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
+            else:
+                # TODO(map) What's a better way to do this?
+                logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+            return logic_asm + self.get_end_of_conditional_asm()
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
+
+    def traverse_logic_node_children(self, children):
+        child_asm = []
+        for child in children:
+            if not child.visited:
+                child_asm += self.traverse_tree(child)
+        return child_asm
 
     def process_op_node(self, node):
         if node.value == "+":
@@ -1096,6 +1292,8 @@ class Compiler:
             return self.get_mul_asm()
         elif node.value == "/":
             return self.get_div_asm()
+        elif node.value == ">":
+            return self.get_conditional_greater_than_asm()
         elif node.value == "=":
             # We don't actually need to do any ops for this node right now.
             return []
@@ -1179,9 +1377,42 @@ class Compiler:
                 "    push rax\n"]
 
     def get_keyword_asm(self):
-        return ["    ;; Keyword Func\n",
-                "    call print\n"
-                ]
+        return [
+            "    ;; Keyword Func\n",
+            "    call print\n"
+        ]
+
+    def get_true_side_asm(self):
+        return [
+            "    greater:\n",
+        ]
+
+    def get_false_side_asm(self):
+        return [
+            "    less:\n",
+        ]
+
+    def get_jump_past_less(self):
+        return [
+            "    jmp end\n"
+        ]
+
+    def get_end_of_conditional_asm(self):
+        return [
+            "    ;; End if/else block\n",
+            "    end:\n"
+        ]
+
+
+    def get_conditional_greater_than_asm(self):
+        # TODO(map) This breaks with more than one if statement in the program.
+        return [
+            "    pop rax\n",
+            "    pop rbx\n",
+            "    cmp rbx, rax\n",
+            "    jg greater\n",
+            "    jle less\n"
+        ]
 
     def get_string_asm(self, string, string_length, string_count):
         return [
