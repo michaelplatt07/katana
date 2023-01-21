@@ -289,9 +289,11 @@ class LogicKeywordNode(KeywordNode):
         self.false_side = false_side
 
         if true_side:
-            self.true_side.parent_node = self
+            for node in true_side:
+                node.parent_node = self
         if false_side:
-            self.false_side.parent_node = self
+            for node in false_side:
+                node.parent_node = self
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1006,6 +1008,7 @@ class Parser:
             # Move past left curl bracket
             self.advance_token()
 
+            truth_node_list = []
             while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                 ret_node = self.process_token(truth_body)
                 if type(ret_node) != NoOpNode:
@@ -1014,6 +1017,9 @@ class Parser:
                     # code.
                     truth_body = ret_node
                 self.advance_token()
+                if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                    truth_node_list.append(truth_body)
+                    truth_body = None
 
             # Move past the right curl brace to close the if body.
             self.advance_token()
@@ -1025,6 +1031,7 @@ class Parser:
 
             # Flag if there is an else keyword and parse it.
             is_else_keyword_present = self.curr_token.value == "else"
+            false_node_list = []
             if is_else_keyword_present:
                 # Move past the else keyword.
                 self.advance_token()
@@ -1043,10 +1050,11 @@ class Parser:
             else:
                 # TODO(map) This is not clean. Find a better way to determine
                 # if there is an else without actually advancing the token.
+
                 self.curr_token_pos -= 1
                 self.curr_token = self.token_list[self.curr_token_pos]
 
-            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_body, false_side=false_body)
+            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -1238,6 +1246,19 @@ class Compiler:
             node.visited = True
             var_ref = self.variables[node.value]["var_name"]
             return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
+        elif isinstance(node, LogicKeywordNode):
+            node.visited = True
+            if not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            for true_node in node.true_side:
+                if not true_node.visited:
+                    return self.traverse_tree(true_node)
+            if node.false_side and not node.false_side.isempty():
+                for false_node in node.false_side:
+                    if not false_node.visited:
+                        return self.traverse_tree(false_node)
+            if not node.false_side or node.false_side.isempty():
+                return self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1250,6 +1271,8 @@ class Compiler:
             return self.get_mul_asm()
         elif node.value == "/":
             return self.get_div_asm()
+        elif node.value == ">":
+            return self.get_conditional_greater_than_asm()
         elif node.value == "=":
             # We don't actually need to do any ops for this node right now.
             return []
@@ -1333,9 +1356,30 @@ class Compiler:
                 "    push rax\n"]
 
     def get_keyword_asm(self):
-        return ["    ;; Keyword Func\n",
-                "    call print\n"
-                ]
+        return [
+            "    ;; Keyword Func\n",
+            "    call print\n"
+        ]
+
+    def get_true_side_asm(self):
+        return [
+            "    greater:\n",
+        ]
+
+    def get_false_side_asm(self):
+        return [
+            "    less:\n",
+        ]
+
+    def get_conditional_greater_than_asm(self):
+        return [
+            "    pop rax\n",
+            "    pop rbx\n",
+            "    cmp rbx, rax\n",
+            "    jg greater\n",
+            "    jle less\n",
+            "    greater:\n"
+        ]
 
     def get_string_asm(self, string, string_length, string_count):
         return [
