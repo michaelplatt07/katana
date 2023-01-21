@@ -74,6 +74,7 @@ CONTINUATION_TOKENS = (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE
 )
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
 IGNORE_OPS = (
@@ -84,6 +85,7 @@ IGNORE_OPS = (
 )
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else")
+# TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
 
@@ -520,6 +522,8 @@ class VariableNode(Node):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
+
+    # TODO(map) Do validation in the init method to ensure the typing is correct.
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1046,9 +1050,8 @@ class Parser:
             # Move past the right curl brace to close the if body.
             self.advance_token()
 
-            # TODO(map) Handle multiple return characters between if and else.
             # Move past the new line after the curl bracket if present.
-            if self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
+            while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
                 self.advance_token()
 
             # Flag if there is an else keyword and parse it.
