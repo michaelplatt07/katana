@@ -256,6 +256,34 @@ class TestCompilerKeywords:
                 "    call print\n"
             ]
 
+    def test_if_else_keyword_with_less_than(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_conditional_if_else_less_than.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push 1\n",
+                "    push 0\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    cmp rbx, rax\n",
+                "    jl less\n",
+                "    jge greater\n",
+                "    less:\n",
+                "    push 10\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    jmp end\n",
+                "    greater:\n",
+                "    push 13\n",
+                "    push string_2\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    ;; End if/else block\n",
+                "    end:\n"
+            ]
+
 
 class TestCompilerString:
 

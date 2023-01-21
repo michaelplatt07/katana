@@ -13,6 +13,7 @@ from katana.katana import (
     KEYWORD_TOKEN_TYPE,
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
+    LESS_THAN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
@@ -551,7 +552,7 @@ class TestKeyword:
 
     def test_if_keyword_success(self):
         """
-        Test to make sure the `if` keyword by iteslfcorrectly lexes.
+        Test to make sure the `if` keyword by itself correctly lexes.
         """
         program = Program(["main() {\n", "if (1 > 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
         token_list = [
@@ -564,6 +565,40 @@ class TestKeyword:
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
             Token(GREATER_THAN_TOKEN_TYPE, 6, 1, ">", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "0", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_if_keyword_less_than_operator(self):
+        """
+        Test to make sure the less than operator works and is lexed.
+        """
+        program = Program(["main() {\n", "if (1 < 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
+            Token(LESS_THAN_TOKEN_TYPE, 6, 1, "<", HIGH),
             Token(NUM_TOKEN_TYPE, 8, 1, "0", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
