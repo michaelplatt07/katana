@@ -1285,8 +1285,7 @@ class Compiler:
         if node.false_side:
             logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
         else:
-            # TODO(map) What's a better way to do this?
-            logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+            logic_asm += self.get_false_side_asm()
         return logic_asm
 
     def traverse_less_than_body(self, node):
@@ -1296,8 +1295,7 @@ class Compiler:
         if node.false_side:
             logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.false_side)
         else:
-            # TODO(map) What's a better way to do this?
-            logic_asm += self.get_true_side_asm() + self.get_push_number_onto_stack_asm(0)
+            logic_asm += self.get_true_side_asm()
         return logic_asm
 
 
