@@ -903,6 +903,8 @@ class Parser:
                 node = self.parse_op(AssignmentNode, root_node)
             elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
