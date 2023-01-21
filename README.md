@@ -27,6 +27,7 @@ main() {
     print("Hello, Katana!");
 }
 ```
+
 ## Basic Arithmetic
 Katana supports all the usual mathematic operations.
 
@@ -70,7 +71,7 @@ Returns
 1
 ```
 
-### Advance Arithmetic
+### Advanced Arithmetic
 Katana respects order of operations for arithmetic
 ```
 4 / 1 + 3 * 2;
@@ -106,6 +107,17 @@ Hello, World example in Katana
 print("Hello, World!")
 ```
 
+### if/else
+Katana supports conditionals with the following format:
+```
+if (SOME_CONDITION) {
+    // do body
+} else {
+    // do other body
+}
+```
+with `SOME_CONDITION` being a truthy statement like `1 > 0`.
+
 ## TODO: Features to Implement
 - [x] Implement subtract in asssembly
 - [x] Implement multiply in asssembly
@@ -116,7 +128,8 @@ print("Hello, World!")
 - [x] Handle string literals
 - [x] Change the program parsing to read line by line
 - [ ] Implement a printl for print line that adds new line on to end
-- [ ] Add conditionals
+- [x] Add conditionals
+- [ ] Add to current conditionals (only support `>` right now)
 - [ ] Add loops
 - [ ] Add 32-bit processing flag
 - [ ] Do type parsing in declaration, things like uint32 and such
