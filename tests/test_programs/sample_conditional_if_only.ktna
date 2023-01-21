@@ -1,0 +1,6 @@
+main() {
+    if (1 > 0) {
+        print("greater");
+    }
+    print("lower");
+}
