@@ -1,0 +1,7 @@
+main() {
+    if (1 < 0) {
+        print("Less than.");
+    } else {
+        print("Greater than.");
+    }
+}
