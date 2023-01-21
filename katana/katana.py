@@ -236,6 +236,12 @@ class Node:
 
         return priority_equal and token_equal
 
+    def can_traverse_to_parent(self):
+        if self.parent_node:
+            return type(self.parent_node) != LogicKeywordNode
+        else:
+            return False
+
 
 class NoOpNode(Node):
     """
@@ -483,6 +489,11 @@ class CompareNode(ExpressionNode):
         return (types_equal and
                 super().__eq__(other))
 
+    def can_traverse_to_parent(self):
+        if self.parent_node:
+            return True
+        else:
+            return False
 
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -1191,20 +1202,20 @@ class Compiler:
                 return self.traverse_tree(node.right_side)
             else:
                 node.visited = True
-                if node.parent_node:
+                if node.can_traverse_to_parent():
                     return self.process_op_node(node) + self.traverse_tree(node.parent_node)
                 else:
                     return self.process_op_node(node)
         elif isinstance(node, LiteralNode):
             node.visited = True
-            if node.parent_node:
+            if node.can_traverse_to_parent():
                 return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_number_onto_stack_asm(node.value)
         elif isinstance(node, FunctionKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            elif node.parent_node:
+            elif node.can_traverse_to_parent():
                 node.visited = True
                 return self.get_keyword_asm() + self.traverse_tree(node.parent_node)
             else:
@@ -1213,7 +1224,7 @@ class Compiler:
         elif isinstance(node, VariableKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            elif node.parent_node:
+            elif node.can_traverse_to_parent():
                 node.visited = True
                 return self.traverse_tree(node.parent_node)
             else:
@@ -1224,7 +1235,7 @@ class Compiler:
             node.visited = True
             key = f"string_{self.string_count}"
             self.raw_strings[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
-            if node.parent_node:
+            if node.can_traverse_to_parent():
                 return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_string_asm(self.string_count, len(node.value))
@@ -1253,17 +1264,23 @@ class Compiler:
             node.visited = True
             if not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            for true_node in node.true_side:
-                if not true_node.visited:
-                    return self.traverse_tree(true_node)
-            if node.false_side and not node.false_side.isempty():
-                for false_node in node.false_side:
-                    if not false_node.visited:
-                        return self.traverse_tree(false_node)
-            if not node.false_side or node.false_side.isempty():
-                return self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+            logic_asm = []
+            if node.true_side:
+                logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+            if node.false_side:
+                logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
+            else:
+                logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+            return logic_asm + self.get_end_of_conditional_asm()
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
+
+    def traverse_logic_node_children(self, children):
+        child_asm = []
+        for child in children:
+            if not child.visited:
+                child_asm += self.traverse_tree(child)
+        return child_asm
 
     def process_op_node(self, node):
         if node.value == "+":
@@ -1374,14 +1391,26 @@ class Compiler:
             "    less:\n",
         ]
 
+    def get_jump_past_less(self):
+        return [
+            "    jmp end\n"
+        ]
+
+    def get_end_of_conditional_asm(self):
+        return [
+            "    ;; End if/else block\n",
+            "    end:\n"
+        ]
+
+
     def get_conditional_greater_than_asm(self):
+        # TODO(map) This breaks with more than one if statement in the program.
         return [
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
             "    jg greater\n",
-            "    jle less\n",
-            "    greater:\n"
+            "    jle less\n"
         ]
 
     def get_string_asm(self, string, string_length, string_count):
