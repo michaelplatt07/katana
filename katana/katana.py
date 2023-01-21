@@ -1270,6 +1270,7 @@ class Compiler:
             if node.false_side:
                 logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
             else:
+                # TODO(map) What's a better way to do this?
                 logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
             return logic_asm + self.get_end_of_conditional_asm()
         else:
