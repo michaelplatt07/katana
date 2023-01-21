@@ -660,6 +660,52 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_if_else_on_same_line_success(self):
+        """
+        If there is an `if` paired with an `else` the lexer succeeds.
+        """
+        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "} else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
+            Token(GREATER_THAN_TOKEN_TYPE, 6, 1, ">", HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "high", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+
+            Token(KEYWORD_TOKEN_TYPE, 2, 3, "else", ULTRA_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 3, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 4, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 4, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 4, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 4, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 4, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 5, "\n", LOW),
+
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 6, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 7, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
 
 class TestQuotationCharacter:
 

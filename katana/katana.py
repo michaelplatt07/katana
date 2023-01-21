@@ -692,8 +692,17 @@ class Lexer:
                 raise UnpairedElseError(err_token.row, err_token.col)
             for idx in reversed(self.else_idx_list):
                 token_list = self.token_list[:idx]
-                if token_list[idx - 2].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                    bad_token = token_list[idx - 3]
+                improperly_closed_if = False
+                bad_token = None
+                for token in reversed(token_list):
+                    if token.ttype == NEW_LINE_TOKEN_TYPE:
+                        continue
+                    elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+                        break
+                    else:
+                        bad_token = token
+                        improperly_closed_if = True
+                if improperly_closed_if:
                     raise BadFormattedLogicBlock(bad_token.row, 0)
 
         return self.token_list
@@ -1042,17 +1051,11 @@ class Parser:
                 while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                     ret_node = self.process_token(false_body)
                     if type(ret_node) != NoOpNode:
-                        # TODO(map) This only allows for a single line of code 
-                        # to be in the body. It will fail if there are two 
-                        # lines of code.
-                        false_body = self.process_token(false_body)
+                        false_node_list.append(ret_node)
                     self.advance_token()
-            else:
-                # TODO(map) This is not clean. Find a better way to determine
-                # if there is an else without actually advancing the token.
 
-                self.curr_token_pos -= 1
-                self.curr_token = self.token_list[self.curr_token_pos]
+            self.curr_token_pos -= 1
+            self.curr_token = self.token_list[self.curr_token_pos]
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
         else:
