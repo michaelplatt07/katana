@@ -39,6 +39,7 @@ PLUS_TOKEN_TYPE = "PLUS"
 KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
+LESS_THAN_TOKEN_TYPE = "LESS_THAN"
 RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_CURL_BRACE"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 STRING_TOKEN_TYPE = "STRING"
@@ -289,7 +290,7 @@ class LogicKeywordNode(KeywordNode):
     """
     More specialized node for Logic keywords vs other types of keywords.
     """
-    def __init__(self, token, value, child_node, parent_node=None, true_side=None, false_side=None):
+    def __init__(self, token, value, child_node, parent_node=None, true_side=[], false_side=[]):
         super().__init__(token, value, child_node, parent_node)
         self.true_side = true_side
         self.false_side = false_side
@@ -749,6 +750,8 @@ class Lexer:
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '>':
                 return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '<':
+                return Token(LESS_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
@@ -900,6 +903,8 @@ class Parser:
                 node = self.parse_op(AssignmentNode, root_node)
             elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -1032,9 +1037,6 @@ class Parser:
             while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                 ret_node = self.process_token(truth_body)
                 if type(ret_node) != NoOpNode:
-                    # TODO(map) This only allows for a single line of code to
-                    # be in the body. It will fail if there are two lines of
-                    # code.
                     truth_body = ret_node
                 self.advance_token()
                 if self.curr_token.ttype == EOL_TOKEN_TYPE:
@@ -1264,17 +1266,37 @@ class Compiler:
             node.visited = True
             if not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            logic_asm = []
-            if node.true_side:
-                logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
-            if node.false_side:
-                logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
+            if node.child_node.value == ">":
+                return self.traverse_greater_than_body(node) + self.get_end_of_conditional_asm()
+            elif node.child_node.value == "<":
+                return self.traverse_less_than_body(node) + self.get_end_of_conditional_asm()
             else:
-                # TODO(map) What's a better way to do this?
-                logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
-            return logic_asm + self.get_end_of_conditional_asm()
+                assert False, f"Conditional {node.child_nod.value} not understood."
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
+
+    def traverse_greater_than_body(self, node):
+        logic_asm = []
+        if node.true_side:
+            logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+        if node.false_side:
+            logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
+        else:
+            # TODO(map) What's a better way to do this?
+            logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+        return logic_asm
+
+    def traverse_less_than_body(self, node):
+        logic_asm = []
+        if node.true_side:
+            logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+        if node.false_side:
+            logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.false_side)
+        else:
+            # TODO(map) What's a better way to do this?
+            logic_asm += self.get_true_side_asm() + self.get_push_number_onto_stack_asm(0)
+        return logic_asm
+
 
     def traverse_logic_node_children(self, children):
         child_asm = []
@@ -1294,6 +1316,8 @@ class Compiler:
             return self.get_div_asm()
         elif node.value == ">":
             return self.get_conditional_greater_than_asm()
+        elif node.value == "<":
+            return self.get_conditional_less_than_asm()
         elif node.value == "=":
             # We don't actually need to do any ops for this node right now.
             return []
@@ -1403,7 +1427,6 @@ class Compiler:
             "    end:\n"
         ]
 
-
     def get_conditional_greater_than_asm(self):
         # TODO(map) This breaks with more than one if statement in the program.
         return [
@@ -1412,6 +1435,16 @@ class Compiler:
             "    cmp rbx, rax\n",
             "    jg greater\n",
             "    jle less\n"
+        ]
+
+    def get_conditional_less_than_asm(self):
+        # TODO(map) This breaks with more than one if statement in the program.
+        return [
+            "    pop rax\n",
+            "    pop rbx\n",
+            "    cmp rbx, rax\n",
+            "    jl less\n",
+            "    jge greater\n"
         ]
 
     def get_string_asm(self, string, string_length, string_count):
