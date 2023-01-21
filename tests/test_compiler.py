@@ -247,7 +247,6 @@ class TestCompilerKeywords:
                 "    call print\n",
                 "    jmp end\n",
                 "    less:\n",
-                "    push 0\n",
                 "    ;; End if/else block\n",
                 "    end:\n",
                 "    push 5\n",
