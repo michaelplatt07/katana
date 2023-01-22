@@ -74,6 +74,7 @@ CONTINUATION_TOKENS = (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
+    NEW_LINE_TOKEN_TYPE
 )
 IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
 IGNORE_OPS = (
@@ -84,6 +85,7 @@ IGNORE_OPS = (
 )
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else")
+# TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
 
@@ -185,6 +187,16 @@ class UnpairedElseError(Exception):
 
     def __str__(self):
         return f"else at {self.line_num}:{self.col_num} does not have a matching if block."
+
+
+class InvalidTypeDeclarationException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid type")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Invalid type at {self.line_num}:{self.col_num}."
 
 
 
@@ -490,11 +502,15 @@ class CompareNode(ExpressionNode):
         return (types_equal and
                 super().__eq__(other))
 
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
+
     def can_traverse_to_parent(self):
         if self.parent_node:
             return True
         else:
             return False
+
 
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -520,6 +536,7 @@ class VariableNode(Node):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
+
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -929,6 +946,8 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
+        except InvalidTypeDeclarationException as itde:
+            print_exception_message(("\n").join(program_lines), itde.col_num, itde)
 
     def parse_literal(self):
         """
@@ -968,6 +987,7 @@ class Parser:
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
         root_node = None
+
         if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
             # Advance once to get past the paren token.
             self.advance_token()
@@ -1009,6 +1029,8 @@ class Parser:
             while self.curr_token.ttype != EOL_TOKEN_TYPE:
                 child_node = self.process_token(child_node)
                 self.advance_token()
+            if not child_node.right_side.value.isnumeric():
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         elif node_value == "if":
             keyword_token = self.curr_token
@@ -1039,16 +1061,15 @@ class Parser:
                 if type(ret_node) != NoOpNode:
                     truth_body = ret_node
                 self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                     truth_node_list.append(truth_body)
                     truth_body = None
 
             # Move past the right curl brace to close the if body.
             self.advance_token()
 
-            # TODO(map) Handle multiple return characters between if and else.
             # Move past the new line after the curl bracket if present.
-            if self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
+            while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
                 self.advance_token()
 
             # Flag if there is an else keyword and parse it.
@@ -1066,9 +1087,9 @@ class Parser:
                     if type(ret_node) != NoOpNode:
                         false_node_list.append(ret_node)
                     self.advance_token()
-
-            self.curr_token_pos -= 1
-            self.curr_token = self.token_list[self.curr_token_pos]
+            else:
+                # TODO(map) Figure out how to not go back here
+                self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
         else:
@@ -1146,8 +1167,10 @@ class Compiler:
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
         self.var_count = 0
+        self.conditional_count = 0
         self.raw_strings = {}
         self.variables = {}
+        self.conditionals = {}
 
     def compile(self):
         self.create_empty_out_file()
@@ -1266,37 +1289,35 @@ class Compiler:
             node.visited = True
             if not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
+            conditional_mark_count = self.conditionals[node.child_node]
             if node.child_node.value == ">":
-                return self.traverse_greater_than_body(node) + self.get_end_of_conditional_asm()
+                return self.traverse_greater_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             elif node.child_node.value == "<":
-                return self.traverse_less_than_body(node) + self.get_end_of_conditional_asm()
+                return self.traverse_less_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
-    def traverse_greater_than_body(self, node):
+    def traverse_greater_than_body(self, conditional_key, node):
         logic_asm = []
         if node.true_side:
-            logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+            logic_asm += self.get_true_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
         if node.false_side:
-            logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.false_side)
+            logic_asm += self.get_false_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
-            # TODO(map) What's a better way to do this?
-            logic_asm += self.get_false_side_asm() + self.get_push_number_onto_stack_asm(0)
+            logic_asm += self.get_false_side_asm(conditional_key)
         return logic_asm
 
-    def traverse_less_than_body(self, node):
+    def traverse_less_than_body(self, conditional_key, node):
         logic_asm = []
         if node.true_side:
-            logic_asm += self.get_false_side_asm() + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less()
+            logic_asm += self.get_false_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
         if node.false_side:
-            logic_asm += self.get_true_side_asm() + self.traverse_logic_node_children(node.false_side)
+            logic_asm += self.get_true_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
-            # TODO(map) What's a better way to do this?
-            logic_asm += self.get_true_side_asm() + self.get_push_number_onto_stack_asm(0)
+            logic_asm += self.get_true_side_asm(conditional_key)
         return logic_asm
-
 
     def traverse_logic_node_children(self, children):
         child_asm = []
@@ -1315,9 +1336,13 @@ class Compiler:
         elif node.value == "/":
             return self.get_div_asm()
         elif node.value == ">":
-            return self.get_conditional_greater_than_asm()
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_greater_than_asm(self.conditional_count)
         elif node.value == "<":
-            return self.get_conditional_less_than_asm()
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_less_than_asm(self.conditional_count)
         elif node.value == "=":
             # We don't actually need to do any ops for this node right now.
             return []
@@ -1406,45 +1431,43 @@ class Compiler:
             "    call print\n"
         ]
 
-    def get_true_side_asm(self):
+    def get_true_side_asm(self, conditional_count):
         return [
-            "    greater:\n",
+            f"    greater_{conditional_count}:\n",
         ]
 
-    def get_false_side_asm(self):
+    def get_false_side_asm(self, conditional_count):
         return [
-            "    less:\n",
+            f"    less_{conditional_count}:\n",
         ]
 
-    def get_jump_past_less(self):
+    def get_jump_false_condition_body(self, conditional_count):
         return [
-            "    jmp end\n"
+            f"    jmp end_{conditional_count}\n"
         ]
 
-    def get_end_of_conditional_asm(self):
+    def get_end_of_conditional_asm(self, conditional_count):
         return [
             "    ;; End if/else block\n",
-            "    end:\n"
+            f"    end_{conditional_count}:\n"
         ]
 
-    def get_conditional_greater_than_asm(self):
-        # TODO(map) This breaks with more than one if statement in the program.
+    def get_conditional_greater_than_asm(self, conditional_count):
         return [
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
-            "    jg greater\n",
-            "    jle less\n"
+            f"    jg greater_{conditional_count}\n",
+            f"    jle less_{conditional_count}\n"
         ]
 
-    def get_conditional_less_than_asm(self):
-        # TODO(map) This breaks with more than one if statement in the program.
+    def get_conditional_less_than_asm(self, conditional_count):
         return [
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
-            "    jl less\n",
-            "    jge greater\n"
+            f"    jl less_{conditional_count}\n",
+            f"    jge greater_{conditional_count}\n"
         ]
 
     def get_string_asm(self, string, string_length, string_count):
