@@ -492,11 +492,15 @@ class CompareNode(ExpressionNode):
         return (types_equal and
                 super().__eq__(other))
 
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
+
     def can_traverse_to_parent(self):
         if self.parent_node:
             return True
         else:
             return False
+
 
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -972,6 +976,7 @@ class Parser:
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
         root_node = None
+
         if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
             # Advance once to get past the paren token.
             self.advance_token()
@@ -1043,7 +1048,7 @@ class Parser:
                 if type(ret_node) != NoOpNode:
                     truth_body = ret_node
                 self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                     truth_node_list.append(truth_body)
                     truth_body = None
 
@@ -1069,9 +1074,9 @@ class Parser:
                     if type(ret_node) != NoOpNode:
                         false_node_list.append(ret_node)
                     self.advance_token()
-
-            self.curr_token_pos -= 1
-            self.curr_token = self.token_list[self.curr_token_pos]
+            else:
+                # TODO(map) Figure out how to not go back here
+                self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
         else:
@@ -1149,10 +1154,10 @@ class Compiler:
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
         self.var_count = 0
-        self.if_count = 0
-        self.else_count = 0
+        self.conditional_count = 0
         self.raw_strings = {}
         self.variables = {}
+        self.conditionals = {}
 
     def compile(self):
         self.create_empty_out_file()
@@ -1271,33 +1276,34 @@ class Compiler:
             node.visited = True
             if not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
+            conditional_mark_count = self.conditionals[node.child_node]
             if node.child_node.value == ">":
-                return self.traverse_greater_than_body(node) + self.get_end_of_conditional_asm(self.else_count)
+                return self.traverse_greater_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             elif node.child_node.value == "<":
-                return self.traverse_less_than_body(node) + self.get_end_of_conditional_asm(self.else_count)
+                return self.traverse_less_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
-    def traverse_greater_than_body(self, node):
+    def traverse_greater_than_body(self, conditional_key, node):
         logic_asm = []
         if node.true_side:
-            logic_asm += self.get_true_side_asm(self.if_count) + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less(self.else_count)
+            logic_asm += self.get_true_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
         if node.false_side:
-            logic_asm += self.get_false_side_asm(self.else_count) + self.traverse_logic_node_children(node.false_side)
+            logic_asm += self.get_false_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
-            logic_asm += self.get_false_side_asm(self.else_count)
+            logic_asm += self.get_false_side_asm(conditional_key)
         return logic_asm
 
-    def traverse_less_than_body(self, node):
+    def traverse_less_than_body(self, conditional_key, node):
         logic_asm = []
         if node.true_side:
-            logic_asm += self.get_false_side_asm(self.else_count) + self.traverse_logic_node_children(node.true_side) + self.get_jump_past_less(self.else_count)
+            logic_asm += self.get_false_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
         if node.false_side:
-            logic_asm += self.get_true_side_asm(self.if_count) + self.traverse_logic_node_children(node.false_side)
+            logic_asm += self.get_true_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
-            logic_asm += self.get_true_side_asm(self.if_count)
+            logic_asm += self.get_true_side_asm(conditional_key)
         return logic_asm
 
     def traverse_logic_node_children(self, children):
@@ -1317,13 +1323,13 @@ class Compiler:
         elif node.value == "/":
             return self.get_div_asm()
         elif node.value == ">":
-            self.if_count += 1
-            self.else_count += 1
-            return self.get_conditional_greater_than_asm(self.if_count)
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_greater_than_asm(self.conditional_count)
         elif node.value == "<":
-            self.if_count += 1
-            self.else_count += 1
-            return self.get_conditional_less_than_asm(self.if_count)
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_less_than_asm(self.conditional_count)
         elif node.value == "=":
             # We don't actually need to do any ops for this node right now.
             return []
@@ -1412,45 +1418,43 @@ class Compiler:
             "    call print\n"
         ]
 
-    def get_true_side_asm(self, if_count):
+    def get_true_side_asm(self, conditional_count):
         return [
-            f"    greater_{if_count}:\n",
+            f"    greater_{conditional_count}:\n",
         ]
 
-    def get_false_side_asm(self, else_count):
+    def get_false_side_asm(self, conditional_count):
         return [
-            f"    less_{else_count}:\n",
+            f"    less_{conditional_count}:\n",
         ]
 
-    def get_jump_past_less(self, else_count):
+    def get_jump_false_condition_body(self, conditional_count):
         return [
-            f"    jmp end_{else_count}\n"
+            f"    jmp end_{conditional_count}\n"
         ]
 
-    def get_end_of_conditional_asm(self, else_count):
+    def get_end_of_conditional_asm(self, conditional_count):
         return [
             "    ;; End if/else block\n",
-            f"    end_{else_count}:\n"
+            f"    end_{conditional_count}:\n"
         ]
 
-    def get_conditional_greater_than_asm(self, if_count):
-        # TODO(map) This breaks with more than one if statement in the program.
+    def get_conditional_greater_than_asm(self, conditional_count):
         return [
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
-            f"    jg greater_{if_count}\n",
-            f"    jle less_{if_count}\n"
+            f"    jg greater_{conditional_count}\n",
+            f"    jle less_{conditional_count}\n"
         ]
 
-    def get_conditional_less_than_asm(self, if_count):
-        # TODO(map) This breaks with more than one if statement in the program.
+    def get_conditional_less_than_asm(self, conditional_count):
         return [
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
-            f"    jl less_{if_count}\n",
-            f"    jge greater_{if_count}\n"
+            f"    jl less_{conditional_count}\n",
+            f"    jge greater_{conditional_count}\n"
         ]
 
     def get_string_asm(self, string, string_length, string_count):
