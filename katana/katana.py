@@ -189,6 +189,16 @@ class UnpairedElseError(Exception):
         return f"else at {self.line_num}:{self.col_num} does not have a matching if block."
 
 
+class InvalidTypeDeclarationException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid type")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Invalid type at {self.line_num}:{self.col_num}."
+
+
 
 ########
 # TOKENS
@@ -527,7 +537,6 @@ class VariableNode(Node):
         self.value = value
         self.parent_node = parent_node
 
-    # TODO(map) Do validation in the init method to ensure the typing is correct.
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -937,6 +946,8 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
+        except InvalidTypeDeclarationException as itde:
+            print_exception_message(("\n").join(program_lines), itde.col_num, itde)
 
     def parse_literal(self):
         """
@@ -1018,6 +1029,8 @@ class Parser:
             while self.curr_token.ttype != EOL_TOKEN_TYPE:
                 child_node = self.process_token(child_node)
                 self.advance_token()
+            if not child_node.right_side.value.isnumeric():
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         elif node_value == "if":
             keyword_token = self.curr_token
