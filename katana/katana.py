@@ -102,7 +102,6 @@ class UnclosedParenthesisError(Exception):
         return f"Unclosed parenthesis at {self.line_num}:{self.col_num}."
 
 
-# TODO(map) Probably a chance to make the init method more DRY
 # TODO(map) Because the line_num in the program starts at 0 we add 1 for now.
 class InvalidTokenException(Exception):
     def __init__(self, line_num, col_num, character):
@@ -739,14 +738,6 @@ class Lexer:
     def update_comment_index(self):
         if "//" in self.program.get_curr_line():
             self.comment_index = self.program.get_curr_line().index("//")
-
-    def get_single_line_comment_token(self) -> Token:
-        end_of_comment_pos = self.program.get_curr_line()[self.program.curr_col:].index(
-            "\n") + self.program.curr_col
-        token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line,
-                      self.program.get_curr_line()[self.program.curr_col:end_of_comment_pos], LOW)
-        self.program.curr_col = end_of_comment_pos
-        return token
 
     def generate_token(self, character) -> Token:
         try:
