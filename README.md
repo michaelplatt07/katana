@@ -131,6 +131,15 @@ with `SOME_CONDITION` being a truthy statement like `1 > 0`.
 - [x] Add conditionals
 - [ ] Add to current conditionals (only support `>` right now)
 - [ ] Add loops
+- [ ] * loopUntil(==, >, <)
+- [ ] * loopDown
+- [ ] * loopDownIncl
+- [ ] * loopUp
+- [ ] * loopUpIncl
+- [ ] * loopFrom
+- [ ] * loopFromIncl
+- [ ] * loopOver
+- [ ] Add ability to update variable in the code
 - [ ] Add 32-bit processing flag
 - [ ] Do type parsing in declaration, things like uint32 and such
 - [ ] Enable printing for numbers

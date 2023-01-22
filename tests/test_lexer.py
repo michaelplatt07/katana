@@ -40,6 +40,16 @@ from katana.katana import (
 )
 
 
+def get_main_tokens():
+    return [
+        Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+        Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+        Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+        Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+        Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+    ]
+
+
 class TestComments:
     """Testing to make sure comments are picked up appropriately."""
 
@@ -407,11 +417,7 @@ class TestKeyword:
         Ensures the main method keyword is lexed correctly.
         """
         program = Program(["main() {print(1+2);};\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+        token_list = get_main_tokens()[:-1] + [
             Token(KEYWORD_TOKEN_TYPE, 8, 0, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 13, 0, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 14, 0, "1", LOW),
@@ -432,12 +438,7 @@ class TestKeyword:
         Same program as above test but with new lines.
         """
         program = Program(["main() {\n", "print(1+2);\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 6, 1, "1", LOW),
@@ -478,12 +479,7 @@ class TestKeyword:
         appropriate tokens to be parsed.
         """
         program = Program(["main() {\n", "int16 x = 3;\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
@@ -503,12 +499,7 @@ class TestKeyword:
         appropriate tokens.
         """
         program = Program(["main() {\n", "int16 x = 3;\n", "print(x);\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
@@ -555,12 +546,7 @@ class TestKeyword:
         Test to make sure the `if` keyword by itself correctly lexes.
         """
         program = Program(["main() {\n", "if (1 > 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
@@ -589,12 +575,7 @@ class TestKeyword:
         Test to make sure the less than operator works and is lexed.
         """
         program = Program(["main() {\n", "if (1 < 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
@@ -653,12 +634,7 @@ class TestKeyword:
         If there is an `if` paired with an `else` the lexer succeeds.
         """
         program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
@@ -700,12 +676,7 @@ class TestKeyword:
         If there is an `if` paired with an `else` the lexer succeeds.
         """
         program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "} else {\n", "print(\"low\");\n", "}\n", "}\n"])
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "1", LOW),
@@ -741,6 +712,29 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_basic_loop_up_keyword(self):
+        program = Program(["main() {\n", "loopUp(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "loopUp", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 10, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  11, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE,  17, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  1, 3, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  1, 4, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 class TestQuotationCharacter:
 
