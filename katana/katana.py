@@ -1388,12 +1388,21 @@ class Compiler:
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         elif isinstance(node, LoopKeywordNode):
-            node.visited = True
-            if not node.child_node.visited:
-                return self.traverse_tree(node.child_node)
-            if not node.loop_body[0].visited:
-                return self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
-            return []
+            if type(node) == LoopUpKeywordNode:
+                node.visited = True
+                if not node.child_node.visited:
+                    return ["    ;; Push loop end val on stack\n"] + self.traverse_tree(node.child_node)
+                if not node.loop_body[0].visited:
+                    return  self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
+                return []
+            elif type(node) == LoopDownKeywordNode:
+                node.visited = True
+                if not node.child_node.visited:
+                    return ["    ;; Push loop start val on stack\n"] + self.traverse_tree(node.child_node)
+                if not node.loop_body[0].visited:
+                    return self.get_loop_down_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end()
+                return []
+
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1541,6 +1550,14 @@ class Compiler:
             "    loop:\n",
         ]
 
+    def get_loop_down_asm_start(self):
+        return [
+            "    ;; Loop down\n",
+            "    ;; End loop at 0\n",
+            "    push 0\n",
+            "    loop:\n",
+        ]
+
     def get_loop_up_asm_end(self):
         return [
             "    pop rcx\n",
@@ -1550,6 +1567,17 @@ class Compiler:
             "    push rbx\n",
             "    push rcx\n",
             "    jl loop\n"
+        ]
+
+    def get_loop_down_asm_end(self):
+        return [
+            "    pop rbx\n",
+            "    pop rcx\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rcx\n",
+            "    push rbx\n",
+            "    jg loop\n"
         ]
 
     def get_true_side_asm(self, conditional_count):
