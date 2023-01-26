@@ -118,6 +118,18 @@ if (SOME_CONDITION) {
 ```
 with `SOME_CONDITION` being a truthy statement like `1 > 0`.
 
+### loops
+Katana has basic support for loops but often times in software there is a need to perform basic loop operations such as loop from zero to the size of a list. For that, Katana offers some specialized loops out of the box.
+
+`loopUp` is a specialized loop that, by default, starts at `0`:
+```
+main() {
+    loopUp(5) { // Loops from 0 - 5, non-inclusive
+        // BODY
+    }
+}
+```
+
 ## TODO: Features to Implement
 - [x] Implement subtract in asssembly
 - [x] Implement multiply in asssembly
