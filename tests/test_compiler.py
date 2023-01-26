@@ -283,6 +283,30 @@ class TestCompilerKeywords:
                 "    end_1:\n"
             ]
 
+    def test_loop_up(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_up.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push 3\n",
+                "    ;; Loop up\n",
+                "    ;; Start loop at 0\n",
+                "    push 0\n",
+                "    loop:\n",
+                "    push 7\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    pop rcx\n",
+                "    pop rbx\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    push rbx\n",
+                "    push rcx\n",
+                "    jl loop\n",
+            ]
+
 
 class TestCompilerString:
 

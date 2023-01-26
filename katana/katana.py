@@ -1364,7 +1364,9 @@ class Compiler:
             node.visited = True
             if not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
-            return self.traverse_logic_node_children(node.loop_body)
+            if not node.loop_body[0].visited:
+                return self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
+            return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1392,6 +1394,7 @@ class Compiler:
         child_asm = []
         for child in children:
             if not child.visited:
+                child.visited = True
                 child_asm += self.traverse_tree(child)
         return child_asm
 
@@ -1438,19 +1441,22 @@ class Compiler:
             compiled_program.write("        push rax\n")
             compiled_program.write("        mov rsi, rsp\n")
             compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("        jmp finish\n")
             compiled_program.write("   ;; If string get the value\n")
             compiled_program.write("   str:\n")
             compiled_program.write("        ;; Get variable length\n")
             compiled_program.write("        pop rdx\n")
             compiled_program.write("        mov rsi, rax\n")
-            compiled_program.write("   ;; Finish the print\n")
-            compiled_program.write("   finish:\n")
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        syscall\n")
-            compiled_program.write("        ;; Remove value at top of stack.\n")
-            compiled_program.write("        pop rax\n")
+            compiled_program.write("   ;; Finish the print\n")
+            compiled_program.write("   finish:\n")
             compiled_program.write("        ;; Push return address back.\n")
             compiled_program.write("        push rbx\n")
             compiled_program.write("        ret\n")
@@ -1498,6 +1504,25 @@ class Compiler:
         return [
             "    ;; Keyword Func\n",
             "    call print\n"
+        ]
+
+    def get_loop_up_asm_start(self):
+        return [
+            "    ;; Loop up\n",
+            "    ;; Start loop at 0\n",
+            "    push 0\n",
+            "    loop:\n",
+        ]
+
+    def get_loop_up_asm_end(self):
+        return [
+            "    pop rcx\n",
+            "    pop rbx\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rbx\n",
+            "    push rcx\n",
+            "    jl loop\n"
         ]
 
     def get_true_side_asm(self, conditional_count):
