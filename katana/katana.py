@@ -371,6 +371,29 @@ class LoopUpKeywordNode(LoopKeywordNode):
         return types_equal and loop_body_equal and super().__eq__(other)
 
 
+class LoopDownKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `loopDown` keyword specifically.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # TODO(map) Is there value to this? The start/end value are really part
+        # of the child node in this case
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = child_node.value
+        self.end_value = 0
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+
 class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
@@ -1120,7 +1143,7 @@ class Parser:
                 self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value == "loopUp":
+        elif node_value == "loopUp" or node_value == "loopDown":
             keyword_token = self.curr_token
 
             # Move past keyword token
@@ -1149,13 +1172,17 @@ class Parser:
                 self.advance_token()
                 if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                     loop_contents.append(loop_body)
-                    truth_body = None
-
+                    loop_body = None
 
             # Move past the right curl brace to close the if body.
             self.advance_token()
 
-            return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            if node_value == "loopUp":
+                return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            elif node_value == "loopDown":
+                return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            else:
+                assert False, f"Loop of type {node_value} is not recognized."
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -1214,7 +1241,7 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
                 node_list.append(root_node)
                 root_node = None
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp"]:
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown"]:
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()

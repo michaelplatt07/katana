@@ -6,6 +6,7 @@ from katana.katana import (
     FunctionKeywordNode,
     LiteralNode,
     LogicKeywordNode,
+    LoopDownKeywordNode,
     LoopUpKeywordNode,
     MultiplyDivideNode,
     Parser,
@@ -836,6 +837,52 @@ class TestKeywordParser:
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_loop_down_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopDown(3) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(loopDown((0<3), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 14, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 16, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 17, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 4, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        string_node = StringNode(token_list[13], "looping")
+        print_node = FunctionKeywordNode(token_list[11], "print", string_node)
+        three_node = LiteralNode(token_list[7], "3")
+        loop_node = LoopDownKeywordNode(token_list[5], "loopDown", three_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
 
 
 class TestQuotationParser:
