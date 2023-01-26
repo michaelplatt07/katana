@@ -1,0 +1,5 @@
+main() {
+    loopUp(3) {
+        print("looping");
+    }
+}

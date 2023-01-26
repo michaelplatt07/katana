@@ -84,7 +84,7 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-LOGIC_KEYWORDS = ("if", "else")
+LOGIC_KEYWORDS = ("if", "else", "loopUp")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
@@ -332,6 +332,43 @@ class VariableKeywordNode(KeywordNode):
 
     def __eq__(self, other):
         return type(self) == type(other) and super().__eq__(other)
+
+
+class LoopKeywordNode(KeywordNode):
+    """
+    Specialized node for the different types of loops that exist.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node)
+        self.loop_body = loop_body
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __repr__(self):
+        return f"({self.value}({self.child_node}, {self.loop_body}))"
+
+
+class LoopUpKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `loopUp` keyword specifically.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = 0
+        self.end_value = child_node.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
 
 
 class StartNode(Node):
@@ -1083,6 +1120,42 @@ class Parser:
                 self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
+        elif node_value == "loopUp":
+            keyword_token = self.curr_token
+
+            # Move past keyword token
+            self.advance_token()
+
+            # TODO(map) Should I just call handle_parenthesis here?
+            # Move past paren token
+            self.advance_token()
+
+            # Get the comparison within the parens.
+            paren_contents = None
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                paren_contents = self.process_token(paren_contents)
+                self.advance_token()
+
+            # Move past left curl bracket
+            self.advance_token()
+
+            loop_contents = []
+            loop_body = None
+
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ret_node = self.process_token(loop_body)
+                if type(ret_node) != NoOpNode:
+                    loop_body = ret_node
+                self.advance_token()
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                    loop_contents.append(loop_body)
+                    truth_body = None
+
+
+            # Move past the right curl brace to close the if body.
+            self.advance_token()
+
+            return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -1141,7 +1214,7 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
                 node_list.append(root_node)
                 root_node = None
-            elif type(node) ==  LogicKeywordNode and node.value == "if":
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp"]:
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
@@ -1287,6 +1360,13 @@ class Compiler:
                 return self.traverse_less_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
+        elif isinstance(node, LoopKeywordNode):
+            node.visited = True
+            if not node.child_node.visited:
+                return self.traverse_tree(node.child_node)
+            if not node.loop_body[0].visited:
+                return self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
+            return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1314,6 +1394,7 @@ class Compiler:
         child_asm = []
         for child in children:
             if not child.visited:
+                child.visited = True
                 child_asm += self.traverse_tree(child)
         return child_asm
 
@@ -1360,19 +1441,22 @@ class Compiler:
             compiled_program.write("        push rax\n")
             compiled_program.write("        mov rsi, rsp\n")
             compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("        jmp finish\n")
             compiled_program.write("   ;; If string get the value\n")
             compiled_program.write("   str:\n")
             compiled_program.write("        ;; Get variable length\n")
             compiled_program.write("        pop rdx\n")
             compiled_program.write("        mov rsi, rax\n")
-            compiled_program.write("   ;; Finish the print\n")
-            compiled_program.write("   finish:\n")
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        syscall\n")
-            compiled_program.write("        ;; Remove value at top of stack.\n")
-            compiled_program.write("        pop rax\n")
+            compiled_program.write("   ;; Finish the print\n")
+            compiled_program.write("   finish:\n")
             compiled_program.write("        ;; Push return address back.\n")
             compiled_program.write("        push rbx\n")
             compiled_program.write("        ret\n")
@@ -1420,6 +1504,25 @@ class Compiler:
         return [
             "    ;; Keyword Func\n",
             "    call print\n"
+        ]
+
+    def get_loop_up_asm_start(self):
+        return [
+            "    ;; Loop up\n",
+            "    ;; Start loop at 0\n",
+            "    push 0\n",
+            "    loop:\n",
+        ]
+
+    def get_loop_up_asm_end(self):
+        return [
+            "    pop rcx\n",
+            "    pop rbx\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rbx\n",
+            "    push rcx\n",
+            "    jl loop\n"
         ]
 
     def get_true_side_asm(self, conditional_count):
