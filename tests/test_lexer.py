@@ -736,6 +736,31 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_basic_loop_down_keyword(self):
+        program = Program(["main() {\n", "loopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "loopDown", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 8, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 12, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  13, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE,  17, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  1, 3, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE,  1, 4, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+
 class TestQuotationCharacter:
 
     def test_quote_character(self):
