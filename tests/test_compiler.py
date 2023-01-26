@@ -289,6 +289,7 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push loop end val on stack\n",
                 "    push 3\n",
                 "    ;; Loop up\n",
                 "    ;; Start loop at 0\n",
@@ -305,6 +306,31 @@ class TestCompilerKeywords:
                 "    push rbx\n",
                 "    push rcx\n",
                 "    jl loop\n",
+            ]
+
+    def test_loop_down(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_down.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start val on stack\n",
+                "    push 3\n",
+                "    ;; Loop down\n",
+                "    ;; End loop at 0\n",
+                "    push 0\n",
+                "    loop:\n",
+                "    push 7\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    pop rbx\n",
+                "    pop rcx\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    push rcx\n",
+                "    push rbx\n",
+                "    jg loop\n",
             ]
 
 

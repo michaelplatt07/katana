@@ -84,7 +84,7 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-LOGIC_KEYWORDS = ("if", "else", "loopUp")
+LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
@@ -360,6 +360,29 @@ class LoopUpKeywordNode(LoopKeywordNode):
         # Because this is loop up we will always loop from 0 to the end value.
         self.start_value = 0
         self.end_value = child_node.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+
+class LoopDownKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `loopDown` keyword specifically.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # TODO(map) Is there value to this? The start/end value are really part
+        # of the child node in this case
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = child_node.value
+        self.end_value = 0
 
         if loop_body:
             for node in loop_body:
@@ -1120,7 +1143,7 @@ class Parser:
                 self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value == "loopUp":
+        elif node_value == "loopUp" or node_value == "loopDown":
             keyword_token = self.curr_token
 
             # Move past keyword token
@@ -1149,13 +1172,17 @@ class Parser:
                 self.advance_token()
                 if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                     loop_contents.append(loop_body)
-                    truth_body = None
-
+                    loop_body = None
 
             # Move past the right curl brace to close the if body.
             self.advance_token()
 
-            return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            if node_value == "loopUp":
+                return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            elif node_value == "loopDown":
+                return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            else:
+                assert False, f"Loop of type {node_value} is not recognized."
         else:
             assert False, f"Keyword {node_value} not implemented"
 
@@ -1214,7 +1241,7 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
                 node_list.append(root_node)
                 root_node = None
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp"]:
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown"]:
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
@@ -1361,12 +1388,21 @@ class Compiler:
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         elif isinstance(node, LoopKeywordNode):
-            node.visited = True
-            if not node.child_node.visited:
-                return self.traverse_tree(node.child_node)
-            if not node.loop_body[0].visited:
-                return self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
-            return []
+            if type(node) == LoopUpKeywordNode:
+                node.visited = True
+                if not node.child_node.visited:
+                    return ["    ;; Push loop end val on stack\n"] + self.traverse_tree(node.child_node)
+                if not node.loop_body[0].visited:
+                    return  self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
+                return []
+            elif type(node) == LoopDownKeywordNode:
+                node.visited = True
+                if not node.child_node.visited:
+                    return ["    ;; Push loop start val on stack\n"] + self.traverse_tree(node.child_node)
+                if not node.loop_body[0].visited:
+                    return self.get_loop_down_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end()
+                return []
+
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1514,6 +1550,14 @@ class Compiler:
             "    loop:\n",
         ]
 
+    def get_loop_down_asm_start(self):
+        return [
+            "    ;; Loop down\n",
+            "    ;; End loop at 0\n",
+            "    push 0\n",
+            "    loop:\n",
+        ]
+
     def get_loop_up_asm_end(self):
         return [
             "    pop rcx\n",
@@ -1523,6 +1567,17 @@ class Compiler:
             "    push rbx\n",
             "    push rcx\n",
             "    jl loop\n"
+        ]
+
+    def get_loop_down_asm_end(self):
+        return [
+            "    pop rbx\n",
+            "    pop rcx\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rcx\n",
+            "    push rbx\n",
+            "    jg loop\n"
         ]
 
     def get_true_side_asm(self, conditional_count):
