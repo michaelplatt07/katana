@@ -346,6 +346,9 @@ class LoopKeywordNode(KeywordNode):
             for node in loop_body:
                 node.parent_node = self
 
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
+
     def __repr__(self):
         return f"({self.value}({self.child_node}, {self.loop_body}))"
 
@@ -370,6 +373,9 @@ class LoopUpKeywordNode(LoopKeywordNode):
         loop_body_equal = self.loop_body == other.loop_body
         return types_equal and loop_body_equal and super().__eq__(other)
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class LoopDownKeywordNode(LoopKeywordNode):
     """
@@ -392,6 +398,9 @@ class LoopDownKeywordNode(LoopKeywordNode):
         types_equal = type(self) == type(other)
         loop_body_equal = self.loop_body == other.loop_body
         return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class StartNode(Node):
@@ -1170,7 +1179,7 @@ class Parser:
                 if type(ret_node) != NoOpNode:
                     loop_body = ret_node
                 self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
                     loop_contents.append(loop_body)
                     loop_body = None
 
@@ -1259,9 +1268,11 @@ class Compiler:
         self.string_count = 0
         self.var_count = 0
         self.conditional_count = 0
+        self.loop_count = 0
         self.raw_strings = {}
         self.variables = {}
         self.conditionals = {}
+        self.loops = {}
 
     def compile(self):
         self.create_empty_out_file()
@@ -1393,14 +1404,18 @@ class Compiler:
                 if not node.child_node.visited:
                     return ["    ;; Push loop end val on stack\n"] + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
-                    return  self.get_loop_up_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end()
+                    self.loop_count += 1
+                    self.loops[node] = self.loop_count
+                    return  self.get_loop_up_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(self.loops[node])
                 return []
             elif type(node) == LoopDownKeywordNode:
                 node.visited = True
                 if not node.child_node.visited:
                     return ["    ;; Push loop start val on stack\n"] + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
-                    return self.get_loop_down_asm_start() + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end()
+                    self.loop_count += 1
+                    self.loops[node] = self.loop_count
+                    return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(self.loops[node])
                 return []
 
         else:
@@ -1542,23 +1557,23 @@ class Compiler:
             "    call print\n"
         ]
 
-    def get_loop_up_asm_start(self):
+    def get_loop_up_asm_start(self, loop_count):
         return [
             "    ;; Loop up\n",
             "    ;; Start loop at 0\n",
             "    push 0\n",
-            "    loop:\n",
+            f"    loop_{loop_count}:\n",
         ]
 
-    def get_loop_down_asm_start(self):
+    def get_loop_down_asm_start(self, loop_count):
         return [
             "    ;; Loop down\n",
             "    ;; End loop at 0\n",
             "    push 0\n",
-            "    loop:\n",
+            f"    loop_{loop_count}:\n",
         ]
 
-    def get_loop_up_asm_end(self):
+    def get_loop_up_asm_end(self, loop_count):
         return [
             "    pop rcx\n",
             "    pop rbx\n",
@@ -1566,10 +1581,13 @@ class Compiler:
             "    cmp rcx, rbx\n",
             "    push rbx\n",
             "    push rcx\n",
-            "    jl loop\n"
+            f"    jl loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
         ]
 
-    def get_loop_down_asm_end(self):
+    def get_loop_down_asm_end(self, loop_count):
         return [
             "    pop rbx\n",
             "    pop rcx\n",
@@ -1577,7 +1595,10 @@ class Compiler:
             "    cmp rcx, rbx\n",
             "    push rcx\n",
             "    push rbx\n",
-            "    jg loop\n"
+            f"    jg loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
         ]
 
     def get_true_side_asm(self, conditional_count):
