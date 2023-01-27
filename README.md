@@ -162,7 +162,7 @@ main() {
 - [ ] * loopFromIncl
 - [ ] * loopOver
 - [ ] Add ability to update variable in the code
-- [ ] * Update integers
+- [x] * Update integers
 - [ ] * Update strings
 - [ ] Add 32-bit processing flag
 - [ ] Do type parsing in declaration, things like uint32 and such
