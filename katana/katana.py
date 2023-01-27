@@ -40,6 +40,7 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+RANGE_INDICATION_TOKEN_TYPE = "RANGE"
 RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_CURL_BRACE"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 STRING_TOKEN_TYPE = "STRING"
@@ -84,7 +85,7 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown")
+LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
@@ -842,6 +843,8 @@ class Lexer:
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '"':
                 return self.generate_string_token()
+            elif character == ".":
+                return self.handle_dot_character()
             elif character.isalpha():
                 return self.generate_keyword_token()
             elif character == "\n":
@@ -938,6 +941,16 @@ class Lexer:
             self.program.curr_col += 1
 
         return Token(STRING_TOKEN_TYPE, original_pos, self.program.curr_line, string, LOW)
+
+    def handle_dot_character(self):
+        dot_operator = self.program.get_curr_char()
+        dot_operator_idx = self.program.curr_col
+        if self.program.get_next_char() == ".":
+            self.program.advance_character()
+            dot_operator += self.program.get_curr_char()
+            return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
+        else:
+            raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
 
 
 ########
