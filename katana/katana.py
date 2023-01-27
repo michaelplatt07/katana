@@ -1467,7 +1467,11 @@ class Compiler:
             self.conditionals[node] = self.conditional_count
             return self.get_conditional_less_than_asm(self.conditional_count)
         elif node.value == "=":
-            # We don't actually need to do any ops for this node right now.
+            # This is an assignment of a new value to the variable.
+            if type(node.parent_node) != VariableKeywordNode:
+                return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
+            # Don't do anything if the parent is an AssignmentNode because the
+            # parent_node will handle that assembly.
             return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
@@ -1655,8 +1659,13 @@ class Compiler:
 
     def get_assignment_asm(self, var_count, value):
         return [
-            f"section .var_{var_count}\n",
+            f"section .var_{var_count} write\n",
             f"    number_{var_count} dq {value}\n"
+        ]
+
+    def get_assign_new_value_to_var_asm(self, var_name, new_value):
+        return [
+            f"    mov word [{var_name}], {new_value}\n"
         ]
 
     def create_assembly_for_exit(self):
