@@ -198,7 +198,7 @@ class TestCompilerKeywords:
                     "section": "var_1",
                     "var_name": "number_1",
                     "asm": [
-                        "section .var_1\n",
+                        "section .var_1 write\n",
                         "    number_1 dq 3\n"
                     ]
                 }
@@ -216,7 +216,7 @@ class TestCompilerKeywords:
                     "section": "var_1",
                     "var_name": "number_1",
                     "asm": [
-                        "section .var_1\n",
+                        "section .var_1 write\n",
                         "    number_1 dq 3\n"
                     ]
                 }
@@ -294,7 +294,7 @@ class TestCompilerKeywords:
                 "    ;; Loop up\n",
                 "    ;; Start loop at 0\n",
                 "    push 0\n",
-                "    loop:\n",
+                "    loop_1:\n",
                 "    push 7\n",
                 "    push string_1\n",
                 "    ;; Keyword Func\n",
@@ -305,7 +305,10 @@ class TestCompilerKeywords:
                 "    cmp rcx, rbx\n",
                 "    push rbx\n",
                 "    push rcx\n",
-                "    jl loop\n",
+                "    jl loop_1\n",
+                "    ;; Clean up loop vars\n",
+                "    pop rax\n",
+                "    pop rax\n"
             ]
 
     def test_loop_down(self):
@@ -319,7 +322,7 @@ class TestCompilerKeywords:
                 "    ;; Loop down\n",
                 "    ;; End loop at 0\n",
                 "    push 0\n",
-                "    loop:\n",
+                "    loop_1:\n",
                 "    push 7\n",
                 "    push string_1\n",
                 "    ;; Keyword Func\n",
@@ -330,7 +333,10 @@ class TestCompilerKeywords:
                 "    cmp rcx, rbx\n",
                 "    push rcx\n",
                 "    push rbx\n",
-                "    jg loop\n",
+                "    jg loop_1\n",
+                "    ;; Clean up loop vars\n",
+                "    pop rax\n",
+                "    pop rax\n"
             ]
 
 
