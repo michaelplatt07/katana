@@ -159,7 +159,7 @@ main() {
 - [x] Change the program parsing to read line by line
 - [ ] Rule 110
 - [ ] * Conditional `==`
-- [ ] * String variables
+- [x] * String variables
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
