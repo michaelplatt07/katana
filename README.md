@@ -158,7 +158,7 @@ main() {
 - [ ] * loopDownIncl
 - [x] * loopUp
 - [ ] * loopUpIncl
-- [ ] * loopFrom
+- [x] * loopFrom
 - [ ] * loopFromIncl
 - [ ] * loopOver
 - [ ] Add ability to update variable in the code
