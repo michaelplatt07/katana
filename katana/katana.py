@@ -1152,6 +1152,18 @@ class Parser:
             if not child_node.right_side.value.isnumeric():
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "string":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            if type(child_node.right_side) != StringNode:
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         elif node_value == "if":
             keyword_token = self.curr_token
             truth_body = None

@@ -549,6 +549,81 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_keyword_string_declaration(self):
+        """
+        Given a program like:
+        main() {
+            string x = "hello";
+        }
+        Expected to return an AST like:
+        (main[(int16((x="hello")))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 12, 1, "hello", LOW),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        string_node = StringNode(token_list[8], "hello")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, string_node)
+        keyword_node = VariableKeywordNode(token_list[5], "string", assignment_node)
+        ast = StartNode(token_list[0], "main", [keyword_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_int_16_reference(self):
+        """
+        Given a program like:
+        main() {
+            string x = "hello";
+            print(x);
+        }
+        Expected to return an AST like:
+        (main[(int16((x=3))), (print(x))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        string_node = StringNode(token_list[8], "hello")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, string_node)
+        variable_dec_node = VariableKeywordNode(token_list[5], "string", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[13], "x")
+        print_node = FunctionKeywordNode(token_list[11], "print", x_ref_node)
+        ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
     def test_if_keyword(self):
         """
         Given a program like:
