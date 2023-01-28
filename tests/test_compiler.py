@@ -289,22 +289,21 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
-                "    ;; Push loop end val on stack\n",
+                "    ;; Push loop start and end on stack\n",
+                "    push 0\n",
                 "    push 3\n",
                 "    ;; Loop up\n",
-                "    ;; Start loop at 0\n",
-                "    push 0\n",
                 "    loop_1:\n",
                 "    push 7\n",
                 "    push string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
-                "    pop rcx\n",
                 "    pop rbx\n",
+                "    pop rcx\n",
                 "    inc rcx\n",
                 "    cmp rcx, rbx\n",
-                "    push rbx\n",
                 "    push rcx\n",
+                "    push rbx\n",
                 "    jl loop_1\n",
                 "    ;; Clean up loop vars\n",
                 "    pop rax\n",
@@ -317,11 +316,64 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
-                "    ;; Push loop start val on stack\n",
+                "    ;; Push loop start and end on stack\n",
+                "    push 0\n",
                 "    push 3\n",
                 "    ;; Loop down\n",
-                "    ;; End loop at 0\n",
+                "    loop_1:\n",
+                "    push 7\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    pop rcx\n",
+                "    pop rbx\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    push rbx\n",
+                "    push rcx\n",
+                "    jg loop_1\n",
+                "    ;; Clean up loop vars\n",
+                "    pop rax\n",
+                "    pop rax\n"
+            ]
+
+    def test_loop_from_ascending(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_ascending.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
                 "    push 0\n",
+                "    push 3\n",
+                "    ;; Loop up\n",
+                "    loop_1:\n",
+                "    push 7\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    pop rbx\n",
+                "    pop rcx\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    push rcx\n",
+                "    push rbx\n",
+                "    jl loop_1\n",
+                "    ;; Clean up loop vars\n",
+                "    pop rax\n",
+                "    pop rax\n"
+            ]
+
+    def test_loop_from_descending(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_descending.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    push 3\n",
+                "    push 0\n",
+                "    ;; Loop down\n",
                 "    loop_1:\n",
                 "    push 7\n",
                 "    push string_1\n",

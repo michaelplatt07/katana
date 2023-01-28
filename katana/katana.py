@@ -1465,7 +1465,7 @@ class Compiler:
             if type(node) == LoopUpKeywordNode:
                 node.visited = True
                 if not node.child_node.visited:
-                    return ["    ;; Push loop end val on stack\n"] + self.traverse_tree(node.child_node)
+                    return self.get_push_loop_start_val_asm(0) + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
                     self.loop_count += 1
                     self.loops[node] = self.loop_count
@@ -1474,13 +1474,31 @@ class Compiler:
             elif type(node) == LoopDownKeywordNode:
                 node.visited = True
                 if not node.child_node.visited:
-                    return ["    ;; Push loop start val on stack\n"] + self.traverse_tree(node.child_node)
+                    return self.get_push_loop_end_val_asm(0) + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
                     self.loop_count += 1
                     self.loops[node] = self.loop_count
                     return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(self.loops[node])
                 return []
-
+            elif type(node) == LoopFromKeywordNode:
+                node.visited = True
+                if node.child_node.left_side.value < node.child_node.right_side.value:
+                    if not node.child_node.visited:
+                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
+                    if not node.loop_body[0].visited:
+                        self.loop_count += 1
+                        self.loops[node] = self.loop_count
+                        return self.get_loop_up_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_ascending_asm(self.loops[node])
+                    return []
+                else:
+                    if not node.child_node.visited:
+                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
+                    if not node.loop_body[0].visited:
+                        self.loop_count += 1
+                        self.loops[node] = self.loop_count
+                        # TODO(map) This isn't working as expected. Need a separate method.
+                        return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
+                    return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1535,6 +1553,9 @@ class Compiler:
                 return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
+            return []
+        elif node.value == "..":
+            # Don't need to get assembly here because the loop will handle it.
             return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
@@ -1624,30 +1645,39 @@ class Compiler:
             "    call print\n"
         ]
 
+    def get_push_loop_start_val_asm(self, loop_start):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    push {loop_start}\n"
+        ]
+
+    def get_push_loop_end_val_asm(self, loop_end):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    push {loop_end}\n"
+        ]
+
+
     def get_loop_up_asm_start(self, loop_count):
         return [
             "    ;; Loop up\n",
-            "    ;; Start loop at 0\n",
-            "    push 0\n",
             f"    loop_{loop_count}:\n",
         ]
 
     def get_loop_down_asm_start(self, loop_count):
         return [
             "    ;; Loop down\n",
-            "    ;; End loop at 0\n",
-            "    push 0\n",
             f"    loop_{loop_count}:\n",
         ]
 
     def get_loop_up_asm_end(self, loop_count):
         return [
-            "    pop rcx\n",
             "    pop rbx\n",
+            "    pop rcx\n",
             "    inc rcx\n",
             "    cmp rcx, rbx\n",
-            "    push rbx\n",
             "    push rcx\n",
+            "    push rbx\n",
             f"    jl loop_{loop_count}\n",
             "    ;; Clean up loop vars\n",
             "    pop rax\n",
@@ -1655,6 +1685,34 @@ class Compiler:
         ]
 
     def get_loop_down_asm_end(self, loop_count):
+        return [
+            "    pop rcx\n",
+            "    pop rbx\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rbx\n",
+            "    push rcx\n",
+            f"    jg loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
+        ]
+
+    def get_loop_from_ascending_asm(self, loop_count):
+        return [
+            "    pop rbx\n",
+            "    pop rcx\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rcx\n",
+            "    push rbx\n",
+            f"    jl loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
+        ]
+
+    def get_loop_from_descending_asm(self, loop_count):
         return [
             "    pop rbx\n",
             "    pop rcx\n",
