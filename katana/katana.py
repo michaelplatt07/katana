@@ -1451,17 +1451,26 @@ class Compiler:
             value_node = node.parent_node.right_side
             print_verbose_message(f"Traversing from {node.parent_node} to right side node {value_node}")
             value_node.visited = True
-            # TODO(map) This uses `number` which is bad when new vars arrive.
+
+            if type(value_node) == StringNode:
+                var_name = f"string_{self.var_count}"
+                self.string_count += 1
+            elif type(value_node) == LiteralNode:
+                var_name = f"number_{self.var_count}"
+            else:
+                assert False, f"Not sure how to handle Variable of type {type(value_node)}"
             self.variables[node.value] = {
                 "section":  section_text,
-                "var_name": f"number_{self.var_count}",
-                "asm": self.get_assignment_asm(self.var_count, value_node.value)
+                "var_name": var_name,
+                "var_len": len(value_node.value),
+                "asm": self.get_assignment_asm(self.var_count, value_node.value, type(value_node))
             }
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
             node.visited = True
             var_ref = self.variables[node.value]["var_name"]
-            return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
+            var_len = self.variables[node.value]["var_len"]
+            return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -1620,7 +1629,12 @@ class Compiler:
     def get_push_number_onto_stack_asm(self, num):
         return [f"    push {num}\n"]
 
-    def get_push_var_onto_stack_asm(self, val):
+    def get_push_var_onto_stack_asm(self, val, val_len):
+        if "string" in val:
+            return [
+                f"    push {val_len}\n"
+                f"    push {val}\n"
+            ]
         return [f"    push qword [{val}]\n"]
 
     def get_add_asm(self):
@@ -1790,11 +1804,16 @@ class Compiler:
             f"    push string_{string_count}\n",
         ]
 
-    def get_assignment_asm(self, var_count, value):
+    def get_assignment_asm(self, var_count, value, var_type):
+        if var_type == StringNode:
+            var_decl = [
+                f"    string_{var_count} db '{value}'\n",
+                f"    len_{var_count} equ $ - {len(value)}\n"]
+        else:
+            var_decl = [f"    number_{var_count} dq {value}\n"]
         return [
             f"section .var_{var_count} write\n",
-            f"    number_{var_count} dq {value}\n"
-        ]
+        ] + var_decl
 
     def get_assign_new_value_to_var_asm(self, var_name, new_value):
         return [

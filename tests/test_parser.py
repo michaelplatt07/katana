@@ -582,7 +582,7 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
-    def test_keyword_int_16_reference(self):
+    def test_keyword_string_reference(self):
         """
         Given a program like:
         main() {
