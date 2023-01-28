@@ -542,6 +542,51 @@ class TestKeyword:
         with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
             lexer.lex()
 
+    def test_string_variable_declaration(self):
+        """
+        Tests that declaring a string variable correctly declares the
+        appropriate tokens to be parsed.
+        """
+        program = Program(["main() {\n", "string x = \"hello\";\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_string_variable_usage(self):
+        """
+        Confirms that referencing the string appropriately works.
+        """
+        program = Program(["main() {\n", "string x = \"hello\";\n", "print(x);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
     def test_if_keyword_success(self):
         """
         Test to make sure the `if` keyword by itself correctly lexes.

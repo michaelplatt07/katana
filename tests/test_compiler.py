@@ -197,6 +197,7 @@ class TestCompilerKeywords:
                 "x": {
                     "section": "var_1",
                     "var_name": "number_1",
+                    "var_len": 1,
                     "asm": [
                         "section .var_1 write\n",
                         "    number_1 dq 3\n"
@@ -215,6 +216,7 @@ class TestCompilerKeywords:
                 "x": {
                     "section": "var_1",
                     "var_name": "number_1",
+                    "var_len": 1,
                     "asm": [
                         "section .var_1 write\n",
                         "    number_1 dq 3\n"
@@ -225,6 +227,26 @@ class TestCompilerKeywords:
                 "    push qword [number_1]\n",
                 "    ;; Keyword Func\n",
                 "    call print\n"
+            ]
+
+    def test_string_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_len": 5,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 db 'hello'\n",
+                        "    len_1 equ $ - 5\n"
+                    ]
+                }
+            }
+            assert assembly == [
             ]
 
     def test_if_keyword(self):
