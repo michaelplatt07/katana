@@ -5,6 +5,7 @@ from katana.katana import (
     Program,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
+    BOOLEAN_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     GREATER_THAN_TOKEN_TYPE,
@@ -583,6 +584,26 @@ class TestKeyword:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
             Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_bool_variable_declaration(self):
+        """
+        Tests that declaring a string variable correctly declares the
+        appropriate tokens to be parsed.
+        """
+        program = Program(["main() {\n", "bool x = false;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "bool", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
+            Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 15, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()

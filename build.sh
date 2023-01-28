@@ -1,4 +1,4 @@
 #!/bin/sh
-nasm -f elf64 ./sample_programs/sample.asm
-ld -o ./sample_programs/sample ./sample_programs/sample.o
-./sample_programs/sample
+nasm -f elf64 sample_programs/reference.asm
+ld -o sample_programs/reference sample_programs/reference.o
+./sample_programs/reference

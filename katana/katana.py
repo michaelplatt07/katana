@@ -28,6 +28,7 @@ NO_OP = None
 # Token Types
 #############
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
+BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
 GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
@@ -87,7 +88,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("int16", "string")
+VARIABLE_KEYWORDS = ("int16", "string", "bool")
 
 
 ############
@@ -971,6 +972,8 @@ class Lexer:
             return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in self.variable_name_list:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword in ["true", "false"]:
+            return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
