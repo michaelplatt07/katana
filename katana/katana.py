@@ -1817,7 +1817,11 @@ class Compiler:
 
     def get_assign_new_value_to_var_asm(self, var_name, new_value):
         return [
-            f"    mov word [{var_name}], {new_value}\n"
+            f"    mov word [{var_name}], {new_value}\n",
+            "    ;; Remove reassignment from stack\n",
+            "    pop rax\n"
+            "    ;; Remove reference to var from stack\n",
+            "    pop rax\n"
         ]
 
     def create_assembly_for_exit(self):

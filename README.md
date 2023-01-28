@@ -160,6 +160,7 @@ main() {
 - [ ] Rule 110
 - [ ] * Conditional `==`
 - [x] * String variables
+- [ ] * Boolean constants
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
