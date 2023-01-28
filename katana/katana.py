@@ -404,6 +404,31 @@ class LoopDownKeywordNode(LoopKeywordNode):
         return super().__hash__()
 
 
+class LoopFromKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `loopFrom` keyword specifically.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = child_node.left_side.value
+        self.end_value = child_node.right_side.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+
 class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
@@ -579,6 +604,26 @@ class CompareNode(ExpressionNode):
             return True
         else:
             return False
+
+
+class RangeNode(ExpressionNode):
+    """
+    Node specific for setting up a range to loop over.
+    """
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, MEDIUM, left_side, right_side,
+                         parent_node)
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
 
 class LiteralNode(Node):
@@ -995,6 +1040,8 @@ class Parser:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
+                node = self.parse_op(RangeNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -1165,7 +1212,7 @@ class Parser:
                 self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value == "loopUp" or node_value == "loopDown":
+        elif node_value in ["loopUp", "loopDown", "loopFrom"]:
             keyword_token = self.curr_token
 
             # Move past keyword token
@@ -1203,6 +1250,8 @@ class Parser:
                 return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
             elif node_value == "loopDown":
                 return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            elif node_value == "loopFrom":
+                return LoopFromKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
             else:
                 assert False, f"Loop of type {node_value} is not recognized."
         else:
@@ -1263,7 +1312,8 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
                 node_list.append(root_node)
                 root_node = None
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown"]:
+            # TODO(map) Is there a better check for this?
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
