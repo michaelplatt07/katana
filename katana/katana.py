@@ -87,7 +87,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("int16",)
+VARIABLE_KEYWORDS = ("int16", "string")
 
 
 ############

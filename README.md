@@ -121,6 +121,14 @@ with `SOME_CONDITION` being a truthy statement like `1 > 0`.
 ### loops
 Katana has basic support for loops but often times in software there is a need to perform basic loop operations such as loop from zero to the size of a list. For that, Katana offers some specialized loops out of the box.
 
+Basic loops use the keyword `loopFrom` like so:
+```
+main() {
+    loopFrom(0..3) { // Loops from 0 - 3, non-inclusive
+        // BODY
+    }
+}
+```
 `loopUp` is a specialized loop that, by default, starts at `0` and ends at the value in loop definition:
 ```
 main() {
@@ -149,8 +157,12 @@ main() {
 - [x] Set up printing in assembly
 - [x] Handle string literals
 - [x] Change the program parsing to read line by line
+- [ ] Rule 110
+- [ ] * Conditional `==`
+- [ ] * String variables
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
+- [ ] Chaining conditionals using `and` and `or` keywords
 - [ ] Add to current conditionals (only support `>` right now)
 - [ ] Add loops
 - [ ] * loopUntil(==, >, <)
@@ -161,6 +173,7 @@ main() {
 - [x] * loopFrom
 - [ ] * loopFromIncl
 - [ ] * loopOver
+- [ ] Loop enhancements by accessing the index of the loop
 - [ ] Add ability to update variable in the code
 - [x] * Update integers
 - [ ] * Update strings
