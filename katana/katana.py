@@ -40,6 +40,7 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+RANGE_INDICATION_TOKEN_TYPE = "RANGE"
 RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_CURL_BRACE"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
 STRING_TOKEN_TYPE = "STRING"
@@ -84,7 +85,7 @@ IGNORE_OPS = (
     EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "main")
-LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown")
+LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16",)
 
@@ -403,6 +404,31 @@ class LoopDownKeywordNode(LoopKeywordNode):
         return super().__hash__()
 
 
+class LoopFromKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `loopFrom` keyword specifically.
+    """
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = child_node.left_side.value
+        self.end_value = child_node.right_side.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+
 class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
@@ -578,6 +604,26 @@ class CompareNode(ExpressionNode):
             return True
         else:
             return False
+
+
+class RangeNode(ExpressionNode):
+    """
+    Node specific for setting up a range to loop over.
+    """
+    def __init__(self, token, value, left_side=None, right_side=None,
+                 parent_node=None):
+        super().__init__(token, value, MEDIUM, left_side, right_side,
+                         parent_node)
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        return (types_equal and
+                super().__eq__(other))
+
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
 
 class LiteralNode(Node):
@@ -842,6 +888,8 @@ class Lexer:
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == '"':
                 return self.generate_string_token()
+            elif character == ".":
+                return self.handle_dot_character()
             elif character.isalpha():
                 return self.generate_keyword_token()
             elif character == "\n":
@@ -939,6 +987,16 @@ class Lexer:
 
         return Token(STRING_TOKEN_TYPE, original_pos, self.program.curr_line, string, LOW)
 
+    def handle_dot_character(self):
+        dot_operator = self.program.get_curr_char()
+        dot_operator_idx = self.program.curr_col
+        if self.program.get_next_char() == ".":
+            self.program.advance_character()
+            dot_operator += self.program.get_curr_char()
+            return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
+        else:
+            raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
+
 
 ########
 # PARSER
@@ -982,6 +1040,8 @@ class Parser:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
+                node = self.parse_op(RangeNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
                 node = self.handle_parenthesis()
             elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -1152,7 +1212,7 @@ class Parser:
                 self.curr_token_pos -= 1
 
             return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value == "loopUp" or node_value == "loopDown":
+        elif node_value in ["loopUp", "loopDown", "loopFrom"]:
             keyword_token = self.curr_token
 
             # Move past keyword token
@@ -1190,6 +1250,8 @@ class Parser:
                 return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
             elif node_value == "loopDown":
                 return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
+            elif node_value == "loopFrom":
+                return LoopFromKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
             else:
                 assert False, f"Loop of type {node_value} is not recognized."
         else:
@@ -1250,7 +1312,8 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
                 node_list.append(root_node)
                 root_node = None
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown"]:
+            # TODO(map) Is there a better check for this?
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
@@ -1402,7 +1465,7 @@ class Compiler:
             if type(node) == LoopUpKeywordNode:
                 node.visited = True
                 if not node.child_node.visited:
-                    return ["    ;; Push loop end val on stack\n"] + self.traverse_tree(node.child_node)
+                    return self.get_push_loop_start_val_asm(0) + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
                     self.loop_count += 1
                     self.loops[node] = self.loop_count
@@ -1411,13 +1474,31 @@ class Compiler:
             elif type(node) == LoopDownKeywordNode:
                 node.visited = True
                 if not node.child_node.visited:
-                    return ["    ;; Push loop start val on stack\n"] + self.traverse_tree(node.child_node)
+                    return self.get_push_loop_end_val_asm(0) + self.traverse_tree(node.child_node)
                 if not node.loop_body[0].visited:
                     self.loop_count += 1
                     self.loops[node] = self.loop_count
                     return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(self.loops[node])
                 return []
-
+            elif type(node) == LoopFromKeywordNode:
+                node.visited = True
+                if node.child_node.left_side.value < node.child_node.right_side.value:
+                    if not node.child_node.visited:
+                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
+                    if not node.loop_body[0].visited:
+                        self.loop_count += 1
+                        self.loops[node] = self.loop_count
+                        return self.get_loop_up_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_ascending_asm(self.loops[node])
+                    return []
+                else:
+                    if not node.child_node.visited:
+                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
+                    if not node.loop_body[0].visited:
+                        self.loop_count += 1
+                        self.loops[node] = self.loop_count
+                        # TODO(map) This isn't working as expected. Need a separate method.
+                        return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
+                    return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1472,6 +1553,9 @@ class Compiler:
                 return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
+            return []
+        elif node.value == "..":
+            # Don't need to get assembly here because the loop will handle it.
             return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
@@ -1561,30 +1645,39 @@ class Compiler:
             "    call print\n"
         ]
 
+    def get_push_loop_start_val_asm(self, loop_start):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    push {loop_start}\n"
+        ]
+
+    def get_push_loop_end_val_asm(self, loop_end):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    push {loop_end}\n"
+        ]
+
+
     def get_loop_up_asm_start(self, loop_count):
         return [
             "    ;; Loop up\n",
-            "    ;; Start loop at 0\n",
-            "    push 0\n",
             f"    loop_{loop_count}:\n",
         ]
 
     def get_loop_down_asm_start(self, loop_count):
         return [
             "    ;; Loop down\n",
-            "    ;; End loop at 0\n",
-            "    push 0\n",
             f"    loop_{loop_count}:\n",
         ]
 
     def get_loop_up_asm_end(self, loop_count):
         return [
-            "    pop rcx\n",
             "    pop rbx\n",
+            "    pop rcx\n",
             "    inc rcx\n",
             "    cmp rcx, rbx\n",
-            "    push rbx\n",
             "    push rcx\n",
+            "    push rbx\n",
             f"    jl loop_{loop_count}\n",
             "    ;; Clean up loop vars\n",
             "    pop rax\n",
@@ -1592,6 +1685,34 @@ class Compiler:
         ]
 
     def get_loop_down_asm_end(self, loop_count):
+        return [
+            "    pop rcx\n",
+            "    pop rbx\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rbx\n",
+            "    push rcx\n",
+            f"    jg loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
+        ]
+
+    def get_loop_from_ascending_asm(self, loop_count):
+        return [
+            "    pop rbx\n",
+            "    pop rcx\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            "    push rcx\n",
+            "    push rbx\n",
+            f"    jl loop_{loop_count}\n",
+            "    ;; Clean up loop vars\n",
+            "    pop rax\n",
+            "    pop rax\n"
+        ]
+
+    def get_loop_from_descending_asm(self, loop_count):
         return [
             "    pop rbx\n",
             "    pop rcx\n",
