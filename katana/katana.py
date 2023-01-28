@@ -646,12 +646,30 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
-class VariableNode(Node):
+class BooleanNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
 
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class VariableNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1055,6 +1073,8 @@ class Parser:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
                 node = self.handle_string()
+            elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
+                node = BooleanNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
                 node = VariableNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
@@ -1167,6 +1187,19 @@ class Parser:
             if type(child_node.right_side) != StringNode:
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "bool":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            if type(child_node.right_side) != BooleanNode:
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+
         elif node_value == "if":
             keyword_token = self.curr_token
             truth_body = None
