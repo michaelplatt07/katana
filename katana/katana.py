@@ -31,6 +31,7 @@ ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
+EQUAL_TOKEN_TYPE = "EQUAL"
 GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
 MINUS_TOKEN_TYPE = "MINUS"
 MULTIPLY_TOKEN_TYPE = "MULTIPLY"
@@ -890,8 +891,10 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
-            elif character == '=':
+            elif character == '=' and self.program.get_next_char() != '=':
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '=' and self.program.get_next_char() == '=':
+                return self.handle_equal_operator()
             elif character == '>':
                 return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '<':
@@ -1019,6 +1022,11 @@ class Lexer:
             return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
         else:
             raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
+
+    def handle_equal_operator(self):
+        equal_idx = self.program.curr_col
+        self.program.advance_character()
+        return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
 
 
 ########
