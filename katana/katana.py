@@ -28,8 +28,10 @@ NO_OP = None
 # Token Types
 #############
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
+BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
+EQUAL_TOKEN_TYPE = "EQUAL"
 GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
 MINUS_TOKEN_TYPE = "MINUS"
 MULTIPLY_TOKEN_TYPE = "MULTIPLY"
@@ -87,7 +89,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("int16", "string")
+VARIABLE_KEYWORDS = ("int16", "string", "bool")
 
 
 ############
@@ -645,12 +647,33 @@ class LiteralNode(Node):
         return f"{self.value}"
 
 
-class VariableNode(Node):
+class BooleanNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
 
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
+
+
+class VariableNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -682,7 +705,6 @@ class VariableReferenceNode(Node):
 
     def __repr__(self):
         return f"{self.value}"
-
 
 
 #########
@@ -869,8 +891,10 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
-            elif character == '=':
+            elif character == '=' and self.program.get_next_char() != '=':
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '=' and self.program.get_next_char() == '=':
+                return self.handle_equal_operator()
             elif character == '>':
                 return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '<':
@@ -971,6 +995,8 @@ class Lexer:
             return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in self.variable_name_list:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword in ["true", "false"]:
+            return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -996,6 +1022,11 @@ class Lexer:
             return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
         else:
             raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
+
+    def handle_equal_operator(self):
+        equal_idx = self.program.curr_col
+        self.program.advance_character()
+        return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
 
 
 ########
@@ -1040,6 +1071,8 @@ class Parser:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == EQUAL_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
                 node = self.parse_op(RangeNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
@@ -1052,6 +1085,8 @@ class Parser:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
                 node = self.handle_string()
+            elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
+                node = BooleanNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
                 node = VariableNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
@@ -1164,6 +1199,19 @@ class Parser:
             if type(child_node.right_side) != StringNode:
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "bool":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            if type(child_node.right_side) != BooleanNode:
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+
         elif node_value == "if":
             keyword_token = self.curr_token
             truth_body = None
@@ -1457,6 +1505,8 @@ class Compiler:
                 self.string_count += 1
             elif type(value_node) == LiteralNode:
                 var_name = f"number_{self.var_count}"
+            elif type(value_node) == BooleanNode:
+                var_name = f"bool_{self.var_count}"
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)}"
             self.variables[node.value] = {
@@ -1480,6 +1530,8 @@ class Compiler:
                 return self.traverse_greater_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             elif node.child_node.value == "<":
                 return self.traverse_less_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
+            elif node.child_node.value == "==":
+                return self.traverse_equal_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         elif isinstance(node, LoopKeywordNode):
@@ -1520,6 +1572,11 @@ class Compiler:
                         # TODO(map) This isn't working as expected. Need a separate method.
                         return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
                     return []
+        elif type(node) == BooleanNode:
+            node.visited = True
+            if node.can_traverse_to_parent():
+                return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
+            return self.get_push_boolean_onto_stack(node.value)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1539,6 +1596,16 @@ class Compiler:
             logic_asm += self.get_false_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
         if node.false_side:
             logic_asm += self.get_true_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
+        else:
+            logic_asm += self.get_true_side_asm(conditional_key)
+        return logic_asm
+
+    def traverse_equal_body(self, conditional_key, node):
+        logic_asm = []
+        if node.true_side:
+            logic_asm += self.get_equal_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
+        if node.false_side:
+            logic_asm += self.get_not_equal_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
             logic_asm += self.get_true_side_asm(conditional_key)
         return logic_asm
@@ -1568,6 +1635,10 @@ class Compiler:
             self.conditional_count += 1
             self.conditionals[node] = self.conditional_count
             return self.get_conditional_less_than_asm(self.conditional_count)
+        elif node.value == "==":
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_equal_asm(self.conditional_count)
         elif node.value == "=":
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
@@ -1632,10 +1703,22 @@ class Compiler:
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
-                f"    push {val_len}\n"
+                f"    push {val_len}\n",
                 f"    push {val}\n"
             ]
         return [f"    push qword [{val}]\n"]
+
+    def get_push_boolean_onto_stack(self, node_value):
+        if node_value == "true":
+            return [
+                "    ;; Push true onto stack\n",
+                "    push 1\n"
+            ]
+        else:
+            return [
+                "    ;; Push true onto stack\n",
+                "    push 0\n"
+            ]
 
     def get_add_asm(self):
         return ["    ;; Add\n",
@@ -1762,6 +1845,16 @@ class Compiler:
             f"    less_{conditional_count}:\n",
         ]
 
+    def get_equal_side_asm(self, conditional_count):
+        return [
+            f"    equal_{conditional_count}:\n",
+        ]
+
+    def get_not_equal_side_asm(self, conditional_count):
+        return [
+            f"    not_equal_{conditional_count}:\n",
+        ]
+
     def get_jump_false_condition_body(self, conditional_count):
         return [
             f"    jmp end_{conditional_count}\n"
@@ -1791,6 +1884,15 @@ class Compiler:
             f"    jge greater_{conditional_count}\n"
         ]
 
+    def get_conditional_equal_asm(self, conditional_count):
+        return [
+            "    pop rax\n",
+            "    pop rbx\n",
+            "    cmp rbx, rax\n",
+            f"    je equal_{conditional_count}\n",
+            f"    jne not_equal_{conditional_count}\n"
+        ]
+
     def get_string_asm(self, string, string_length, string_count):
         return [
             f"section .string_{string_count}\n",
@@ -1809,6 +1911,12 @@ class Compiler:
             var_decl = [
                 f"    string_{var_count} db '{value}'\n",
                 f"    len_{var_count} equ $ - {len(value)}\n"]
+        elif var_type == BooleanNode:
+            var_decl = [
+                f"    bool_{var_count} dq 0\n",
+                ] if value == "false" else [
+                    f"    bool_{var_count} dq 1\n",
+                ]
         else:
             var_decl = [f"    number_{var_count} dq {value}\n"]
         return [

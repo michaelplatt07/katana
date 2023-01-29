@@ -5,8 +5,10 @@ from katana.katana import (
     Program,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
+    BOOLEAN_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
+    EQUAL_TOKEN_TYPE,
     GREATER_THAN_TOKEN_TYPE,
     EOF_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
@@ -587,6 +589,26 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_bool_variable_declaration(self):
+        """
+        Tests that declaring a string variable correctly declares the
+        appropriate tokens to be parsed.
+        """
+        program = Program(["main() {\n", "bool x = false;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "bool", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
+            Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 15, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
     def test_if_keyword_success(self):
         """
         Test to make sure the `if` keyword by itself correctly lexes.
@@ -644,6 +666,36 @@ class TestKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_if_keyword_equal_operator(self):
+        """
+        Test to make sure equal operator works and is lexed.
+        """
+        program = Program(["main() {\n", "if (0 == 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "if", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 1, "0", LOW),
+            Token(EQUAL_TOKEN_TYPE, 6, 1, "==", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 1, "0", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 12, 1, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
 
     def test_else_with_no_if_raises_error(self):
         """

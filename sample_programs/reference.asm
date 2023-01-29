@@ -473,17 +473,50 @@
 
 
 ; Printing a variable
+; section .text
+;     global _start
+
+; section .var_1
+;     number_1 dw 4
+
+; section .text
+;     _start:
+;         mov rax, [number_1]
+;         add rax, 48
+;         push rax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 4
+;         syscall
+;         syscall
+
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+; Booleans
 section .text
     global _start
 
 section .var_1
-    number_1 dw 4
+    bool_1 db 0
 
 section .text
     _start:
-        mov rax, [number_1]
-        add rax, 48
+        mov rax, [bool_1]
+        cmp rax, 0
+        je equal
+        jne not_equal
+        equal:
+        mov rax, 49
         push rax
+        jmp end_cond
+        not_equal:
+        mov rax, 50
+        push rax
+        end_cond:
         mov rsi, rsp
         mov rax, 1
         mov rdi, 1
