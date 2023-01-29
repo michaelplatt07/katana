@@ -1068,11 +1068,11 @@ class Parser:
             elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
                 node = self.parse_op(AssignmentNode, root_node)
             elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
-                node = self.parse_op(CompareNode, root_node)
+                node = self.parse_comparator(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
-                node = self.parse_op(CompareNode, root_node)
+                node = self.parse_comparator(CompareNode, root_node)
             elif self.curr_token.ttype == EQUAL_TOKEN_TYPE:
-                node = self.parse_op(CompareNode, root_node)
+                node = self.parse_comparator(CompareNode, root_node)
             elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
                 node = self.parse_op(RangeNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
@@ -1136,6 +1136,21 @@ class Parser:
             node.parent_node = ret_node
             ret_node.right_side = node
             return ret_node
+        return node
+
+    def parse_comparator(self, op_type, root_node):
+        """
+        This is just like the `parse_op` method except we don't ever want to
+        take anything from either the left or right and have them mix.
+        Priorities between the left and right side are not considered in this
+        method.
+        """
+        left_node = root_node
+        op_token = self.curr_token
+        self.advance_token()
+        right_node = self.process_token(root_node)
+        node = op_type(op_token, op_token.value,
+                       left_side=left_node, right_side=right_node)
         return node
 
     def handle_parenthesis(self):

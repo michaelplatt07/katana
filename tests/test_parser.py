@@ -1112,6 +1112,85 @@ class TestKeywordParser:
         assert ast == parser.parse()
 
 
+class TestKeywordAdvanced:
+
+    def test_if_keyword_with_var_reference_in_conditional(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 1;
+            if (x - 1 > 0) {
+                print("true");
+            } else {
+                print("false");
+            }
+        }
+        Expected to return an AST like:
+        (main[(int16(x=1)), (if((x-1)>0, print("greater"), None)), (print("lower"))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 6, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 7, "x", 0),
+            Token(MINUS_TOKEN_TYPE, 2, 9, "-", 1),
+            Token(NUM_TOKEN_TYPE, 2, 11, "1", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 2, 13, ">", 2),
+            Token(NUM_TOKEN_TYPE, 2, 15, "0", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 16, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 18, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 19, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "true", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 21, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 22, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 6, "else", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 11, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 4, 12, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 5, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 5, 14, "false", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 21, ")", 3),
+            Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 5, 23, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 6, 5, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 7, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
+        ]
+        lower_string_node = StringNode(token_list[33], "false")
+        second_print_node = FunctionKeywordNode(token_list[31], "print", lower_string_node)
+        greater_string_node = StringNode(token_list[23], "true")
+        first_print_node = FunctionKeywordNode(token_list[21], "print", greater_string_node)
+        one_node = LiteralNode(token_list[8], "1")
+        x_node = VariableNode(token_list[6], "x")
+        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
+        keyword_node = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[13], "x")
+        one_minus_node = LiteralNode(token_list[15], "1")
+        subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
+        zero_node = LiteralNode(token_list[9], "0")
+        compare_node = CompareNode(token_list[16], ">", subtract_node, zero_node)
+        if_node = LogicKeywordNode(token_list[11], "if", compare_node, None, [first_print_node], [second_print_node])
+        ast = StartNode(token_list[0], "main", [keyword_node, if_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+
 class TestQuotationParser:
 
     def test_quotation(self):
