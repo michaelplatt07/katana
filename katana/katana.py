@@ -31,6 +31,7 @@ ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
+EQUAL_TOKEN_TYPE = "EQUAL"
 GREATER_THAN_TOKEN_TYPE = "GREATER_THAN"
 MINUS_TOKEN_TYPE = "MINUS"
 MULTIPLY_TOKEN_TYPE = "MULTIPLY"
@@ -890,8 +891,10 @@ class Lexer:
                 return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '/':
                 return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
-            elif character == '=':
+            elif character == '=' and self.program.get_next_char() != '=':
                 return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+            elif character == '=' and self.program.get_next_char() == '=':
+                return self.handle_equal_operator()
             elif character == '>':
                 return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '<':
@@ -1020,6 +1023,11 @@ class Lexer:
         else:
             raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
 
+    def handle_equal_operator(self):
+        equal_idx = self.program.curr_col
+        self.program.advance_character()
+        return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
+
 
 ########
 # PARSER
@@ -1062,6 +1070,8 @@ class Parser:
             elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == EQUAL_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
                 node = self.parse_op(RangeNode, root_node)
@@ -1520,6 +1530,8 @@ class Compiler:
                 return self.traverse_greater_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             elif node.child_node.value == "<":
                 return self.traverse_less_than_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
+            elif node.child_node.value == "==":
+                return self.traverse_equal_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
         elif isinstance(node, LoopKeywordNode):
@@ -1588,6 +1600,16 @@ class Compiler:
             logic_asm += self.get_true_side_asm(conditional_key)
         return logic_asm
 
+    def traverse_equal_body(self, conditional_key, node):
+        logic_asm = []
+        if node.true_side:
+            logic_asm += self.get_equal_side_asm(conditional_key) + self.traverse_logic_node_children(node.true_side) + self.get_jump_false_condition_body(conditional_key)
+        if node.false_side:
+            logic_asm += self.get_not_equal_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
+        else:
+            logic_asm += self.get_true_side_asm(conditional_key)
+        return logic_asm
+
     def traverse_logic_node_children(self, children):
         child_asm = []
         for child in children:
@@ -1613,6 +1635,10 @@ class Compiler:
             self.conditional_count += 1
             self.conditionals[node] = self.conditional_count
             return self.get_conditional_less_than_asm(self.conditional_count)
+        elif node.value == "==":
+            self.conditional_count += 1
+            self.conditionals[node] = self.conditional_count
+            return self.get_conditional_equal_asm(self.conditional_count)
         elif node.value == "=":
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
@@ -1819,6 +1845,16 @@ class Compiler:
             f"    less_{conditional_count}:\n",
         ]
 
+    def get_equal_side_asm(self, conditional_count):
+        return [
+            f"    equal_{conditional_count}:\n",
+        ]
+
+    def get_not_equal_side_asm(self, conditional_count):
+        return [
+            f"    not_equal_{conditional_count}:\n",
+        ]
+
     def get_jump_false_condition_body(self, conditional_count):
         return [
             f"    jmp end_{conditional_count}\n"
@@ -1846,6 +1882,15 @@ class Compiler:
             "    cmp rbx, rax\n",
             f"    jl less_{conditional_count}\n",
             f"    jge greater_{conditional_count}\n"
+        ]
+
+    def get_conditional_equal_asm(self, conditional_count):
+        return [
+            "    pop rax\n",
+            "    pop rbx\n",
+            "    cmp rbx, rax\n",
+            f"    je equal_{conditional_count}\n",
+            f"    jne not_equal_{conditional_count}\n"
         ]
 
     def get_string_asm(self, string, string_length, string_count):
