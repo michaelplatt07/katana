@@ -249,6 +249,84 @@ class TestCompilerKeywords:
             assert assembly == [
             ]
 
+    def test_bool_false_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_bool_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "bool_1",
+                    "var_len": 5,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    bool_1 dq 0\n",
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_bool_true_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_bool_true_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "bool_1",
+                    "var_len": 4,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    bool_1 dq 1\n",
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_bool_keyword_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_bool_used.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "bool_1",
+                    "var_len": 4,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    bool_1 dq 1\n",
+                    ]
+                }
+            }
+            assert assembly == [
+                "    push qword [bool_1]\n",
+                "    ;; Push true onto stack\n",
+                "    push 1\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    cmp rbx, rax\n",
+                "    jg greater_1\n",
+                "    jle less_1\n",
+                "    greater_1:\n",
+                "    push 4\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    jmp end_1\n",
+                "    less_1:\n",
+                "    push 5\n",
+                "    push string_2\n",
+                "    ;; Keyword Func\n",
+                "    call print\n",
+                "    ;; End if/else block\n",
+                "    end_1:\n",
+            ]
+
     def test_if_keyword(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_conditional_if_only.ktna") as f:

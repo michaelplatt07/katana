@@ -659,7 +659,6 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
-
     def test_if_keyword(self):
         """
         Given a program like:

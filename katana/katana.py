@@ -664,6 +664,9 @@ class BooleanNode(Node):
     def __repr__(self):
         return f"{self.value}"
 
+    def __hash__(self):
+        return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
+
 
 class VariableNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -701,7 +704,6 @@ class VariableReferenceNode(Node):
 
     def __repr__(self):
         return f"{self.value}"
-
 
 
 #########
@@ -1493,6 +1495,8 @@ class Compiler:
                 self.string_count += 1
             elif type(value_node) == LiteralNode:
                 var_name = f"number_{self.var_count}"
+            elif type(value_node) == BooleanNode:
+                var_name = f"bool_{self.var_count}"
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)}"
             self.variables[node.value] = {
@@ -1556,6 +1560,11 @@ class Compiler:
                         # TODO(map) This isn't working as expected. Need a separate method.
                         return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
                     return []
+        elif type(node) == BooleanNode:
+            node.visited = True
+            if node.can_traverse_to_parent():
+                return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
+            return self.get_push_boolean_onto_stack(node.value)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -1668,10 +1677,22 @@ class Compiler:
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
-                f"    push {val_len}\n"
+                f"    push {val_len}\n",
                 f"    push {val}\n"
             ]
         return [f"    push qword [{val}]\n"]
+
+    def get_push_boolean_onto_stack(self, node_value):
+        if node_value == "true":
+            return [
+                "    ;; Push true onto stack\n",
+                "    push 1\n"
+            ]
+        else:
+            return [
+                "    ;; Push true onto stack\n",
+                "    push 0\n"
+            ]
 
     def get_add_asm(self):
         return ["    ;; Add\n",
@@ -1845,6 +1866,12 @@ class Compiler:
             var_decl = [
                 f"    string_{var_count} db '{value}'\n",
                 f"    len_{var_count} equ $ - {len(value)}\n"]
+        elif var_type == BooleanNode:
+            var_decl = [
+                f"    bool_{var_count} dq 0\n",
+                ] if value == "false" else [
+                    f"    bool_{var_count} dq 1\n",
+                ]
         else:
             var_decl = [f"    number_{var_count} dq {value}\n"]
         return [
