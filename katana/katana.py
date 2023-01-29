@@ -1071,6 +1071,8 @@ class Parser:
                 node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
                 node = self.parse_op(CompareNode, root_node)
+            elif self.curr_token.ttype == EQUAL_TOKEN_TYPE:
+                node = self.parse_op(CompareNode, root_node)
             elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
                 node = self.parse_op(RangeNode, root_node)
             elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
