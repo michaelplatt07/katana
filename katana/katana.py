@@ -1265,8 +1265,11 @@ class Parser:
                 while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                     ret_node = self.process_token(false_body)
                     if type(ret_node) != NoOpNode:
-                        false_node_list.append(ret_node)
+                        false_body = ret_node
                     self.advance_token()
+                    if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                        false_node_list.append(ret_node)
+                        false_body = None
             else:
                 # TODO(map) Figure out how to not go back here
                 self.curr_token_pos -= 1
@@ -1607,7 +1610,7 @@ class Compiler:
         if node.false_side:
             logic_asm += self.get_not_equal_side_asm(conditional_key) + self.traverse_logic_node_children(node.false_side)
         else:
-            logic_asm += self.get_true_side_asm(conditional_key)
+            logic_asm += self.get_not_equal_side_asm(conditional_key)
         return logic_asm
 
     def traverse_logic_node_children(self, children):
@@ -1924,6 +1927,10 @@ class Compiler:
         ] + var_decl
 
     def get_assign_new_value_to_var_asm(self, var_name, new_value):
+        if new_value == "true":
+            new_value = 1
+        elif new_value == "false":
+            new_value = 0
         return [
             f"    mov word [{var_name}], {new_value}\n",
             "    ;; Remove reassignment from stack\n",
