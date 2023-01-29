@@ -158,9 +158,11 @@ main() {
 - [x] Handle string literals
 - [x] Change the program parsing to read line by line
 - [ ] Rule 110
-- [ ] * Conditional `==`
+- [x] * Conditional `==`
 - [x] * String variables
-- [ ] * Boolean constants
+- [x] * Boolean constants
+- [ ] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
+- [ ] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
