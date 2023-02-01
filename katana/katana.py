@@ -484,6 +484,23 @@ class StringNode(Node):
         return f"'{self.value}'"
 
 
+class CharNode(Node):
+    """
+    Node for chars in the Katana language.
+    """
+
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+
+    def __eq__(self, other):
+        values_equal = self.value == other.value
+        return values_equal and super().__eq__(other)
+
+    def __repr__(self):
+        return f"'{self.value}'"
+
+
 class ExpressionNode(Node):
     """
     Superclass that represents an expression that is some sort of arithmetic.
@@ -1113,6 +1130,8 @@ class Parser:
                 node = self.handle_keyword()
             elif self.curr_token.ttype == STRING_TOKEN_TYPE:
                 node = self.handle_string()
+            elif self.curr_token.ttype == CHARACTER_TOKEN_TYPE:
+                node = CharNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
                 node = BooleanNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
@@ -1261,6 +1280,18 @@ class Parser:
             if type(child_node.right_side) != StringNode:
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
+        elif node_value == "char":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+
+            child_node = None
+            while self.curr_token.ttype != EOL_TOKEN_TYPE:
+                child_node = self.process_token(child_node)
+                self.advance_token()
+            if type(child_node.right_side) != CharNode:
+                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         elif node_value == "bool":
             keyword_token = self.curr_token
             # Move past keyword token
@@ -1273,7 +1304,6 @@ class Parser:
             if type(child_node.right_side) != BooleanNode:
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-
         elif node_value == "if":
             keyword_token = self.curr_token
             truth_body = None

@@ -1,12 +1,11 @@
 import pytest
 
 from katana.katana import (
-    BOOLEAN_TOKEN_TYPE,
     AssignmentNode,
     BooleanNode,
+    CharNode,
     CompareNode,
     FunctionKeywordNode,
-    KeywordNode,
     LiteralNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
@@ -23,6 +22,8 @@ from katana.katana import (
     VariableReferenceNode,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
+    BOOLEAN_TOKEN_TYPE,
+    CHARACTER_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EQUAL_TOKEN_TYPE,
@@ -594,7 +595,7 @@ class TestKeywordParser:
             print(x);
         }
         Expected to return an AST like:
-        (main[(int16((x=3))), (print(x))])
+        (main[(string((x=3))), (print(x))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
@@ -625,6 +626,39 @@ class TestKeywordParser:
         x_ref_node = VariableReferenceNode(token_list[13], "x")
         print_node = FunctionKeywordNode(token_list[11], "print", x_ref_node)
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_char_declaration(self):
+        """
+        Given a program like:
+        main() {
+            char x = 'h';
+        }
+        Expected to return an AST like:
+        (main[(char((x="hello")))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "char", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(CHARACTER_TOKEN_TYPE, 10, 1, "h", LOW),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        char_node = CharNode(token_list[8], "h")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, char_node)
+        keyword_node = VariableKeywordNode(token_list[5], "char", assignment_node)
+        ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
 
