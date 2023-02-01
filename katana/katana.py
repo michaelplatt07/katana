@@ -29,6 +29,7 @@ NO_OP = None
 #############
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
+CHARACTER_TOKEN_TYPE = "CHARACTER"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
 EQUAL_TOKEN_TYPE = "EQUAL"
@@ -89,7 +90,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "main")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("int16", "string", "bool")
+VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
 
 
 ############
@@ -169,6 +170,16 @@ class UnclosedQuotationException(Exception):
 
     def __str__(self):
         return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
+
+
+class InvalidCharException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid char")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Invalid declaration of `char` at {self.line_num}:{self.col_num}."
 
 
 class BadFormattedLogicBlock(Exception):
@@ -910,6 +921,8 @@ class Lexer:
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+            elif character == '\'':
+                return self.generate_char_token()
             elif character == '"':
                 return self.generate_string_token()
             elif character == ".":
@@ -1003,15 +1016,30 @@ class Lexer:
     def generate_string_token(self):
         string = ""
         original_pos = self.program.curr_col
-        self.program.curr_col += 1
+        self.program.advance_character()
 
         while self.program.get_curr_char() != '"':
             if self.program.get_curr_char() == ";" or self.program.get_curr_char() == "\n":
                 raise UnclosedQuotationException(self.program.curr_line, self.program.curr_col, string)
             string += self.program.get_curr_char()
-            self.program.curr_col += 1
+            self.program.advance_character()
 
         return Token(STRING_TOKEN_TYPE, original_pos, self.program.curr_line, string, LOW)
+
+    def generate_char_token(self):
+        # Move the character after the first single quote
+        self.program.advance_character()
+
+        original_pos = self.program.curr_col
+        char = self.program.get_curr_char()
+
+        # Move to the next single quote
+        self.program.advance_character()
+
+        if self.program.get_curr_char() != '\'':
+            raise InvalidCharException(self.program.curr_line, self.program.curr_col)
+
+        return Token(CHARACTER_TOKEN_TYPE, original_pos, self.program.curr_line, char, LOW)
 
     def handle_dot_character(self):
         dot_operator = self.program.get_curr_char()
