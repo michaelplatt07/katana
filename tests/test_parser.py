@@ -6,6 +6,7 @@ from katana.katana import (
     BooleanNode,
     CompareNode,
     FunctionKeywordNode,
+    KeywordNode,
     LiteralNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
@@ -1187,6 +1188,52 @@ class TestKeywordAdvanced:
         compare_node = CompareNode(token_list[16], ">", subtract_node, zero_node)
         if_node = LogicKeywordNode(token_list[11], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_update_var_with_expression(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 1;
+            x = x + 3;
+        }
+        Expected to return an AST like:
+        (main[(int16(x=1)), (x=(x+3))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 8, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(NUM_TOKEN_TYPE, 2, 12, "3", 0),
+            Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 14, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+        ]
+        one_node = LiteralNode(token_list[8], "1")
+        x_var_node = VariableNode(token_list[6], "x")
+        x_assign_node = AssignmentNode(token_list[7], "=", x_var_node, one_node)
+        int_keyword_node = VariableKeywordNode(token_list[5], "int16", x_assign_node)
+        three_node = LiteralNode(token_list[15], "3")
+        x_ref_node = VariableReferenceNode(token_list[13], "x")
+        plus_node = PlusMinusNode(token_list[14], "+", x_ref_node, three_node)
+        x_left_assignmet_ref_node = VariableReferenceNode(token_list[11], "x")
+        reassign_node = AssignmentNode(token_list[12], "=", x_left_assignmet_ref_node, plus_node)
+        ast = StartNode(token_list[0], "main", [int_keyword_node, reassign_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
 
