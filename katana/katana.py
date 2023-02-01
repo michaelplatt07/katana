@@ -1066,7 +1066,7 @@ class Parser:
             elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
                 node = self.parse_op(MultiplyDivideNode, root_node)
             elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
-                node = self.parse_op(AssignmentNode, root_node)
+                node = self.parse_assignment(root_node)
             elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
                 node = self.parse_comparator(CompareNode, root_node)
             elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
@@ -1152,6 +1152,25 @@ class Parser:
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
         return node
+
+    def parse_assignment(self, root_node):
+        """
+        This is its own method because an assignment can contain more than a
+        single value and might be an expression on the right hand side.
+        """
+        left_node = root_node
+        op_token = self.curr_token
+        right_node = None
+        self.advance_token()
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            right_node = self.process_token(right_node)
+            self.advance_token()
+        # TODO(map) Have to do this because I advance the token here which puts
+        # me at the EOL token, but then I advance after the node is returned.
+        self.curr_token_pos = self.curr_token_pos - 1
+        self.curr_token = self.token_list[self.curr_token_pos]
+        return AssignmentNode(op_token, op_token.value,
+                              left_side=left_node, right_side=right_node)
 
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
@@ -1536,6 +1555,11 @@ class Compiler:
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
             node.visited = True
+            # If the ref node is the left node of an assignment we don't need
+            # to push this onto the stack because the assignment assembly will
+            # push the variable onto the stack during assignment.
+            if type(node.parent_node) == AssignmentNode and node.parent_node.left_side == node:
+                return [] + self.traverse_tree(node.parent_node)
             var_ref = self.variables[node.value]["var_name"]
             var_len = self.variables[node.value]["var_len"]
             return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
@@ -1660,7 +1684,13 @@ class Compiler:
         elif node.value == "=":
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
-                return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
+                # If the right side of the assignment is an expression then we
+                # don't need to pop any values to clean up because the assembly
+                # will pop the data to do the expression.
+                if type(node.right_side) in [PlusMinusNode, MultiplyDivideNode]:
+                    return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
+                else:
+                    return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
             return []
@@ -1952,6 +1982,12 @@ class Compiler:
             "    pop rax\n"
             "    ;; Remove reference to var from stack\n",
             "    pop rax\n"
+        ]
+
+    def get_assign_new_value_to_var_from_expression(self, var_name):
+        return [
+            "    pop rax\n",
+            f"    mov qword [{var_name}], rax\n",
         ]
 
     def create_assembly_for_exit(self):

@@ -162,7 +162,8 @@ main() {
 - [x] * String variables
 - [x] * Boolean constants
 - [ ] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
-- [ ] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
+- [ ] * Substring access? Maybe the char should just exist instead?
+- [x] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
