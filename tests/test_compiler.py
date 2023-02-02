@@ -183,7 +183,7 @@ class TestCompilerKeywords:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
                 "    push 14\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
             ]
@@ -243,6 +243,25 @@ class TestCompilerKeywords:
                         "section .var_1 write\n",
                         "    string_1 db 'hello'\n",
                         "    len_1 equ $ - 5\n"
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_char_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_char_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "char_1",
+                    "var_len": 1,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    char_1 db 'h'\n",
                     ]
                 }
             }
@@ -314,13 +333,13 @@ class TestCompilerKeywords:
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
                 "    push 4\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    jmp end_1\n",
                 "    not_equal_1:\n",
                 "    push 5\n",
-                "    push string_2\n",
+                "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    ;; End if/else block\n",
@@ -342,7 +361,7 @@ class TestCompilerKeywords:
                 "    jle less_1\n",
                 "    greater_1:\n",
                 "    push 7\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    jmp end_1\n",
@@ -350,7 +369,7 @@ class TestCompilerKeywords:
                 "    ;; End if/else block\n",
                 "    end_1:\n",
                 "    push 5\n",
-                "    push string_2\n",
+                "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
                 "    call print\n"
             ]
@@ -370,13 +389,13 @@ class TestCompilerKeywords:
                 "    jge greater_1\n",
                 "    less_1:\n",
                 "    push 10\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    jmp end_1\n",
                 "    greater_1:\n",
                 "    push 13\n",
-                "    push string_2\n",
+                "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    ;; End if/else block\n",
@@ -398,13 +417,13 @@ class TestCompilerKeywords:
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
                 "    push 5\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    jmp end_1\n",
                 "    not_equal_1:\n",
                 "    push 7\n",
-                "    push string_2\n",
+                "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    ;; End if/else block\n",
@@ -423,7 +442,7 @@ class TestCompilerKeywords:
                 "    ;; Loop up\n",
                 "    loop_1:\n",
                 "    push 7\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    pop rbx\n",
@@ -450,7 +469,7 @@ class TestCompilerKeywords:
                 "    ;; Loop down\n",
                 "    loop_1:\n",
                 "    push 7\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    pop rcx\n",
@@ -477,7 +496,7 @@ class TestCompilerKeywords:
                 "    ;; Loop up\n",
                 "    loop_1:\n",
                 "    push 7\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    pop rbx\n",
@@ -504,7 +523,7 @@ class TestCompilerKeywords:
                 "    ;; Loop down\n",
                 "    loop_1:\n",
                 "    push 7\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print\n",
                 "    pop rbx\n",
@@ -528,5 +547,44 @@ class TestCompilerString:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
                 "    push 13\n",
-                "    push string_1\n",
+                "    push raw_string_1\n",
             ]
+
+
+class TestCompilerMultipleVarDeclarations:
+
+    def test_multiple_var_type_declarations(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_multi_var_type_declaration.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.compile()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_len": 1,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    number_1 dq 1\n",
+                    ]
+                },
+                "y": {
+                    "section": "var_2",
+                    "var_name": "string_1",
+                    "var_len": 14,
+                    "asm": [
+                        "section .var_2 write\n",
+                        "    string_1 db 'Hello, Katana!'\n",
+                        "    len_1 equ $ - 14\n"
+                    ]
+                },
+                "z": {
+                    "section": "var_3",
+                    "var_name": "char_1",
+                    "var_len": 1,
+                    "asm": [
+                        "section .var_3 write\n",
+                        "    char_1 db 'A'\n",
+                    ]
+                }
+            }

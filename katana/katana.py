@@ -1484,7 +1484,11 @@ class Compiler:
         self.ast = ast
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
+        self.char_count = 0
+        self.bool_count = 0
+        self.num_count = 0
         self.var_count = 0
+        self.raw_string_count = 0
         self.conditional_count = 0
         self.loop_count = 0
         self.raw_strings = {}
@@ -1576,14 +1580,14 @@ class Compiler:
                 node.visted = True
                 return []
         elif isinstance(node, StringNode):
-            self.string_count += 1
             node.visited = True
-            key = f"string_{self.string_count}"
-            self.raw_strings[key] = self.get_string_asm(node.value, len(node.value), self.string_count)
+            self.raw_string_count += 1
+            key = f"raw_string_{self.raw_string_count}"
+            self.raw_strings[key] = self.get_raw_string_asm(node.value, len(node.value), self.raw_string_count)
             if node.can_traverse_to_parent():
-                return self.get_push_string_asm(self.string_count, len(node.value)) + self.traverse_tree(node.parent_node)
+                return self.get_push_string_asm(self.raw_string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_string_asm(self.string_count, len(node.value))
+                return self.get_push_string_asm(self.raw_string_count, len(node.value))
         elif isinstance(node, VariableNode):
             self.var_count += 1
             node.visited = True
@@ -1596,19 +1600,28 @@ class Compiler:
             value_node.visited = True
 
             if type(value_node) == StringNode:
-                var_name = f"string_{self.var_count}"
                 self.string_count += 1
+                var_name = f"string_{self.string_count}"
+                type_count = self.string_count
+            elif type(value_node) == CharNode:
+                self.char_count += 1
+                var_name = f"char_{self.char_count}"
+                type_count = self.char_count
             elif type(value_node) == LiteralNode:
-                var_name = f"number_{self.var_count}"
+                self.num_count += 1
+                var_name = f"number_{self.num_count}"
+                type_count = self.num_count
             elif type(value_node) == BooleanNode:
-                var_name = f"bool_{self.var_count}"
+                self.bool_count += 1
+                var_name = f"bool_{self.bool_count}"
+                type_count = self.bool_count
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)}"
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
                 "var_len": len(value_node.value),
-                "asm": self.get_assignment_asm(self.var_count, value_node.value, type(value_node))
+                "asm": self.get_assignment_asm(self.var_count, type_count, value_node.value, type(value_node))
             }
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
@@ -1999,6 +2012,13 @@ class Compiler:
             f"    jne not_equal_{conditional_count}\n"
         ]
 
+    def get_raw_string_asm(self, string, string_length, string_count):
+        return [
+            f"section .raw_string_{string_count}\n",
+            f"    raw_string_{string_count} db '{string}', {string_length}\n",
+            f"    raw_len_{string_count} equ $ - raw_string_{string_count}\n"
+        ]
+
     def get_string_asm(self, string, string_length, string_count):
         return [
             f"section .string_{string_count}\n",
@@ -2009,22 +2029,26 @@ class Compiler:
     def get_push_string_asm(self, string_count, string_length):
         return [
             f"    push {string_length}\n",
-            f"    push string_{string_count}\n",
+            f"    push raw_string_{string_count}\n",
         ]
 
-    def get_assignment_asm(self, var_count, value, var_type):
+    def get_assignment_asm(self, var_count, type_count, value, var_type):
         if var_type == StringNode:
             var_decl = [
-                f"    string_{var_count} db '{value}'\n",
-                f"    len_{var_count} equ $ - {len(value)}\n"]
+                f"    string_{type_count} db '{value}'\n",
+                f"    len_{type_count} equ $ - {len(value)}\n"]
+        elif var_type == CharNode:
+            var_decl = [
+                f"    char_{type_count} db '{value}'\n",
+            ]
         elif var_type == BooleanNode:
             var_decl = [
-                f"    bool_{var_count} dq 0\n",
+                f"    bool_{type_count} dq 0\n",
                 ] if value == "false" else [
-                    f"    bool_{var_count} dq 1\n",
+                    f"    bool_{type_count} dq 1\n",
                 ]
         else:
-            var_decl = [f"    number_{var_count} dq {value}\n"]
+            var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
             f"section .var_{var_count} write\n",
         ] + var_decl
