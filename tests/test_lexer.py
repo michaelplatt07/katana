@@ -6,6 +6,7 @@ from katana.katana import (
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
+    CHARACTER_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EQUAL_TOKEN_TYPE,
@@ -33,6 +34,7 @@ from katana.katana import (
     VERY_HIGH,
     ULTRA_HIGH,
     BadFormattedLogicBlock,
+    InvalidCharException,
     InvalidTokenException,
     InvalidVariableNameError,
     NoTerminatorError,
@@ -379,9 +381,9 @@ class TestInvalidTokenException:
         """
         Ensures that if an unknown token shows up an exception is raised.
         """
-        program = Program(["';"])
+        program = Program(["`;"])
         lexer = Lexer(program)
-        with pytest.raises(InvalidTokenException, match="Invalid token ''' at 1:0."):
+        with pytest.raises(InvalidTokenException, match="Invalid token '`' at 1:0."):
             lexer.lex()
 
 
@@ -542,6 +544,35 @@ class TestKeyword:
             ["main() {\n", "int16 1_var = 3;\n", "}\n"])
         lexer = Lexer(program)
         with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
+            lexer.lex()
+
+    def test_character_variable_declaration(self):
+        """
+        Tests that declaring a character variable correctly declares the
+        appropriate tokens to be parsed.
+        """
+        program = Program(["main() {\n", "char x = 'h';\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "char", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(CHARACTER_TOKEN_TYPE, 10, 1, "h", LOW),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_invalid_character_variable_declaration_raises_exception(self):
+        """
+        Tests that anything other than a char in the format 'a' is not valid.
+        """
+        program = Program(["main() {\n", "char x = 'hi';\n", "}\n"])
+        lexer = Lexer(program)
+        with pytest.raises(InvalidCharException, match="Invalid declaration of `char` at 2:11."):
             lexer.lex()
 
     def test_string_variable_declaration(self):

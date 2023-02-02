@@ -497,35 +497,109 @@
 
 
 ; Booleans
+; section .text
+;     global _start
+
+; section .var_1
+;     bool_1 db 0
+
+; section .text
+;     _start:
+;         mov rax, [bool_1]
+;         cmp rax, 0
+;         je equal
+;         jne not_equal
+;         equal:
+;         mov rax, 49
+;         push rax
+;         jmp end_cond
+;         not_equal:
+;         mov rax, 50
+;         push rax
+;         end_cond:
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 4
+;         syscall
+;         syscall
+
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+; String indices
 section .text
     global _start
 
-section .var_1
-    bool_1 db 0
+section .string_1
+    string_1 db 'hELLO'
+    char_1 db 'h'
 
+;; This will get the single byte from string_1 and put it in al, the lower 8
+;; bytes of register ax (16 bits).
 section .text
     _start:
-        mov rax, [bool_1]
-        cmp rax, 0
-        je equal
-        jne not_equal
-        equal:
-        mov rax, 49
-        push rax
-        jmp end_cond
-        not_equal:
-        mov rax, 50
-        push rax
-        end_cond:
+        ;; H
+        mov al, [string_1]
+        push ax
         mov rsi, rsp
         mov rax, 1
         mov rdi, 1
-        mov rdx, 4
+        mov rdx, 1
         syscall
+        
+        ;; Compare a byte to a byte.
+        mov al, [string_1]
+        cmp al, [char_1]
+        jne not_rest
+        je rest
+        not_rest:
+        mov al, [string_1 + 1]
+        push ax
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+        rest:
+        ;; e
+        mov al, [string_1 + 1]
+        push ax
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; l
+        mov al, [string_1 + 2]
+        push ax
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; l
+        mov al, [string_1 + 3]
+        push ax
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
+        syscall
+
+        ;; 0
+        mov al, [string_1 + 4]
+        push ax
+        mov rsi, rsp
+        mov rax, 1
+        mov rdi, 1
+        mov rdx, 1
         syscall
 
         mov rax, 60
         mov rdi, 0
         syscall
-
-
