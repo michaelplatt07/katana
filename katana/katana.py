@@ -30,6 +30,7 @@ NO_OP = None
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 CHARACTER_TOKEN_TYPE = "CHARACTER"
+COMMA_TOKEN_TYPE = "COMMA"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
 EQUAL_TOKEN_TYPE = "EQUAL"
@@ -87,7 +88,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-FUNCTION_KEYWORDS = ("print", "main")
+FUNCTION_KEYWORDS = ("print", "main", "charAt")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
@@ -944,6 +945,8 @@ class Lexer:
                 return self.generate_string_token()
             elif character == ".":
                 return self.handle_dot_character()
+            elif character == ",":
+                return Token(COMMA_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isalpha():
                 return self.generate_keyword_token()
             elif character == "\n":

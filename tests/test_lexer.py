@@ -7,6 +7,7 @@ from katana.katana import (
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
     CHARACTER_TOKEN_TYPE,
+    COMMA_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EQUAL_TOKEN_TYPE,
@@ -915,6 +916,23 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_char_at_function(self):
+        program = Program(["main() {\n", "charAt(\"Hello\", 3);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "charAt", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 7, 1, "Hello", LOW),
+            Token(COMMA_TOKEN_TYPE, 14, 1, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 1, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestQuotationCharacter:
