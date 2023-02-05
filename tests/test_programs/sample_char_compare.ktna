@@ -1,0 +1,8 @@
+main() {
+    char x = 'l';
+    if (x == 'l') {
+        print("Equal");
+    } else{
+        print("Unequal");
+    }
+}

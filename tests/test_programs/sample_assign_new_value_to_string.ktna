@@ -1,0 +1,5 @@
+main() {
+    string x = "Hello";
+    x = "Goodbye";
+    print(x);
+}

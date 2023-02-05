@@ -1,0 +1,7 @@
+main() {
+    char y = 'l';
+    y = charAt("Hello, Katana!", 2);
+    if (y == 'l') {
+        print("Equal");
+    }
+}
