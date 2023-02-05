@@ -1,3 +1,4 @@
+# TODO(map) For all ASM put some more comments for debugging.
 import argparse
 import os
 # TODO(map) Move all the classes and enums outs so imports are nice
@@ -265,7 +266,7 @@ class Node:
 
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode
         else:
             return False
 
@@ -279,6 +280,16 @@ class NoOpNode(Node):
                  token: Token) -> None:
         self.token: Token = token
         super().__init__(token, NO_OP, None)
+
+
+class ArgSeparatorNode(NoOpNode):
+    """
+    Node to declare a type we can use for conditional checks. Child of NoOp as
+    we don't want to do anything with it, but it is specific for separating out
+    arguments in a function.
+    """
+    def __init__(self, token):
+        super().__init__(token)
 
 
 class KeywordNode(Node):
@@ -301,12 +312,37 @@ class KeywordNode(Node):
         return f"({self.value}({self.child_node}))"
 
 
-class FunctionKeywordNode(KeywordNode):
+class FunctionNode(Node):
+    """
+    Node for all things function based. Key difference between this and keyword
+    node is that the function node has a list of args but a keyword only has
+    a single childe node.
+    """
+    def __init__(self, token, value, arg_nodes, parent_node=None):
+        super().__init__(token, ULTRA_HIGH, parent_node)
+        self.value = value
+        self.arg_nodes = arg_nodes
+        for node in arg_nodes:
+            node.parent_node = self
+
+    def __eq__(self, other):
+        args_equal = self.arg_nodes == other.arg_nodes
+        return args_equal and type(self) == type(other) and super().__eq__(other)
+
+    def __repr__(self):
+        arg_nodes = "["
+        for node in self.arg_nodes:
+            arg_nodes += node.__repr__() + ","
+        arg_nodes += "]"
+        return f"({self.value}{arg_nodes})"
+
+
+class FunctionKeywordNode(FunctionNode):
     """
     More specialized node for Function keywords vs other types of keywords.
     """
-    def __init__(self, token, value, child_node, parent_node=None):
-        super().__init__(token, value, child_node, parent_node)
+    def __init__(self, token, value, arg_nodes, parent_node=None):
+        super().__init__(token, value, arg_nodes, parent_node)
 
     def __eq__(self, other):
         return type(self) == type(other) and super().__eq__(other)
@@ -440,7 +476,6 @@ class LoopFromKeywordNode(LoopKeywordNode):
 
     def __hash__(self):
         return super().__hash__()
-
 
 
 class StartNode(Node):
@@ -1141,6 +1176,8 @@ class Parser:
                 node = VariableNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
                 node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
+            elif self.curr_token.ttype == COMMA_TOKEN_TYPE:
+                node = ArgSeparatorNode(self.curr_token)
             elif self.curr_token.ttype in IGNORE_OPS:
                 node = NoOpNode(self.curr_token)
             elif self.curr_token.ttype == EOF_TOKEN_TYPE:
@@ -1253,6 +1290,12 @@ class Parser:
             self.advance_token()
             contents = self.handle_print_keyword(keyword_token)
             keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
+        elif node_value == "charAt":
+            keyword_token = self.curr_token
+            # Move past keyword token
+            self.advance_token()
+            contents = self.handle_char_at_keyword(keyword_token)
+            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
         elif node_value == "main":
             keyword_token = self.curr_token
             # Move past keyword token
@@ -1292,7 +1335,9 @@ class Parser:
             while self.curr_token.ttype != EOL_TOKEN_TYPE:
                 child_node = self.process_token(child_node)
                 self.advance_token()
-            if type(child_node.right_side) != CharNode:
+            assignment_is_char_type = type(child_node.right_side) == CharNode
+            assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
+            if not assignment_is_char_type and not assignment_is_char_at:
                 raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
             keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
         elif node_value == "bool":
@@ -1435,7 +1480,39 @@ class Parser:
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
             root_node = self.process_token(root_node)
             self.advance_token()
-        return root_node
+        return [root_node]
+
+    def handle_char_at_keyword(self, keyword_token):
+        """Signature is `charAt(STRING, INDEX)`"""
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # TODO(map) This should be something like a handle_function_keyword.
+        # TODO(map) There should be a map of the number of args for language
+        # specific functions and error messages for misuse.
+        # Case where `print` was called with nothing to print.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
+
+        # Parse the inner parts of the print function
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+        return arg_list
 
     def handle_main_keyword(self, keyword_token):
         """Signature is `main() { BODY };`"""
@@ -1492,12 +1569,15 @@ class Compiler:
         self.num_count = 0
         self.var_count = 0
         self.raw_string_count = 0
+        self.raw_char_count = 0
         self.conditional_count = 0
         self.loop_count = 0
         self.raw_strings = {}
+        self.raw_chars = {}
         self.variables = {}
         self.conditionals = {}
         self.loops = {}
+        self.initialize_vars_asm = []
 
     def compile(self):
         self.create_empty_out_file()
@@ -1531,12 +1611,19 @@ class Compiler:
             for key in self.raw_strings:
                 for line in self.raw_strings[key]:
                     compiled_program.write(line)
+            # Write any raw chars that will be used that aren't assigned to a
+            # variable in the code.
+            for key in self.raw_chars:
+                for line in self.raw_chars[key]:
+                    compiled_program.write(line)
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
                 for line in self.variables[key]["asm"]:
                     compiled_program.write(line)
             self.create_start_point(compiled_program)
+            for line in self.initialize_vars_asm:
+                compiled_program.write(line)
             for line in asm:
                 compiled_program.write(line)
 
@@ -1560,19 +1647,42 @@ class Compiler:
                     return self.process_op_node(node)
         elif isinstance(node, LiteralNode):
             node.visited = True
-            if node.can_traverse_to_parent():
+            if type(node.parent_node) == AssignmentNode:
+                return [] + self.traverse_tree(node.parent_node)
+            elif node.can_traverse_to_parent():
                 return self.get_push_number_onto_stack_asm(node.value) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_number_onto_stack_asm(node.value)
         elif isinstance(node, FunctionKeywordNode):
-            if node.child_node and not node.child_node.visited:
-                return self.traverse_tree(node.child_node)
-            elif node.can_traverse_to_parent():
+            asm = []
+            if node.value == "print":
+                if type(node.arg_nodes[0]) == StringNode:
+                    keyword_call_asm = self.get_print_string_keyword_asm()
+                elif type(node.arg_nodes[0]) == LiteralNode:
+                    keyword_call_asm = self.get_print_num_keyword_asm()
+                elif type(node.arg_nodes[0]) == CharNode:
+                    keyword_call_asm = self.get_print_char_keyword_asm()
+                elif self.variables[node.arg_nodes[0].value]:
+                    if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
+                        keyword_call_asm = self.get_print_string_keyword_asm()
+                    elif self.variables[node.arg_nodes[0].value]["var_type"] == "char":
+                        keyword_call_asm = self.get_print_char_keyword_asm()
+                    elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
+                        keyword_call_asm = self.get_print_num_keyword_asm()
+            elif node.value == "charAt":
+                keyword_call_asm = self.get_char_at_keyword_asm()
+            else:
+                # We don't know how to parse this keyword.
+                assert False, f"Unable to parse Function Keyword Node {node}"
+            for arg_node in node.arg_nodes:
+                if not arg_node.visited:
+                    asm.extend(self.traverse_tree(arg_node))
+            if node.can_traverse_to_parent():
                 node.visited = True
-                return self.get_keyword_asm() + self.traverse_tree(node.parent_node)
+                return asm + keyword_call_asm + self.traverse_tree(node.parent_node)
             else:
                 node.visted = True
-                return self.get_keyword_asm()
+                return asm + keyword_call_asm
         elif isinstance(node, VariableKeywordNode):
             if node.child_node and not node.child_node.visited:
                 return self.traverse_tree(node.child_node)
@@ -1591,6 +1701,15 @@ class Compiler:
                 return self.get_push_string_asm(self.raw_string_count, len(node.value)) + self.traverse_tree(node.parent_node)
             else:
                 return self.get_push_string_asm(self.raw_string_count, len(node.value))
+        elif isinstance(node, CharNode):
+            node.visited = True
+            self.raw_char_count += 1
+            key = f"raw_char_{self.raw_char_count}"
+            self.raw_chars[key] = self.get_raw_char_asm(node.value, self.raw_char_count)
+            if node.can_traverse_to_parent():
+                return self.get_push_char_asm(self.raw_char_count) + self.traverse_tree(node.parent_node)
+            else:
+                return self.get_push_char_asm(self.raw_char_count)
         elif isinstance(node, VariableNode):
             self.var_count += 1
             node.visited = True
@@ -1605,24 +1724,36 @@ class Compiler:
             if type(value_node) == StringNode:
                 self.string_count += 1
                 var_name = f"string_{self.string_count}"
+                var_type = "string"
                 type_count = self.string_count
             elif type(value_node) == CharNode:
                 self.char_count += 1
                 var_name = f"char_{self.char_count}"
+                var_type = "char"
                 type_count = self.char_count
             elif type(value_node) == LiteralNode:
                 self.num_count += 1
                 var_name = f"number_{self.num_count}"
+                var_type = "num"
                 type_count = self.num_count
             elif type(value_node) == BooleanNode:
                 self.bool_count += 1
                 var_name = f"bool_{self.bool_count}"
+                var_type = "bool"
                 type_count = self.bool_count
+            elif value_node.value == "charAt" and type(value_node) == FunctionKeywordNode:
+                self.char_count += 1
+                var_name = f"char_{self.char_count}"
+                type_count = self.char_count
+                var_type = "char"
+                self.initialize_vars_asm.extend(self.traverse_tree(value_node))
+                self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
             else:
-                assert False, f"Not sure how to handle Variable of type {type(value_node)}"
+                assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
+                "var_type": var_type,
                 "var_len": len(value_node.value),
                 "asm": self.get_assignment_asm(self.var_count, type_count, value_node.value, type(value_node))
             }
@@ -1633,10 +1764,16 @@ class Compiler:
             # to push this onto the stack because the assignment assembly will
             # push the variable onto the stack during assignment.
             if type(node.parent_node) == AssignmentNode and node.parent_node.left_side == node:
-                return [] + self.traverse_tree(node.parent_node)
+                if node.can_traverse_to_parent():
+                    return [] + self.traverse_tree(node.parent_node)
+                else:
+                    return []
             var_ref = self.variables[node.value]["var_name"]
             var_len = self.variables[node.value]["var_len"]
-            return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
+            if node.can_traverse_to_parent():
+                return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
+            else:
+                return self.get_push_var_onto_stack_asm(var_ref, var_len)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -1690,6 +1827,11 @@ class Compiler:
                     return []
         elif type(node) == BooleanNode:
             node.visited = True
+            if node.can_traverse_to_parent():
+                return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
+            return self.get_push_boolean_onto_stack(node.value)
+        elif type(node) == CharNode:
+            node.visisted = True
             if node.can_traverse_to_parent():
                 return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
             return self.get_push_boolean_onto_stack(node.value)
@@ -1754,8 +1896,13 @@ class Compiler:
         elif node.value == "==":
             self.conditional_count += 1
             self.conditionals[node] = self.conditional_count
-            return self.get_conditional_equal_asm(self.conditional_count)
+            if type(node.left_side) == CharNode or type(node.right_side) == CharNode:
+                compare_types = "char"
+            else:
+                compare_types = "int16"
+            return self.get_conditional_equal_asm(self.conditional_count, compare_types)
         elif node.value == "=":
+            print(f"Should be assigning for node {node}")
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
                 # If the right side of the assignment is an expression then we
@@ -1763,10 +1910,21 @@ class Compiler:
                 # will pop the data to do the expression.
                 if type(node.right_side) in [PlusMinusNode, MultiplyDivideNode]:
                     return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
+                elif node.right_side.value == "charAt":
+                    return self.get_assign_char_at_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
+                elif type(node.right_side) == CharNode:
+                    return self.get_assign_char_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
+                elif type(node.right_side) == StringNode:
+                    # TODO(map) Handle updating string.
+                    # This seems like it'll be a char by char thing.
+                    assert False, "Not implemented."
+                elif type(node.right_side) == LiteralNode:
+                    return self.get_get_assign_int_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
                 else:
                     return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
+            print(f"Node not doing anything {node}")
             return []
         elif node.value == "..":
             # Don't need to get assembly here because the loop will handle it.
@@ -1775,21 +1933,39 @@ class Compiler:
             assert False, f"Unrecognized root node value {node.value}"
 
     def create_keyword_functions(self):
-        # TODO(map) This doesn't work for numbers above 9
+        self.create_print_string_function()
+        self.create_print_num_function()
+        self.create_print_char_function()
+        self.create_char_at_function()
+   
+    def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
-            compiled_program.write("    print:\n")
+            compiled_program.write("    print_string:\n")
             compiled_program.write("        ;; Print function\n")
             compiled_program.write("        ;; Save return address\n")
             compiled_program.write("        pop rbx\n")
             compiled_program.write("        ;; Get variable value\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        ;; Check if this is a number\n")
-            compiled_program.write("        cmp rax, 10\n")
-            compiled_program.write("        jl number\n")
-            compiled_program.write("        jge str\n")
-            compiled_program.write("    ;; If number add 48 to print\n")
-            compiled_program.write("    number:\n")
+            compiled_program.write("        ;; Get variable length\n")
+            compiled_program.write("        pop rdx\n")
+            compiled_program.write("        mov rsi, rax\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Push return address back.\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+
+    def create_print_num_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    print_num:\n")
+            compiled_program.write("        ;; Print function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get variable value\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("        add rax, 48\n")
             compiled_program.write("        push rax\n")
             compiled_program.write("        mov rsi, rsp\n")
@@ -1799,19 +1975,44 @@ class Compiler:
             compiled_program.write("        syscall\n")
             compiled_program.write("        ;; Remove value at top of stack.\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        jmp finish\n")
-            compiled_program.write("   ;; If string get the value\n")
-            compiled_program.write("   str:\n")
-            compiled_program.write("        ;; Get variable length\n")
-            compiled_program.write("        pop rdx\n")
-            compiled_program.write("        mov rsi, rax\n")
-            compiled_program.write("        mov rax, 1\n")
-            compiled_program.write("        mov rdi, 1\n")
-            compiled_program.write("        syscall\n")
-            compiled_program.write("   ;; Finish the print\n")
-            compiled_program.write("   finish:\n")
             compiled_program.write("        ;; Push return address back.\n")
             compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+    
+    def create_print_char_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    print_char:\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        mov rdx, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("         ;; Push return address back.\n")
+            compiled_program.write("         push rbx\n")
+            compiled_program.write("         ret\n")
+
+    def create_char_at_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    char_at:\n")
+            compiled_program.write("        ;; charAt function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Get char index\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get string value\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Pop string length\n")
+            compiled_program.write("        pop rdx\n")
+            compiled_program.write("        ;; Get byte of string at index\n")
+            compiled_program.write("        mov dl, [rax + rbx]\n")
+            compiled_program.write("        ;; Push byte back onto stack\n")
+            compiled_program.write("        push dx\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
 
     def create_global_start(self):
@@ -1827,6 +2028,11 @@ class Compiler:
             return [
                 f"    push {val_len}\n",
                 f"    push {val}\n"
+            ]
+        elif "char" in val:
+            return [
+                f"    mov bl, [{val}]\n",
+                f"    push bx\n"
             ]
         return [f"    push qword [{val}]\n"]
 
@@ -1870,10 +2076,30 @@ class Compiler:
                 "    div rbx\n",
                 "    push rax\n"]
 
-    def get_keyword_asm(self):
+    def get_print_string_keyword_asm(self):
         return [
             "    ;; Keyword Func\n",
-            "    call print\n"
+            "    call print_string\n"
+        ]
+
+    def get_print_num_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call print_num\n"
+        ]
+
+    def get_print_char_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call print_char\n",
+            "    ;; Pop the byte off the stack to clean up\n",
+            "    pop bx\n",
+        ]
+
+    def get_char_at_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call char_at\n"
         ]
 
     def get_push_loop_start_val_asm(self, loop_start):
@@ -2006,20 +2232,35 @@ class Compiler:
             f"    jge greater_{conditional_count}\n"
         ]
 
-    def get_conditional_equal_asm(self, conditional_count):
-        return [
-            "    pop rax\n",
-            "    pop rbx\n",
-            "    cmp rbx, rax\n",
-            f"    je equal_{conditional_count}\n",
-            f"    jne not_equal_{conditional_count}\n"
-        ]
+    def get_conditional_equal_asm(self, conditional_count, compare_types):
+        if compare_types == "char":
+            return [
+                "    pop ax\n",
+                "    pop bx\n",
+                "    cmp bx, ax\n",
+                f"    je equal_{conditional_count}\n",
+                f"    jne not_equal_{conditional_count}\n"
+            ]
+        else:
+            return [
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    cmp rbx, rax\n",
+                f"    je equal_{conditional_count}\n",
+                f"    jne not_equal_{conditional_count}\n"
+            ]
 
     def get_raw_string_asm(self, string, string_length, string_count):
         return [
             f"section .raw_string_{string_count}\n",
             f"    raw_string_{string_count} db '{string}', {string_length}\n",
             f"    raw_len_{string_count} equ $ - raw_string_{string_count}\n"
+        ]
+
+    def get_raw_char_asm(self, char, char_count):
+        return [
+            f"section .raw_char_{char_count}\n",
+            f"    raw_char_{char_count} db '{char}'\n",
         ]
 
     def get_string_asm(self, string, string_length, string_count):
@@ -2033,6 +2274,12 @@ class Compiler:
         return [
             f"    push {string_length}\n",
             f"    push raw_string_{string_count}\n",
+        ]
+
+    def get_push_char_asm(self, char_count):
+        return [
+            f"    mov bl, [raw_char_{char_count}]\n",
+            f"    push bx\n",
         ]
 
     def get_assignment_asm(self, var_count, type_count, value, var_type):
@@ -2050,11 +2297,33 @@ class Compiler:
                 ] if value == "false" else [
                     f"    bool_{type_count} dq 1\n",
                 ]
+        elif value == "charAt":
+            # Case where we are initializing a variable to the return of a
+            # method. We should initialized to 0, then update in the assembly.
+            var_decl = [
+                f"    char_{type_count} db 0\n",
+            ]
         else:
             var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
             f"section .var_{var_count} write\n",
         ] + var_decl
+
+    def get_assign_char_value_to_var_asm(self, var_name):
+        return [
+            f"    mov rdi, {var_name}\n",
+            "    mov byte [rdi], bl\n"
+        ]
+
+    def get_get_assign_int_value_to_var_asm(self, var_name, new_value):
+        return [
+            f"    mov word [{var_name}], {new_value}\n",
+        ]
+
+    def get_assign_new_string_to_var_asm(self, var_name, new_value):
+        return [
+            f"    mov word [{var_name}], '{new_value}'\n",
+        ]
 
     def get_assign_new_value_to_var_asm(self, var_name, new_value):
         if new_value == "true":
@@ -2063,16 +2332,21 @@ class Compiler:
             new_value = 0
         return [
             f"    mov word [{var_name}], {new_value}\n",
-            "    ;; Remove reassignment from stack\n",
-            "    pop rax\n"
-            "    ;; Remove reference to var from stack\n",
-            "    pop rax\n"
         ]
 
     def get_assign_new_value_to_var_from_expression(self, var_name):
         return [
             "    pop rax\n",
             f"    mov qword [{var_name}], rax\n",
+        ]
+
+    def get_assign_char_at_value_to_var_asm(self, var_name):
+        return [
+            "    ;; Pop return value of char at\n",
+            "    pop ax\n",
+            "    ;; Update var with value\n",
+            f"    mov rdi, {var_name}\n",
+            "    mov byte [rdi], al\n",
         ]
 
     def create_assembly_for_exit(self):

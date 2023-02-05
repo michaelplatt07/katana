@@ -1,0 +1,4 @@
+main() {
+    char x = 'A';
+    print(x);
+}
