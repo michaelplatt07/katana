@@ -252,6 +252,7 @@ class TestCompilerKeywords:
                 "    push bx\n",
                 "    mov rdi, char_1\n",
                 "    mov byte [rdi], bl\n",
+                "    pop bx\n",
                 "    mov bl, [char_1]\n",
                 "    push bx\n",
                 "    ;; Keyword Func\n",

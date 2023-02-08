@@ -1,3 +1,4 @@
+# TODO(map) Fix bux for handling x == y - 1 
 # TODO(map) For all ASM put some more comments for debugging.
 import argparse
 import os
@@ -1827,14 +1828,18 @@ class Compiler:
                     return []
         elif type(node) == BooleanNode:
             node.visited = True
-            if node.can_traverse_to_parent():
+            if type(node.parent_node) == AssignmentNode:
+                return [] + self.traverse_tree(node.parent_node)
+            elif node.can_traverse_to_parent():
                 return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
             return self.get_push_boolean_onto_stack(node.value)
         elif type(node) == CharNode:
             node.visisted = True
+            # We just need to return to the parent node because we would never
+            # push the byte itself onto the stack here.
             if node.can_traverse_to_parent():
-                return self.get_push_boolean_onto_stack(node.value) + self.traverse_tree(node.parent_node)
-            return self.get_push_boolean_onto_stack(node.value)
+                return [] + self.traverse_tree(node.parent_node)
+            return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -2312,7 +2317,8 @@ class Compiler:
     def get_assign_char_value_to_var_asm(self, var_name):
         return [
             f"    mov rdi, {var_name}\n",
-            "    mov byte [rdi], bl\n"
+            "    mov byte [rdi], bl\n",
+            "    pop bx\n"
         ]
 
     def get_get_assign_int_value_to_var_asm(self, var_name, new_value):

@@ -90,9 +90,11 @@ Returns
 2
 ```
 
-## Keywords
+## Builtin Functions
+Katana has built in methods that can be used. The exhaustive list can be found here: TODO(map) PROVIDE LINK
+
 ### print
-Katana supports printing both numbers and strings
+Katana supports typical printing capabilities:
 ```
 print(3); // prints the number 3
 ```
@@ -102,11 +104,22 @@ print(3+4); // prints the number 7
 print(3*2); // prints the number 6
 print(3-1); // prints the number 2
 ```
+Printing a char:
+```
+print('A'); // prints the character A
+```
 Hello, World example in Katana
 ```
 print("Hello, World!")
 ```
 
+### charAt
+Katana can access characters of a string by index:
+```
+char x = charAt("Hello, Katana!", 3); // x will be 'l'
+```
+
+## Keywords
 ### if/else
 Katana supports conditionals with the following format:
 ```
@@ -162,7 +175,7 @@ main() {
 - [x] * String variables
 - [x] * Boolean constants
 - [ ] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
-- [ ] * Substring access? Maybe the char should just exist instead?
+- [x] * Substring access? Maybe the char should just exist instead?
 - [x] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
 - [ ] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
@@ -191,3 +204,4 @@ main() {
 - [ ] Add functions
 - [ ] Modulo calcuations
 - [ ] Formatting numbers like 1_000_000 is supported for easier reading
+- [ ] Add ability to exclude code during compilation. This is similar to #define
