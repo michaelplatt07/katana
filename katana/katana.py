@@ -1236,9 +1236,16 @@ class Parser:
         left_node = root_node
         op_token = self.curr_token
         self.advance_token()
-        right_node = self.process_token(root_node)
+        right_node = None
+        # Only need to loop here because the root_node being passed will have
+        # already been evaluated if there is an operation there.
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            right_node = self.process_token(right_node)
+            self.advance_token()
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
+        self.curr_token_pos = self.curr_token_pos - 1
+        self.curr_token = self.token_list[self.curr_token_pos]
         return node
 
     def parse_assignment(self, root_node):

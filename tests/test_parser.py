@@ -1316,6 +1316,173 @@ class TestKeywordAdvanced:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_if_keyword_with_var_reference_in_conditional_right_side(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 1;
+            if (0 > x - 1) {
+                print("true");
+            } else {
+                print("false");
+            }
+        }
+        Expected to return an AST like:
+        (main[(int16(x=1)), (if(0>(x-1), print("greater"), None)), (print("lower"))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 6, "(", 3),
+            Token(NUM_TOKEN_TYPE, 2, 7, "0", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 2, 9, ">", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(MINUS_TOKEN_TYPE, 2, 13, "-", 1),
+            Token(NUM_TOKEN_TYPE, 2, 15, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 16, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 18, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 2, 19, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "true", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 21, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 22, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 6, "else", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 11, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 4, 12, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 5, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 5, 14, "false", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 21, ")", 3),
+            Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 5, 23, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 6, 5, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 7, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
+        ]
+        lower_string_node = StringNode(token_list[33], "false")
+        second_print_node = FunctionKeywordNode(token_list[31], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[23], "true")
+        first_print_node = FunctionKeywordNode(token_list[21], "print", [greater_string_node])
+        one_node = LiteralNode(token_list[8], "1")
+        x_node = VariableNode(token_list[6], "x")
+        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
+        keyword_node = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[15], "x")
+        one_minus_node = LiteralNode(token_list[17], "1")
+        subtract_node = PlusMinusNode(token_list[16], "-", x_ref_node, one_minus_node)
+        zero_node = LiteralNode(token_list[13], "0")
+        compare_node = CompareNode(token_list[14], ">", zero_node, subtract_node)
+        if_node = LogicKeywordNode(token_list[11], "if", compare_node, None, [first_print_node], [second_print_node])
+        ast = StartNode(token_list[0], "main", [keyword_node, if_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_if_keyword_with_var_reference_in_conditional_both_sides(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 1;
+            int16 y = 2;
+            if (y - 2 > x - 1) {
+                print("true");
+            } else {
+                print("false");
+            }
+        }
+        Expected to return an AST like:
+        (main[(int16(x=1)), (int16(y=2)), (if((y-2)>(x-1), [print("greater")], [(print("lower"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 14, "1", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 10, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 14, "2", 0),
+            Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 6, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 7, "y", 0),
+            Token(MINUS_TOKEN_TYPE, 3, 9, "-", 1),
+            Token(NUM_TOKEN_TYPE, 3, 11, "2", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 3, 13, ">", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 15, "x", 0),
+            Token(MINUS_TOKEN_TYPE, 3, 17, "-", 1),
+            Token(NUM_TOKEN_TYPE, 3, 19, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 22, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 3, 23, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 14, "true", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 21, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 4, 22, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 4, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 5, 6, "else", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 11, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 5, 12, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 6, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 6, 14, "false", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, 21, ")", 3),
+            Token(EOL_TOKEN_TYPE, 6, 22, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 6, 23, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 7, 5, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 8, 1, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
+        ]
+        lower_string_node = StringNode(token_list[41], "false")
+        second_print_node = FunctionKeywordNode(token_list[39], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[31], "true")
+        first_print_node = FunctionKeywordNode(token_list[29], "print", [greater_string_node])
+        one_node = LiteralNode(token_list[8], "1")
+        x_node = VariableNode(token_list[6], "x")
+        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
+        keyword_node_x = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
+        two_node = LiteralNode(token_list[14], "2")
+        y_node = VariableNode(token_list[12], "y")
+        y_assignment_node = AssignmentNode(token_list[13], "=", y_node, two_node)
+        keyword_node_y = VariableKeywordNode(token_list[11], "int16", y_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[23], "x")
+        one_minus_node = LiteralNode(token_list[25], "1")
+        subtract_node = PlusMinusNode(token_list[24], "-", x_ref_node, one_minus_node)
+        y_ref_node = VariableReferenceNode(token_list[19], "y")
+        two_minus_node = LiteralNode(token_list[21], "2")
+        subtract_node_two = PlusMinusNode(token_list[20], "-", y_ref_node, two_minus_node)
+        compare_node = CompareNode(token_list[22], ">", subtract_node_two, subtract_node)
+        if_node = LogicKeywordNode(token_list[17], "if", compare_node, None, [first_print_node], [second_print_node])
+        ast = StartNode(token_list[0], "main", [keyword_node_x, keyword_node_y, if_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
     def test_update_var_with_expression(self):
         """
         Given a program like:
