@@ -1676,6 +1676,20 @@ class Compiler:
                         keyword_call_asm = self.get_print_char_keyword_asm()
                     elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
                         keyword_call_asm = self.get_print_num_keyword_asm()
+            elif node.value == "printl":
+                if type(node.arg_nodes[0]) == StringNode:
+                    keyword_call_asm = self.get_printl_string_keyword_asm()
+                elif type(node.arg_nodes[0]) == LiteralNode:
+                    keyword_call_asm = self.get_printl_num_keyword_asm()
+                elif type(node.arg_nodes[0]) == CharNode:
+                    keyword_call_asm = self.get_printl_char_keyword_asm()
+                elif self.variables[node.arg_nodes[0].value]:
+                    if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
+                        keyword_call_asm = self.get_printl_string_keyword_asm()
+                    elif self.variables[node.arg_nodes[0].value]["var_type"] == "char":
+                        keyword_call_asm = self.get_printl_char_keyword_asm()
+                    elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
+                        keyword_call_asm = self.get_printl_num_keyword_asm()
             elif node.value == "charAt":
                 keyword_call_asm = self.get_char_at_keyword_asm()
             else:
@@ -1947,8 +1961,11 @@ class Compiler:
         self.create_print_string_function()
         self.create_print_num_function()
         self.create_print_char_function()
+        self.create_printl_string_function()
+        self.create_printl_num_function()
+        self.create_printl_char_function()
         self.create_char_at_function()
-   
+
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
@@ -2001,6 +2018,116 @@ class Compiler:
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        mov rdx, 1\n")
             compiled_program.write("        syscall\n")
+            compiled_program.write("         ;; Push return address back.\n")
+            compiled_program.write("         push rbx\n")
+            compiled_program.write("         ret\n")
+ 
+    def create_printl_string_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    printl_string:\n")
+            compiled_program.write("        ;; Print function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get variable value\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Get variable length\n")
+            compiled_program.write("        pop rdx\n")
+            compiled_program.write("        mov rsi, rax\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Add linefeed.\n")
+            compiled_program.write("        push 10\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Add return carriage.\n")
+            compiled_program.write("        push 13\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Push return address back.\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+
+    def create_printl_num_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    printl_num:\n")
+            compiled_program.write("        ;; Print function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get variable value\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        add rax, 48\n")
+            compiled_program.write("        push rax\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Add linefeed.\n")
+            compiled_program.write("        push 10\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Add return carriage.\n")
+            compiled_program.write("        push 13\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Push return address back.\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+    
+    def create_printl_char_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    printl_char:\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        mov rdx, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Add linefeed.\n")
+            compiled_program.write("        push 10\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Add return carriage.\n")
+            compiled_program.write("        push 13\n")
+            compiled_program.write("        mov rsi, rsp\n")
+            compiled_program.write("        mov rdx, 4\n")
+            compiled_program.write("        mov rax, 1\n")
+            compiled_program.write("        mov rdi, 1\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Remove value at top of stack.\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("         ;; Push return address back.\n")
             compiled_program.write("         push rbx\n")
             compiled_program.write("         ret\n")
@@ -2093,16 +2220,36 @@ class Compiler:
             "    call print_string\n"
         ]
 
+    def get_printl_string_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call printl_string\n"
+        ]
+
     def get_print_num_keyword_asm(self):
         return [
             "    ;; Keyword Func\n",
             "    call print_num\n"
         ]
 
+    def get_printl_num_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call printl_num\n"
+        ]
+
     def get_print_char_keyword_asm(self):
         return [
             "    ;; Keyword Func\n",
             "    call print_char\n",
+            "    ;; Pop the byte off the stack to clean up\n",
+            "    pop bx\n",
+        ]
+
+    def get_printl_char_keyword_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call printl_char\n",
             "    ;; Pop the byte off the stack to clean up\n",
             "    pop bx\n",
         ]

@@ -177,6 +177,40 @@ class TestCompilerKeywords:
                 "    call print_num\n",
             ]
 
+    def test_printl_keyword_with_num(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_printl.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 3\n",
+                "    ;; Keyword Func\n",
+                "    call printl_num\n",
+            ]
+
+    def test_printl_keyword_with_char(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_printl_char.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    mov bl, [raw_char_1]\n",
+                "    push bx\n",
+                "    ;; Keyword Func\n",
+                "    call printl_char\n",
+                "    ;; Pop the byte off the stack to clean up\n",
+                "    pop bx\n",
+            ]
+
+    def test_printl_keyword_with_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_printl_string.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    push 5\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+            ]
+
     def test_main_keyword(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_main.ktna") as f:
