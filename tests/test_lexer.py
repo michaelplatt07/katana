@@ -479,6 +479,27 @@ class TestKeyword:
         with pytest.raises(NoTerminatorError, match="Line 2:10 must end with a semicolon."):
             lexer.lex()
 
+    def test_printl_function_keyword(self):
+        """
+        Ensures the main method keyword is lexed correctly.
+        """
+        program = Program(["main() {\n", "printl(1+2);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "printl", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 8, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 9, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
     def test_int_16_variable_declaration(self):
         """
         Tests that declaring an int16 variable correctly declares the
@@ -727,7 +748,6 @@ class TestKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
-
 
     def test_else_with_no_if_raises_error(self):
         """

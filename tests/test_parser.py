@@ -1237,6 +1237,37 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_keyword_printl(self):
+        """
+        Given a program like:
+        main() {
+            printl(3);
+        }
+        Expected to return an AST like:
+        (main[(printl(3))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
+            Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
+            Token(NEW_LINE_TOKEN_TYPE, 14, 1, "\n", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", 0),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        three_node = LiteralNode(token_list[7], "3")
+        printl_node = FunctionKeywordNode(token_list[5], "printl", [three_node])
+        ast = StartNode(token_list[0], "main", [printl_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
 
 class TestKeywordAdvanced:
 
