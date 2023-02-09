@@ -1291,7 +1291,7 @@ class Parser:
         node_value = self.curr_token.value
 
         # TODO(map) Move the methods to a map based on the keyword.
-        if node_value == "print":
+        if node_value in ["print", "printl"]:
             keyword_token = self.curr_token
             # Move past keyword token
             self.advance_token()
