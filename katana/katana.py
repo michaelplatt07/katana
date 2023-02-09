@@ -1,4 +1,3 @@
-# TODO(map) Fix bux for handling x == y - 1 
 # TODO(map) For all ASM put some more comments for debugging.
 import argparse
 import os
@@ -90,7 +89,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-FUNCTION_KEYWORDS = ("print", "main", "charAt")
+FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
