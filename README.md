@@ -14,6 +14,9 @@ Running `pytest tests/` will run the full suite of tests. To get a more verbose 
 ### Coverage
 Katana uses `coverage` to determine which lines of code are not being tested. Specifically running `coverage run -m pytest tests` will create a coverage folder folder, then run `coverage html` to get a nice output view.
 
+## Vim Highlighting
+Copy the folders in the `vim` directory in the project to your local `.vim` config for easy syntax highlighting and code folding.
+
 ## Code Structure
 ### Basic layout
 Katana has a single point of entry, the `main` method. Without it, the program is unsure about where to start to build the AST. 
