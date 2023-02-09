@@ -20,7 +20,7 @@ syn keyword katanaVarKeyword int16 bool char string
 highlight link katanaVarKeyword KatanaVarDecKeyword
 
 " Builtin function keywords
-syn keyword katanaBuiltinFuncKeyword charAt print
+syn keyword katanaBuiltinFuncKeyword charAt print printl
 highlight link katanaBuiltinFuncKeyword KatanaBuiltinMethods
 
 " Logic keywords
