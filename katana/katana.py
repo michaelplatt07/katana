@@ -2426,6 +2426,7 @@ class Compiler:
             ]
 
     def get_raw_string_asm(self, string, string_length, string_count):
+        string = string.replace("\\n", "',10,13,'")
         return [
             f"section .raw_string_{string_count}\n",
             f"    raw_string_{string_count} db '{string}', {string_length}\n",
@@ -2439,6 +2440,7 @@ class Compiler:
         ]
 
     def get_string_asm(self, string, string_length, string_count):
+        string = string.replace("\\n", "',10,13,'")
         return [
             f"section .string_{string_count}\n",
             f"    string_{string_count} db '{string}', {string_length}\n",
