@@ -177,10 +177,11 @@ main() {
 - [x] * Conditional `==`
 - [x] * String variables
 - [x] * Boolean constants
-- [ ] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
+- [x] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
 - [x] * Substring access? Maybe the char should just exist instead?
 - [x] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
-- [ ] Implement a printl for print line that adds new line on to end
+- [ ] * Update strings
+- [x] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
 - [ ] Add to current conditionals (only support `>` right now)
@@ -196,7 +197,6 @@ main() {
 - [ ] Loop enhancements by accessing the index of the loop
 - [ ] Add ability to update variable in the code
 - [x] * Update integers
-- [ ] * Update strings
 - [ ] Update README with the different types that exist
 - [ ] Add 32-bit processing flag
 - [ ] Do type parsing in declaration, things like uint32 and such
