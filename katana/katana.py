@@ -5,6 +5,7 @@ import os
 # GLOBALS
 #########
 verbose_flag = False
+raise_assertion_flag = True
 
 ###########
 # Constants
@@ -254,11 +255,11 @@ class Node:
 
     def __eq__(self, other):
         priority_equal = self.priority == other.priority
-        if not priority_equal:
+        if not priority_equal and raise_assertion_flag:
             assert False, f"{self} priority {self.priority} != {other} priority {other.priority}."
 
         token_equal = self.token == other.token
-        if not token_equal:
+        if not token_equal and raise_assertion_flag:
             assert False, f"Tokens {self.token} != {other.token}"
 
         return priority_equal and token_equal
@@ -555,9 +556,9 @@ class ExpressionNode(Node):
 
     def __eq__(self, other):
         # Make sure there is a parent on both sides or no parent on either side
-        if self.parent_node and not other.parent_node:
+        if self.parent_node and not other.parent_node and raise_assertion_flag:
             assert False, (f"Found parent node on self {self} but not other {other}")
-        elif not self.parent_node and other.parent_node:
+        elif not self.parent_node and other.parent_node and raise_assertion_flag:
             assert False, (f"Found parent node on other {other} but not self {self}")
         elif not self.parent_node and not other.parent_node:
             parents_equal = True
@@ -568,19 +569,19 @@ class ExpressionNode(Node):
 
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
-        if not left_side_equal:
+        if not left_side_equal and raise_assertion_flag:
             assert False, "Left sides were not equal."
-        elif not right_side_equal:
+        elif not right_side_equal and raise_assertion_flag:
             assert False, "Right sides were not equal."
-        elif not parents_equal:
+        elif not parents_equal and raise_assertion_flag:
             assert False, "Parents were not equal"
 
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
 
         values_equal = self.value == other.value
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
 
         return (left_side_equal and right_side_equal and parents_equal and
@@ -602,7 +603,7 @@ class AssignmentNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -621,7 +622,7 @@ class PlusMinusNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -639,7 +640,7 @@ class MultiplyDivideNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -656,7 +657,7 @@ class CompareNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -682,7 +683,7 @@ class RangeNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -700,9 +701,9 @@ class LiteralNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -719,9 +720,9 @@ class BooleanNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -741,9 +742,9 @@ class VariableNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -760,9 +761,9 @@ class VariableReferenceNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -2560,6 +2561,8 @@ if __name__ == "__main__":
         "--program", help="The program that should be parse.")
     arg_parser.add_argument("--verbose", action="store_true",
                             help="Adds verbosity output to the steps.")
+    arg_parser.add_argument("--no-raise", action="store_false",
+                            help="Raises assertions on model __eq__ methods.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
@@ -2571,6 +2574,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     verbose_flag = args.verbose
+    raise_assertion_flag = args.no_raise
     with open(args.program, 'r') as code:
         token_list = None
         ast = None

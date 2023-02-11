@@ -1209,7 +1209,7 @@ class TestKeywordParser:
             Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
-            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(NUM_TOKEN_TYPE, 1, 13, "0", 0),
             Token(RANGE_INDICATION_TOKEN_TYPE, 1, 14, "..", 0),
             Token(NUM_TOKEN_TYPE, 1, 16, "3", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 17, ")", 3),
@@ -1229,7 +1229,7 @@ class TestKeywordParser:
         ]
         string_node = StringNode(token_list[15], "looping")
         print_node = FunctionKeywordNode(token_list[13], "print", [string_node])
-        zero_node = LiteralNode(token_list[7], "3")
+        zero_node = LiteralNode(token_list[7], "0")
         three_node = LiteralNode(token_list[9], "3")
         range_node = RangeNode(token_list[8], "..", zero_node, three_node)
         loop_node = LoopFromKeywordNode(token_list[5], "loopFrom", range_node, loop_body=[print_node])

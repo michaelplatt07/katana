@@ -535,6 +535,18 @@ class TestCompilerKeywords:
                 "    end_1:\n",
             ]
 
+    def test_set_var_to_anoter_var(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push qword [number_2]\n",
+                "    pop rax\n",
+                "    ;; Assign var value to new var\n",
+                "    mov qword [number_1], rax\n"
+            ]
+
     def test_bool_false_keyword_assignment(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_bool_assignment.ktna") as f:
