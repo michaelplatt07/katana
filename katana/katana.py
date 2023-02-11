@@ -96,6 +96,13 @@ LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
 
 
+###################
+# Method Signatures
+###################
+CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from the STRING"
+MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
+PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
+
 ############
 # Exceptions
 ############
@@ -691,6 +698,7 @@ class RangeNode(ExpressionNode):
         return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
 
+# TODO(map) Make me a NumberNode
 class LiteralNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
@@ -1293,240 +1301,75 @@ class Parser:
     def handle_keyword(self):
         node_value = self.curr_token.value
 
-        # TODO(map) Move the methods to a map based on the keyword.
-        if node_value in ["print", "printl"]:
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            contents = self.handle_print_keyword(keyword_token)
-            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
-        elif node_value == "charAt":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            contents = self.handle_char_at_keyword(keyword_token)
-            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
-        elif node_value == "main":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            children_nodes = self.handle_main_keyword(keyword_token)
-            keyword_node = StartNode(keyword_token, keyword_token.value, children_nodes)
-        elif node_value == "int16":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
+        # Used for logic nodes
+        truth_body = None
+        false_body = None
+        loop_body = None
 
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if not child_node.right_side.value.isnumeric():
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "string":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
+        keyword_token = self.curr_token
+        # Move past keyword token
+        self.advance_token()
 
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if type(child_node.right_side) != StringNode:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "char":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            assignment_is_char_type = type(child_node.right_side) == CharNode
-            assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
-            if not assignment_is_char_type and not assignment_is_char_at:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "bool":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if type(child_node.right_side) != BooleanNode:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "if":
-            keyword_token = self.curr_token
-            truth_body = None
-            false_body = None
-            # Move past keyword token
-            self.advance_token()
-
-            paren_contents = self.handle_parenthesis()
-
-            # Move past closing paren on conditional check
-            self.advance_token()
-
-            # Move past left curl bracket
-            self.advance_token()
-
-            truth_node_list = []
-            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                ret_node = self.process_token(truth_body)
-                if type(ret_node) != NoOpNode:
-                    truth_body = ret_node
-                self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                    truth_node_list.append(truth_body)
-                    truth_body = None
-
-            # Move past the right curl brace to close the if body.
-            self.advance_token()
-
-            # Move past the new line after the curl bracket if present.
-            while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
-                self.advance_token()
-
-            # Flag if there is an else keyword and parse it.
-            is_else_keyword_present = self.curr_token.value == "else"
-            false_node_list = []
-            if is_else_keyword_present:
-                # Move past the else keyword.
-                self.advance_token()
-
-                # Move past the curl bracket that starts the else body.
-                self.advance_token()
-
-                while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                    ret_node = self.process_token(false_body)
-                    if type(ret_node) != NoOpNode:
-                        false_body = ret_node
-                    self.advance_token()
-                    if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                        false_node_list.append(ret_node)
-                        false_body = None
-            else:
-                # TODO(map) Figure out how to not go back here
-                self.curr_token_pos -= 1
-
-            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value in ["loopUp", "loopDown", "loopFrom"]:
-            keyword_token = self.curr_token
-
-            # Move past keyword token
-            self.advance_token()
-
-            paren_contents = self.handle_parenthesis()
-
-            # Move past right paren
-            self.advance_token()
-
-            loop_contents = []
-            loop_body = None
-
-            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                ret_node = self.process_token(loop_body)
-                if type(ret_node) != NoOpNode:
-                    loop_body = ret_node
-                self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
-                    loop_contents.append(loop_body)
-                    loop_body = None
-
-            # Move past the right curl brace to close the if body.
-            self.advance_token()
-
-            if node_value == "loopUp":
-                return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            elif node_value == "loopDown":
-                return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            elif node_value == "loopFrom":
-                return LoopFromKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            else:
-                assert False, f"Loop of type {node_value} is not recognized."
+        # Map of the functions needed to be called to parse certain tokens.
+        func_map = {
+            "main": (self.handle_main_keyword, StartNode, "children_nodes"),
+            "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "bool": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "print": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
+            "printl": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
+            "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
+            "if": (self.handle_parenthesis, LogicKeywordNode, "child_node"),
+            "loopUp": (self.handle_parenthesis, LoopUpKeywordNode, "child_node"),
+            "loopDown": (self.handle_parenthesis, LoopDownKeywordNode, "child_node"),
+            "loopFrom": (self.handle_parenthesis, LoopFromKeywordNode, "child_node"),
+        }
+        contents_function, node_class, node_args = func_map.get(node_value)
+        if node_class == LogicKeywordNode:
+            # Need to get the true and false body to assign to node.
+            contents = contents_function()
+            truth_body = self.get_truth_side()
+            false_body = self.get_false_side()
+        elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            # Need to get contents of the loop.
+            contents = contents_function()
+            loop_body = self.get_loop_body(node_value)
         else:
-            assert False, f"Keyword {node_value} not implemented"
+            contents = contents_function(keyword_token)
+        kwargs = {
+            "token": keyword_token,
+            "value": keyword_token.value,
+            node_args: contents
+        }
+        if truth_body:
+            kwargs["true_side"] = truth_body
+            kwargs["false_side"] = false_body
+        if loop_body:
+            kwargs["loop_body"] = loop_body
 
+        keyword_node = node_class(**kwargs)
         return keyword_node
-
-    def handle_print_keyword(self, keyword_token):
-        """Signature is `print(VALUE)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE): prints the VALUE to the screen")
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE);: prints the VALUE to the screen")
-
-        # Parse the inner parts of the print function
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            root_node = self.process_token(root_node)
-            self.advance_token()
-        return [root_node]
-
-    def handle_char_at_keyword(self, keyword_token):
-        """Signature is `charAt(STRING, INDEX)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # TODO(map) This should be something like a handle_function_keyword.
-        # TODO(map) There should be a map of the number of args for language
-        # specific functions and error messages for misuse.
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
-
-        # Parse the inner parts of the print function
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-        return arg_list
 
     def handle_main_keyword(self, keyword_token):
         """Signature is `main() { BODY };`"""
         # Confirm the left paren is right after the main keyword
         if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
 
         # Move past the left paren.
         self.advance_token()
 
         # Confirm the right paren closes the left.
         if not self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
 
         # Move pas the right paren
         self.advance_token()
 
         # Confirm left curl brack is present.
         if not self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
 
         # Move past the left curl brace
         self.advance_token()
@@ -1549,6 +1392,149 @@ class Parser:
                 root_node = None
             self.advance_token()
         return node_list
+
+    def handle_print_keyword(self, keyword_token):
+        """Signature is `print(VALUE)`"""
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Case where `print` was called with nothing to print.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
+
+        # Parse the inner parts of the print function
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            root_node = self.process_token(root_node)
+            self.advance_token()
+        return [root_node]
+
+    def handle_char_at_keyword(self, keyword_token):
+        """Signature is `charAt(STRING, INDEX)`"""
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Case where `print` was called with nothing to print.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+
+        # Parse the inner parts of the print function
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+        return arg_list
+
+    def handle_var_declaration(self, keyword_token):
+        child_node = None
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            child_node = self.process_token(child_node)
+            self.advance_token()
+        # Check to see if the `char` initial assignment is the result of
+        # calling the `charAt` function since that's a fair initial declaration
+        assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
+        if keyword_token.value == "int16" and not child_node.right_side.value.isnumeric():
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "char" and type(child_node.right_side) != CharNode and not assignment_is_char_at:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "bool" and type(child_node.right_side) != BooleanNode:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        else:
+            return child_node
+
+    def get_truth_side(self):
+        truth_body = None
+        truth_node_list = []
+        # Move past closing paren on conditional check
+        self.advance_token()
+
+        # Move past left curl bracket
+        self.advance_token()
+
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ret_node = self.process_token(truth_body)
+            if type(ret_node) != NoOpNode:
+                truth_body = ret_node
+            self.advance_token()
+            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                truth_node_list.append(truth_body)
+                truth_body = None
+        # Move past the right curl brace to close the if body.
+        self.advance_token()
+
+        # Move past the new line after the curl bracket if present.
+        while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
+            self.advance_token()
+
+        return truth_node_list
+
+    def get_false_side(self):
+        false_body = None
+        # Flag if there is an else keyword and parse it.
+        is_else_keyword_present = self.curr_token.value == "else"
+        false_node_list = []
+        if is_else_keyword_present:
+            # Move past the else keyword.
+            self.advance_token()
+
+            # Move past the curl bracket that starts the else body.
+            self.advance_token()
+
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ret_node = self.process_token(false_body)
+                if type(ret_node) != NoOpNode:
+                    false_body = ret_node
+                self.advance_token()
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                    false_node_list.append(ret_node)
+                    false_body = None
+        else:
+            # TODO(map) Figure out how to not go back here
+            self.curr_token_pos -= 1
+        return false_node_list
+
+    def get_loop_body(self, node_value):
+        # Move past right paren
+        self.advance_token()
+
+        loop_contents = []
+        loop_body = None
+
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ret_node = self.process_token(loop_body)
+            if type(ret_node) != NoOpNode:
+                loop_body = ret_node
+            self.advance_token()
+            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
+                loop_contents.append(loop_body)
+                loop_body = None
+
+        # Move past the right curl brace to close the if body.
+        self.advance_token()
+
+        if node_value not in ["loopUp", "loopDown", "loopFrom"]:
+            assert False, f"Loop of type {node_value} is not recognized."
+        else:
+            return loop_contents
 
 
 ##########
