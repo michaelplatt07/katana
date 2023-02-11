@@ -436,8 +436,6 @@ class LoopDownKeywordNode(LoopKeywordNode):
     def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
-        # TODO(map) Is there value to this? The start/end value are really part
-        # of the child node in this case
         # Because this is loop up we will always loop from 0 to the end value.
         self.start_value = child_node.value
         self.end_value = 0
@@ -1012,6 +1010,10 @@ class Lexer:
             self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(uqe)
             raise uqe
+        except InvalidCharException as ice:
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
+            print(ice)
+            raise ice
 
     def print_invalid_character_error(self, program, col, row):
         print(program.lines[row])
@@ -1021,7 +1023,6 @@ class Lexer:
         if value == "\n":
             is_previous_token_continuation_type = self.token_list[len(self.token_list) - 1].ttype in CONTINUATION_TOKENS
             is_previous_token_eol = self.token_list[len(self.token_list) - 1].ttype == EOL_TOKEN_TYPE
-            # TODO(map) Should I check to make sure there is not a semicolon?
             if not is_previous_token_continuation_type and not is_previous_token_eol:
                 raise NoTerminatorError(self.program.curr_line, self.program.curr_col)
             elif is_previous_token_continuation_type or is_previous_token_eol:
@@ -1268,21 +1269,22 @@ class Parser:
                               left_side=left_node, right_side=right_node)
 
     def handle_parenthesis(self):
+        # TODO(map) Unify how this works along with other no op stuff. I mean
+        # that this doesn't go past the close parenthesis but it should.
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
         root_node = None
 
-        if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
-            # Advance once to get past the paren token.
+        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
+        # Advance once to get past the paren token.
+        self.advance_token()
+
+        # Currently don't care about the previous token. Keeping this in
+        # so we can error out if the token isn't recognized.
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            root_node = self.process_token(root_node)
             self.advance_token()
 
-            # Currently don't care about the previous token. Keeping this in
-            # so we can error out if the token isn't recognized.
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                root_node = self.process_token(root_node)
-                self.advance_token()
-        else:
-            assert False, f"Token {self.token_list[self.curr_token_pos - 1]} not in ALL_TOKENS"
         return root_node
 
     def handle_string(self):
@@ -1367,15 +1369,7 @@ class Parser:
             # Move past keyword token
             self.advance_token()
 
-            # TODO(map) Should I just call handle_parenthesis here?
-            # Move past paren token
-            self.advance_token()
-
-            # Get the comparison within the parens.
-            paren_contents = None
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                paren_contents = self.process_token(paren_contents)
-                self.advance_token()
+            paren_contents = self.handle_parenthesis()
 
             # Move past closing paren on conditional check
             self.advance_token()
@@ -1429,17 +1423,9 @@ class Parser:
             # Move past keyword token
             self.advance_token()
 
-            # TODO(map) Should I just call handle_parenthesis here?
-            # Move past paren token
-            self.advance_token()
+            paren_contents = self.handle_parenthesis()
 
-            # Get the comparison within the parens.
-            paren_contents = None
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                paren_contents = self.process_token(paren_contents)
-                self.advance_token()
-
-            # Move past left curl bracket
+            # Move past right paren
             self.advance_token()
 
             loop_contents = []
@@ -1553,10 +1539,12 @@ class Parser:
             if node and type(node) != NoOpNode:
                 root_node = node
             if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                # Add the node to the list because it is a logical unit of work
                 node_list.append(root_node)
                 root_node = None
-            # TODO(map) Is there a better check for this?
             elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
+                # Need to add the node to the list because it is a logic unit
+                # of work not ended by a semicolon.
                 node_list.append(root_node)
                 root_node = None
             self.advance_token()
@@ -1790,6 +1778,17 @@ class Compiler:
                     return [] + self.traverse_tree(node.parent_node)
                 else:
                     return []
+            elif type(node.parent_node) == AssignmentNode and type(node) in [LiteralNode, VariableReferenceNode]:
+                # Case of right side of assignment is just a var
+                if node.can_traverse_to_parent():
+                    var_ref = self.variables[node.value]["var_name"]
+                    return [
+                        f"    push qword [{var_ref}]\n",
+                        "    pop rax\n"
+                    ] + self.traverse_tree(node.parent_node)
+                else:
+                    return []
+            # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
             var_len = self.variables[node.value]["var_len"]
             if node.can_traverse_to_parent():
@@ -1844,7 +1843,6 @@ class Compiler:
                     if not node.loop_body[0].visited:
                         self.loop_count += 1
                         self.loops[node] = self.loop_count
-                        # TODO(map) This isn't working as expected. Need a separate method.
                         return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
                     return []
         elif type(node) == BooleanNode:
@@ -1946,6 +1944,8 @@ class Compiler:
                     assert False, "Not implemented."
                 elif type(node.right_side) == LiteralNode:
                     return self.get_get_assign_int_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
+                elif type(node.right_side) == VariableReferenceNode:
+                    return self.get_assign_new_value_from_var_to_var_asm(self.variables[node.left_side.value]["var_name"])
                 else:
                     return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
