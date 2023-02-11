@@ -2562,7 +2562,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--verbose", action="store_true",
                             help="Adds verbosity output to the steps.")
     arg_parser.add_argument("--no-raise", action="store_false",
-                            help="Raises assertions on model __eq__ methods.")
+                            help="Avoids assertions in the __eq__ methods.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
