@@ -1,4 +1,3 @@
-# TODO(map) For all ASM put some more comments for debugging.
 import argparse
 import os
 # TODO(map) Move all the classes and enums outs so imports are nice
@@ -2159,20 +2158,28 @@ class Compiler:
             compiled_program.write("    global _start\n")
 
     def get_push_number_onto_stack_asm(self, num):
-        return [f"    push {num}\n"]
+        return [
+            "    ;; Push number onto stack\n",
+            f"    push {num}\n"
+            ]
 
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
+                "    ;; Push string length and val onto stack\n",
                 f"    push {val_len}\n",
                 f"    push {val}\n"
             ]
         elif "char" in val:
             return [
+                "    ;; Push char var onto stack\n",
                 f"    mov bl, [{val}]\n",
                 f"    push bx\n"
             ]
-        return [f"    push qword [{val}]\n"]
+        return [
+            "    ;; Push var val onto stack\n",
+            f"    push qword [{val}]\n",
+        ]
 
     def get_push_boolean_onto_stack(self, node_value):
         if node_value == "true":
@@ -2182,7 +2189,7 @@ class Compiler:
             ]
         else:
             return [
-                "    ;; Push true onto stack\n",
+                "    ;; Push false onto stack\n",
                 "    push 0\n"
             ]
 
@@ -2287,6 +2294,7 @@ class Compiler:
 
     def get_loop_up_asm_end(self, loop_count):
         return [
+            "    ;; Compare if counter is below loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    inc rcx\n",
@@ -2301,6 +2309,7 @@ class Compiler:
 
     def get_loop_down_asm_end(self, loop_count):
         return [
+            "    ;; Compare if counter is above loop end\n",
             "    pop rcx\n",
             "    pop rbx\n",
             "    dec rcx\n",
@@ -2315,6 +2324,7 @@ class Compiler:
 
     def get_loop_from_ascending_asm(self, loop_count):
         return [
+            "    ;; Compare if counter is below loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    inc rcx\n",
@@ -2329,6 +2339,7 @@ class Compiler:
 
     def get_loop_from_descending_asm(self, loop_count):
         return [
+            "    ;; Compare if counter is above loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    dec rcx\n",
@@ -2374,6 +2385,7 @@ class Compiler:
 
     def get_conditional_greater_than_asm(self, conditional_count):
         return [
+            "    ;; Pop values for comparing greater than\n",
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
@@ -2383,6 +2395,7 @@ class Compiler:
 
     def get_conditional_less_than_asm(self, conditional_count):
         return [
+            "    ;; Pop values for comparing less than\n",
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
@@ -2393,6 +2406,7 @@ class Compiler:
     def get_conditional_equal_asm(self, conditional_count, compare_types):
         if compare_types == "char":
             return [
+                "    ;; Pop values for comparing equal on char\n",
                 "    pop ax\n",
                 "    pop bx\n",
                 "    cmp bx, ax\n",
@@ -2401,6 +2415,7 @@ class Compiler:
             ]
         else:
             return [
+                "    ;; Pop values for comparing equal on other\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
@@ -2430,12 +2445,14 @@ class Compiler:
 
     def get_push_string_asm(self, string_count, string_length):
         return [
+            "    ;; Push a raw string and length onto stack\n",
             f"    push {string_length}\n",
             f"    push raw_string_{string_count}\n",
         ]
 
     def get_push_char_asm(self, char_count):
         return [
+            "    ;; Push a raw char onto the stack\n",
             f"    mov bl, [raw_char_{char_count}]\n",
             f"    push bx\n",
         ]
@@ -2469,6 +2486,7 @@ class Compiler:
 
     def get_assign_char_value_to_var_asm(self, var_name):
         return [
+            "    ;; Assign new value to char var\n",
             f"    mov rdi, {var_name}\n",
             "    mov byte [rdi], bl\n",
             "    pop bx\n"
@@ -2476,11 +2494,13 @@ class Compiler:
 
     def get_get_assign_int_value_to_var_asm(self, var_name, new_value):
         return [
+            "    ;; Assign new int to int var\n",
             f"    mov word [{var_name}], {new_value}\n",
         ]
 
     def get_assign_new_string_to_var_asm(self, var_name, new_value):
         return [
+            "    ;; Assign new string to string var\n",
             f"    mov word [{var_name}], '{new_value}'\n",
         ]
 
@@ -2490,11 +2510,19 @@ class Compiler:
         elif new_value == "false":
             new_value = 0
         return [
+            "    ;; Assign new bool to bool var\n",
             f"    mov word [{var_name}], {new_value}\n",
+        ]
+
+    def get_assign_new_value_from_var_to_var_asm(self, var_name):
+        return [
+            "    ;; Assign var value to new var\n",
+            f"    mov qword [{var_name}], rax\n",
         ]
 
     def get_assign_new_value_to_var_from_expression(self, var_name):
         return [
+            "    ;; Assign expression value to new var\n",
             "    pop rax\n",
             f"    mov qword [{var_name}], rax\n",
         ]
