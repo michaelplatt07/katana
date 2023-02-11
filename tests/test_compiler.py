@@ -535,7 +535,7 @@ class TestCompilerKeywords:
                 "    end_1:\n",
             ]
 
-    def test_set_var_to_anoter_var(self):
+    def test_set_var_to_another_var(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
             compiler = get_compiler_class(f.readlines())

@@ -1773,7 +1773,7 @@ class Compiler:
             # If the ref node is the left node of an assignment we don't need
             # to push this onto the stack because the assignment assembly will
             # push the variable onto the stack during assignment.
-            if type(node.parent_node) == AssignmentNode and node.parent_node.left_side == node:
+            if type(node.parent_node) == AssignmentNode and node.parent_node.left_side.value == node.value:
                 if node.can_traverse_to_parent():
                     return [] + self.traverse_tree(node.parent_node)
                 else:
