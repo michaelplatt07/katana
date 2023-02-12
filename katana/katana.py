@@ -1019,16 +1019,16 @@ class Lexer:
             assert False, "Invalid scenario to check for termination."
 
     def generate_keyword_token(self):
-        keyword = ""
+        # Set the keyword to the first character and mark the position in the
+        # program.
+        keyword = self.program.get_curr_char()
         original_pos = self.program.curr_col
-        while self.program.get_curr_char().isalpha() or self.program.get_curr_char().isnumeric():
-            keyword += self.program.get_curr_char()
-            # TODO(map) De-couple the advance from generating the token
-            self.program.curr_col += 1
 
-        # TODO(map) This is a dirty hack and will be resolved when I decouple
-        # the problem in the TODO above.
-        self.program.curr_col -= 1
+        # Loop while the next char is alphanumeric.
+        while self.program.get_next_char().isalpha() or self.program.get_next_char().isnumeric():
+            self.program.advance_character()
+            keyword += self.program.get_curr_char()
+
         if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
             if keyword == "if":
                 self.if_idx_list.append(len(self.token_list))
