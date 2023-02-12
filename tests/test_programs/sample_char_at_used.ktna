@@ -1,5 +1,5 @@
 main() {
-    char y = 'l';
+    char y = 'x';
     y = charAt("Hello, Katana!", 2);
     if (y == 'l') {
         print("Equal");

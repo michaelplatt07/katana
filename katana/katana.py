@@ -854,8 +854,6 @@ class Lexer:
         self.comment_index = -1
 
     def lex(self):
-        paren_error_row = 0
-        paren_error_col = 0
         while self.program.has_next_char() and self.program.has_next_line():
             self.program.advance_character()
             self.update_comment_index()
@@ -903,45 +901,14 @@ class Lexer:
         # Always add end of file token to list
         self.token_list.append(Token(EOF_TOKEN_TYPE, 0, self.program.curr_line, EOF, LOW))
 
-        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
-            for token in self.token_list:
-                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens += 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
-                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens -= 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
+        # Do checking to make sure the tokens make sense to be parsed.
+        self.check_paren_pairing()
+        self.check_if_else_blocks()
 
-            if self.unpaired_parens != 0:
-                upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-                self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
-                print(upe)
-                raise upe
-
-        # TODO(map) Make this more robust as a method by itself.
-        if len(self.else_idx_list) > 0:
-            # TODO(map) This isn't great as it assumes the last else is the problem.
-            if len(self.if_idx_list) < len(self.else_idx_list):
-                err_token = self.token_list[self.else_idx_list[-1]]
-                raise UnpairedElseError(err_token.row, err_token.col)
-            for idx in reversed(self.else_idx_list):
-                token_list = self.token_list[:idx]
-                improperly_closed_if = False
-                bad_token = None
-                for token in reversed(token_list):
-                    if token.ttype == NEW_LINE_TOKEN_TYPE:
-                        continue
-                    elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
-                        break
-                    else:
-                        bad_token = token
-                        improperly_closed_if = True
-                if improperly_closed_if:
-                    raise BadFormattedLogicBlock(bad_token.row, 0)
-
-        return self.token_list
+        # Return the list of tokens but filter out any NEW_LINE_TOKEN_TYPE as
+        # they don't serve a value in the parser. Don't modify the original
+        # so that it can be viewed if desired for debugging.
+        return list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
 
     def update_comment_index(self):
         if "//" in self.program.get_curr_line():
@@ -1121,6 +1088,59 @@ class Lexer:
         self.program.advance_character()
         return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
 
+    def check_paren_pairing(self):
+        # Check to make sure all the parenthesis line up accordingly.
+        paren_error_row = 0
+        paren_error_col = 0
+        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
+            for token in self.token_list:
+                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens += 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
+                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens -= 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
+
+        if self.unpaired_parens != 0:
+            upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
+            self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
+            print(upe)
+            raise upe
+
+    def check_if_else_blocks(self):
+        # Confirm there is at least one `else` present, otherwise no need to
+        # check if there are matching `if` blocks.
+        if len(self.else_idx_list) > 0:
+            # Case of there being an else with no matched if.
+            if len(self.if_idx_list) < len(self.else_idx_list):
+                for idx, if_idx in enumerate(reversed(self.if_idx_list)):
+                    brace_count = 0
+                    for token in self.token_list[if_idx:self.else_idx_list[idx]]:
+                        if token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+                            brace_count = brace_count + 1
+                        elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+                            brace_count = brace_count - 1
+                        else:
+                            # Token does not affect determining the if/else
+                            # matching algorithm.
+                            pass
+                    if brace_count != 0:
+                        err_token = self.token_list[self.else_idx_list[idx]]
+                        raise UnpairedElseError(err_token.row, err_token.col)
+                # All other if/else pairs matched so the final else must be
+                # the problem
+                err_token = self.token_list[self.else_idx_list[-1]]
+                raise UnpairedElseError(err_token.row, err_token.col)
+
+        # If/else blocks all match, make sure there is nothing between the end
+        # of an `if` block and the start of an `else` block
+        filtered_token_list = list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
+        for idx, token in enumerate(filtered_token_list):
+            if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                raise BadFormattedLogicBlock(token.row, 0)
+
 
 ########
 # PARSER
@@ -1144,6 +1164,9 @@ class Parser:
     def advance_token(self):
         self.curr_token_pos += 1
         self.curr_token = self.token_list[self.curr_token_pos]
+
+    def peek_next_token(self):
+        return self.token_list[self.curr_token_pos + 1]
 
     def process_token(self, root_node):
         try:
@@ -1277,8 +1300,6 @@ class Parser:
                               left_side=left_node, right_side=right_node)
 
     def handle_parenthesis(self):
-        # TODO(map) Unify how this works along with other no op stuff. I mean
-        # that this doesn't go past the close parenthesis but it should.
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
         root_node = None
@@ -1478,21 +1499,22 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                 truth_node_list.append(truth_body)
                 truth_body = None
-        # Move past the right curl brace to close the if body.
-        self.advance_token()
 
-        # Move past the new line after the curl bracket if present.
-        while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
-            self.advance_token()
+        # We don't want to move past the curl brace that closes the if
+        # statement because the `handle_main` will always be stepping over it
+        # as part of its processing.
 
         return truth_node_list
 
     def get_false_side(self):
         false_body = None
         # Flag if there is an else keyword and parse it.
-        is_else_keyword_present = self.curr_token.value == "else"
+        is_else_keyword_present = self.peek_next_token().value == "else"
         false_node_list = []
         if is_else_keyword_present:
+            # Move beyond the closing right curl brace of the `if` statment
+            self.advance_token()
+
             # Move past the else keyword.
             self.advance_token()
 
@@ -1507,9 +1529,6 @@ class Parser:
                 if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
                     false_node_list.append(ret_node)
                     false_body = None
-        else:
-            # TODO(map) Figure out how to not go back here
-            self.curr_token_pos -= 1
         return false_node_list
 
     def get_loop_body(self, node_value):
@@ -1527,9 +1546,6 @@ class Parser:
             if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
                 loop_contents.append(loop_body)
                 loop_body = None
-
-        # Move past the right curl brace to close the if body.
-        self.advance_token()
 
         if node_value not in ["loopUp", "loopDown", "loopFrom"]:
             assert False, f"Loop of type {node_value} is not recognized."

@@ -20,7 +20,6 @@ from katana.katana import (
     LESS_THAN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
-    NEW_LINE_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     RANGE_INDICATION_TOKEN_TYPE,
@@ -52,7 +51,6 @@ def get_main_tokens():
         Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
         Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
         Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-        Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
     ]
 
 
@@ -62,7 +60,6 @@ class TestComments:
     def test_single_line_comment(self):
         program = Program(["// Comment\n"])
         token_list = [Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 10, 0, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -74,7 +71,6 @@ class TestComments:
                       Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                       Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
                       Token(COMMENT_TOKEN_TYPE, 7, 0, "// Comment", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 17, 0, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -82,12 +78,10 @@ class TestComments:
     def test_comment_before_program(self):
         program = Program(["// Comment\n", "1 + 2;\n"])
         token_list = [Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 10, 0, "\n", LOW),
                       Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
                       Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
                       Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
                       Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 6, 1, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -98,9 +92,7 @@ class TestComments:
                       Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
                       Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                       Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                       Token(COMMENT_TOKEN_TYPE, 0, 1, "// Comment", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 10, 1, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -116,7 +108,6 @@ class TestLexerWellFormattedPrograms:
         program = Program(["3;\n"])
         token_list = [Token(NUM_TOKEN_TYPE, 0, 0, "3", LOW),
                       Token(EOL_TOKEN_TYPE, 1, 0, ";", LOW),
-                      Token(NEW_LINE_TOKEN_TYPE, 2, 0, "\n", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -126,11 +117,9 @@ class TestLexerWellFormattedPrograms:
         [
             (["12;\n"], [Token(NUM_TOKEN_TYPE, 0, 0, "12", LOW),
              Token(EOL_TOKEN_TYPE, 2, 0, ";", LOW),
-             Token(NEW_LINE_TOKEN_TYPE, 3, 0, "\n", LOW),
              Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]),
             (["345;\n"], [Token(NUM_TOKEN_TYPE, 0, 0, "345", LOW),
              Token(EOL_TOKEN_TYPE, 3, 0, ";", LOW),
-             Token(NEW_LINE_TOKEN_TYPE, 4, 0, "\n", LOW),
              Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)]),
         ],
     )
@@ -149,7 +138,6 @@ class TestLexerWellFormattedPrograms:
                     Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -160,7 +148,6 @@ class TestLexerWellFormattedPrograms:
                     Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 4, 0, "4", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -181,7 +168,6 @@ class TestLexerWellFormattedPrograms:
                     Token(MINUS_TOKEN_TYPE, 2, 0, "-", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -192,7 +178,6 @@ class TestLexerWellFormattedPrograms:
                     Token(MINUS_TOKEN_TYPE, 2, 0, "-", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 4, 0, "4", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -215,7 +200,6 @@ class TestLexerWellFormattedPrograms:
                     Token(MINUS_TOKEN_TYPE, 6, 0, "-", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 8, 0, "3", LOW),
                     Token(EOL_TOKEN_TYPE, 9, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 10, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -228,7 +212,6 @@ class TestLexerWellFormattedPrograms:
                     Token(PLUS_TOKEN_TYPE, 6, 0, "+", MEDIUM),
                     Token(NUM_TOKEN_TYPE, 8, 0, "5", LOW),
                     Token(EOL_TOKEN_TYPE, 9, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 10, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -249,7 +232,6 @@ class TestLexerWellFormattedPrograms:
                     Token(MULTIPLY_TOKEN_TYPE, 2, 0, "*", HIGH),
                     Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -270,7 +252,6 @@ class TestLexerWellFormattedPrograms:
                     Token(DIVIDE_TOKEN_TYPE, 2, 0, "/", HIGH),
                     Token(NUM_TOKEN_TYPE, 4, 0, "2", LOW),
                     Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-                    Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
                     Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
                 ],
             ),
@@ -295,7 +276,6 @@ class TestLexerBadFormat:
             Token(MINUS_TOKEN_TYPE, 7, 0, "-", MEDIUM),
             Token(NUM_TOKEN_TYPE, 14, 0, "2", LOW),
             Token(EOL_TOKEN_TYPE, 21, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 22, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -318,7 +298,6 @@ class TestLexerParenthesis:
             Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 0, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 11, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -335,7 +314,6 @@ class TestLexerParenthesis:
             Token(MULTIPLY_TOKEN_TYPE, 8, 0, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 0, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -363,7 +341,6 @@ class TestEndOfLineSemicolon:
             Token(PLUS_TOKEN_TYPE, 2, 0, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 0, "4", LOW),
             Token(EOL_TOKEN_TYPE, 5, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -412,7 +389,6 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 10, 0, "4", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 0, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -423,7 +399,7 @@ class TestKeyword:
         Ensures the main method keyword is lexed correctly.
         """
         program = Program(["main() {print(1+2);};\n"])
-        token_list = get_main_tokens()[:-1] + [
+        token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 8, 0, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 13, 0, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 14, 0, "1", LOW),
@@ -433,7 +409,6 @@ class TestKeyword:
             Token(EOL_TOKEN_TYPE, 18, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 19, 0, "}", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 20, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 21, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -452,9 +427,7 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 10, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 11, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -492,9 +465,7 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 9, 1, "2", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -512,9 +483,7 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -532,15 +501,12 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -580,9 +546,7 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
             Token(CHARACTER_TOKEN_TYPE, 10, 1, "h", LOW),
             Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -609,9 +573,7 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
             Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -628,15 +590,12 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
             Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -654,9 +613,7 @@ class TestKeyword:
             Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
             Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
             Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 15, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -675,17 +632,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 8, 1, "0", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -704,17 +657,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 8, 1, "0", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -733,17 +682,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 9, 1, "0", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 12, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "low", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -766,7 +711,7 @@ class TestKeyword:
         """
         program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "print(\"really bad\");\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
         lexer = Lexer(program)
-        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 5:0. Cannot have code between if/else block."):
+        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 6:0. Cannot have code between if/else block."):
             lexer.lex()
 
     def test_else_with_something_between_same_line_raises_error(self):
@@ -777,6 +722,53 @@ class TestKeyword:
         program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n",  "print(\"really bad\");else {\n", "print(\"low\");\n", "}\n", "}\n"])
         lexer = Lexer(program)
         with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 5:0. Cannot have code between if/else block."):
+            lexer.lex()
+
+    def test_nested_if_else_with_bad_line(self):
+        """
+        Ensures that the nested if/else block that are improperly formatted get
+        flagged instead of outer blocks.
+        """
+        program = Program([
+            "main() {\n",
+            "if (1 == 2) {\n",
+            "print(\"first if\");\n",
+            "if (2 == 3){\n",
+            "print(\"second if\");\n",
+            "}\n",
+            "print(\"bad line\");\n",
+            "else {\n",
+            "print(\"second else\");\n",
+            "}\n",
+            "else {\n",
+            "print(\"first else\");\n",
+            "}\n",
+            "}\n",
+            "}\n"
+        ])
+        lexer = Lexer(program)
+        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 8:0. Cannot have code between if/else block."):
+            lexer.lex()
+
+    def test_nested_else_without_if(self):
+        """
+        Ensures that the inner `else` without an if block gets flagged as the
+        unpaired else instead of the outer else.
+        """
+        program = Program([
+            "main() {\n",
+            "if (1 == 2) {\n",
+            "print(\"first if\");\n",
+            "else {\n",
+            "print(\"second else\");\n",
+            "}\n",
+            "else {\n",
+            "print(\"first else\");\n",
+            "}\n",
+            "}\n"
+        ])
+        lexer = Lexer(program)
+        with pytest.raises(UnpairedElseError, match="else at 4:0 does not have a matching if block."):
             lexer.lex()
 
     def test_if_else_success(self):
@@ -792,30 +784,23 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "high", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
 
             Token(KEYWORD_TOKEN_TYPE, 0, 4, "else", ULTRA_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 4, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 4, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 5, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 5, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 5, "low", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 5, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 5, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 5, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 6, "\n", LOW),
 
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 7, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 7, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 8, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -834,29 +819,23 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 8, 1, "2", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "high", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
 
             Token(KEYWORD_TOKEN_TYPE, 2, 3, "else", ULTRA_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 3, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 4, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 4, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 4, "low", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 4, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 4, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 4, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 5, "\n", LOW),
 
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 6, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 7, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -870,17 +849,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 7, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 8, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 10, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  11, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE,  17, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -894,17 +869,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 9, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 12, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  13, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE,  17, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -920,17 +891,13 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 12, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 13, 1, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 15, 1, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  16, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE,  17, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 3, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE,  1, 4, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
         ]
         lexer = Lexer(program)
@@ -946,9 +913,7 @@ class TestKeyword:
             Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 17, 1, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 18, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 19, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         lexer = Lexer(program)
@@ -962,7 +927,6 @@ class TestQuotationCharacter:
         token_list = [
             Token(STRING_TOKEN_TYPE, 0, 0, "test string", LOW),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         lexer = Lexer(program)
