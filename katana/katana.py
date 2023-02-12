@@ -1288,14 +1288,11 @@ class Parser:
         left_node = root_node
         op_token = self.curr_token
         right_node = None
-        self.advance_token()
-        while self.curr_token.ttype != EOL_TOKEN_TYPE:
-            right_node = self.process_token(right_node)
+        # Peek ahead to ensure we are not getting an EOL token.
+        while self.peek_next_token().ttype != EOL_TOKEN_TYPE:
+            # Advance and process the token.
             self.advance_token()
-        # TODO(map) Have to do this because I advance the token here which puts
-        # me at the EOL token, but then I advance after the node is returned.
-        self.curr_token_pos = self.curr_token_pos - 1
-        self.curr_token = self.token_list[self.curr_token_pos]
+            right_node = self.process_token(right_node)
         return AssignmentNode(op_token, op_token.value,
                               left_side=left_node, right_side=right_node)
 
