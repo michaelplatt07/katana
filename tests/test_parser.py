@@ -6,7 +6,7 @@ from katana.katana import (
     CharNode,
     CompareNode,
     FunctionKeywordNode,
-    LiteralNode,
+    NumberNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
     LoopFromKeywordNode,
@@ -37,7 +37,6 @@ from katana.katana import (
     GREATER_THAN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
-    NEW_LINE_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     RANGE_INDICATION_TOKEN_TYPE,
@@ -59,14 +58,14 @@ class TestParserLiterals:
     def test_parser_single_digit_literal(self):
         token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = LiteralNode(token_list[0], "1")
+        ast = NumberNode(token_list[0], "1")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
     def test_parser_multi_digit_literal(self):
         token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "123", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = LiteralNode(token_list[0], "123")
+        ast = NumberNode(token_list[0], "123")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -85,8 +84,8 @@ class TestParserAddition:
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "1")
-        right_node = LiteralNode(token_list[2], "2")
+        left_node = NumberNode(token_list[0], "1")
+        right_node = NumberNode(token_list[2], "2")
         ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
         left_node.parent_node = ast
         right_node.parent_node = ast
@@ -108,11 +107,11 @@ class TestParserAddition:
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_1 = LiteralNode(token_list[0], "1")
-        right_node_1 = LiteralNode(token_list[2], "2")
+        left_node_1 = NumberNode(token_list[0], "1")
+        right_node_1 = NumberNode(token_list[2], "2")
         first_plus = PlusMinusNode(
             token_list[1], "+", left_node_1, right_node_1)
-        right_node_2 = LiteralNode(token_list[4], "3")
+        right_node_2 = NumberNode(token_list[4], "3")
         ast = PlusMinusNode(token_list[3], "+", first_plus, right_node_2)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -133,8 +132,8 @@ class TestParserSubtraction:
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "1")
-        right_node = LiteralNode(token_list[2], "2")
+        left_node = NumberNode(token_list[0], "1")
+        right_node = NumberNode(token_list[2], "2")
         ast = PlusMinusNode(token_list[1], "-", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -155,11 +154,11 @@ class TestParserSubtraction:
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_1 = LiteralNode(token_list[0], "1")
-        right_node_1 = LiteralNode(token_list[2], "2")
+        left_node_1 = NumberNode(token_list[0], "1")
+        right_node_1 = NumberNode(token_list[2], "2")
         first_plus = PlusMinusNode(
             token_list[1], "-", left_node_1, right_node_1)
-        right_node_2 = LiteralNode(token_list[4], "3")
+        right_node_2 = NumberNode(token_list[4], "3")
         ast = PlusMinusNode(token_list[3], "-", first_plus, right_node_2)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -179,8 +178,8 @@ class TestMultiply:
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = MultiplyDivideNode(token_list[1], "*", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -200,8 +199,8 @@ class TestDivide:
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = MultiplyDivideNode(token_list[1], "/", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -222,8 +221,8 @@ class TestComments:
             Token(COMMENT_TOKEN_TYPE, 8, 1, "// Add numbers", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -245,9 +244,9 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_add = LiteralNode(token_list[0], "2")
-        left_node_multiply = LiteralNode(token_list[2], "3")
-        right_node_multiply = LiteralNode(token_list[4], "4")
+        left_node_add = NumberNode(token_list[0], "2")
+        left_node_multiply = NumberNode(token_list[2], "3")
+        right_node_multiply = NumberNode(token_list[4], "4")
         multiply_node = MultiplyDivideNode(
             token_list[3], "*", left_node_multiply, right_node_multiply)
         add_node = PlusMinusNode(
@@ -273,10 +272,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[1], "*", two_node, three_node)
         sub_node = PlusMinusNode(token_list[3], "-", multiply_node, four_node)
@@ -302,10 +301,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[5], "*", four_node, five_node)
         plus_node = PlusMinusNode(token_list[1], "+", two_node, three_node)
@@ -331,10 +330,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[3], "*", three_node, four_node)
         plus_node = PlusMinusNode(token_list[1], "+", two_node, multiply_node)
@@ -360,10 +359,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        first_eight_node = LiteralNode(token_list[0], "8")
-        second_eight_node = LiteralNode(token_list[2], "8")
-        three_node = LiteralNode(token_list[4], "3")
-        two_node = LiteralNode(token_list[6], "2")
+        first_eight_node = NumberNode(token_list[0], "8")
+        second_eight_node = NumberNode(token_list[2], "8")
+        three_node = NumberNode(token_list[4], "3")
+        two_node = NumberNode(token_list[6], "2")
         divide_node = MultiplyDivideNode(
             token_list[1], "/", first_eight_node, second_eight_node)
         multiply_node = MultiplyDivideNode(
@@ -397,9 +396,9 @@ class TestParserParenthesis:
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = LiteralNode(token_list[0], "1")
-        two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[5], "3")
+        one_node = NumberNode(token_list[0], "1")
+        two_node = NumberNode(token_list[3], "2")
+        three_node = NumberNode(token_list[5], "3")
         first_plus = PlusMinusNode(
             token_list[4], "+", two_node, three_node)
         ast = PlusMinusNode(token_list[1], "+", one_node, first_plus)
@@ -423,9 +422,9 @@ class TestParserParenthesis:
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = LiteralNode(token_list[1], "1")
-        two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[6], "3")
+        one_node = NumberNode(token_list[1], "1")
+        two_node = NumberNode(token_list[3], "2")
+        three_node = NumberNode(token_list[6], "3")
         first_plus = PlusMinusNode(
             token_list[2], "+", one_node, two_node)
         ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
@@ -448,10 +447,9 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 6, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 1, ")", HIGH),
             Token(EOL_TOKEN_TYPE, 8, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 9, 1, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        three_node = LiteralNode(token_list[2], "3")
+        three_node = NumberNode(token_list[2], "3")
         ast = FunctionKeywordNode(token_list[0], "print", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -472,10 +470,9 @@ class TestKeywordParser:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 0, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[4], "3")
+        three_node = NumberNode(token_list[4], "3")
         ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -494,21 +491,18 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[8], "3")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
-        keyword_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        three_node = NumberNode(token_list[7], "3")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -533,13 +527,11 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
             Token(STRING_TOKEN_TYPE, 1, 15, "Hello, Katana!", 0),
             Token(EOL_TOKEN_TYPE, 1, 31, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 32, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 4, "char", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 2, 9, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 2, 11, "=", 2),
@@ -550,7 +542,6 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 2, 23, "2", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 24, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 25, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 26, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 7, "(", 3),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 8, "y", 0),
@@ -558,47 +549,41 @@ class TestKeywordParser:
             Token(CHARACTER_TOKEN_TYPE, 3, 14, "l", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 16, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 18, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 19, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 4, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 4, 14, "equal", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 4, 21, ")", 3),
             Token(EOL_TOKEN_TYPE, 4, 22, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 23, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 5, 6, "else", 4),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 11, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 12, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 6, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 6, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 6, 14, "unequal", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 6, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 6, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 7, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
         ]
-        string_node = StringNode(token_list[8], "Hello, Katana!")
-        x_node = VariableNode(token_list[6], "x")
-        x_assign_node = AssignmentNode(token_list[7], "=", x_node, string_node)
-        string_declare_node = VariableKeywordNode(token_list[5], "string", x_assign_node)
-        two_node = LiteralNode(token_list[18], "2")
-        x_ref_node = VariableReferenceNode(token_list[16], "x")
-        char_at_node = FunctionKeywordNode(token_list[14], "charAt", [x_ref_node, two_node])
-        y_node = VariableNode(token_list[12], "y")
-        y_assign_node = AssignmentNode(token_list[13], "=", y_node, char_at_node)
-        char_declare_node = VariableKeywordNode(token_list[11], "char", y_assign_node)
-        char_l_node = CharNode(token_list[26], "l")
-        y_ref_node = VariableReferenceNode(token_list[24], "y")
-        compare_node = CompareNode(token_list[25], "==", y_ref_node, char_l_node)
-        equal_string_node = StringNode(token_list[32], "equal")
-        unequal_string_node = StringNode(token_list[42], "unequal")
-        print_equal_node = FunctionKeywordNode(token_list[30], "print", [equal_string_node])
-        print_unequal_node = FunctionKeywordNode(token_list[40], "print", [unequal_string_node])
-        conditional_node = LogicKeywordNode(token_list[22], "if", compare_node, true_side=[print_equal_node], false_side=[print_unequal_node])
+        string_node = StringNode(token_list[7], "Hello, Katana!")
+        x_node = VariableNode(token_list[5], "x")
+        x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
+        string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        two_node = NumberNode(token_list[16], "2")
+        x_ref_node = VariableReferenceNode(token_list[14], "x")
+        char_at_node = FunctionKeywordNode(token_list[12], "charAt", [x_ref_node, two_node])
+        y_node = VariableNode(token_list[10], "y")
+        y_assign_node = AssignmentNode(token_list[11], "=", y_node, char_at_node)
+        char_declare_node = VariableKeywordNode(token_list[9], "char", y_assign_node)
+        char_l_node = CharNode(token_list[23], "l")
+        y_ref_node = VariableReferenceNode(token_list[21], "y")
+        compare_node = CompareNode(token_list[22], "==", y_ref_node, char_l_node)
+        equal_string_node = StringNode(token_list[28], "equal")
+        unequal_string_node = StringNode(token_list[36], "unequal")
+        print_equal_node = FunctionKeywordNode(token_list[26], "print", [equal_string_node])
+        print_unequal_node = FunctionKeywordNode(token_list[34], "print", [unequal_string_node])
+        conditional_node = LogicKeywordNode(token_list[19], "if", compare_node, true_side=[print_equal_node], false_side=[print_unequal_node])
         ast = StartNode(token_list[0], "main", [string_declare_node, char_declare_node, conditional_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -618,29 +603,25 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 12, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[8], "3")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
-        variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[13], "x")
-        print_node = FunctionKeywordNode(token_list[11], "print", [x_ref_node])
+        three_node = NumberNode(token_list[7], "3")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
+        variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -659,21 +640,18 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
             Token(STRING_TOKEN_TYPE, 12, 1, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
-        string_node = StringNode(token_list[8], "hello")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, string_node)
-        keyword_node = VariableKeywordNode(token_list[5], "string", assignment_node)
+        string_node = StringNode(token_list[7], "hello")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, string_node)
+        keyword_node = VariableKeywordNode(token_list[4], "string", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -693,29 +671,25 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
             Token(STRING_TOKEN_TYPE, 11, 1, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 9, 2, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 3, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
-        string_node = StringNode(token_list[8], "hello")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, string_node)
-        variable_dec_node = VariableKeywordNode(token_list[5], "string", assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[13], "x")
-        print_node = FunctionKeywordNode(token_list[11], "print", [x_ref_node])
+        string_node = StringNode(token_list[7], "hello")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, string_node)
+        variable_dec_node = VariableKeywordNode(token_list[4], "string", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -734,21 +708,18 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "char", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
             Token(CHARACTER_TOKEN_TYPE, 10, 1, "h", LOW),
             Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 13, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
-        char_node = CharNode(token_list[8], "h")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, char_node)
-        keyword_node = VariableKeywordNode(token_list[5], "char", assignment_node)
+        char_node = CharNode(token_list[7], "h")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, char_node)
+        keyword_node = VariableKeywordNode(token_list[4], "char", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -767,21 +738,18 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 0, "\n", LOW),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "bool", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
             Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
             Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 1, "\n", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", LOW),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
-        boolean_node = BooleanNode(token_list[8], "false")
-        x_node = VariableNode(token_list[6], "x")
-        assignment_node = AssignmentNode(token_list[7], "=", x_node, boolean_node)
-        keyword_node = VariableKeywordNode(token_list[5], "bool", assignment_node)
+        boolean_node = BooleanNode(token_list[7], "false")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, boolean_node)
+        keyword_node = VariableKeywordNode(token_list[4], "bool", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -803,7 +771,6 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
@@ -811,33 +778,28 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 1, 12, "0", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 9, "(", 3),
             Token(STRING_TOKEN_TYPE, 4, 10, "lower", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 4, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 4, 18, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 19, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[23], "lower")
-        second_print_node = FunctionKeywordNode(token_list[21], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[15], "greater")
-        first_print_node = FunctionKeywordNode(token_list[13], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[7], "1")
-        zero_node = LiteralNode(token_list[9], "0")
-        greater_than_node = CompareNode(token_list[8], ">", one_node, zero_node)
-        if_node = LogicKeywordNode(token_list[5], "if", greater_than_node, None, [first_print_node], [])
+        lower_string_node = StringNode(token_list[19], "lower")
+        second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[13], "greater")
+        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        one_node = NumberNode(token_list[6], "1")
+        zero_node = NumberNode(token_list[8], "0")
+        greater_than_node = CompareNode(token_list[7], ">", one_node, zero_node)
+        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -859,7 +821,6 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 8, "0", 0),
@@ -867,33 +828,28 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 1, 12, "1", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 9, "(", 3),
             Token(STRING_TOKEN_TYPE, 4, 10, "lower", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 4, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 4, 18, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 19, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[23], "lower")
-        second_print_node = FunctionKeywordNode(token_list[21], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[15], "greater")
-        first_print_node = FunctionKeywordNode(token_list[13], "print", [greater_string_node])
-        zero_node = LiteralNode(token_list[7], "0")
-        one_node = LiteralNode(token_list[9], "1")
-        greater_than_node = CompareNode(token_list[8], ">", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[5], "if", greater_than_node, None, [first_print_node], [])
+        lower_string_node = StringNode(token_list[19], "lower")
+        second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[13], "greater")
+        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        zero_node = NumberNode(token_list[6], "0")
+        one_node = NumberNode(token_list[8], "1")
+        greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
+        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -917,7 +873,6 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
@@ -925,45 +880,38 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 1, 12, "0", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 3, 14, "greater still", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 29, ")", 3),
             Token(EOL_TOKEN_TYPE, 3, 30, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 31, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 6, "else", 4),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 11, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 12, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 5, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 5, 14, "lower", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 21, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 23, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 7, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[31], "lower")
-        second_print_node = FunctionKeywordNode(token_list[29], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[15], "greater")
-        first_print_node = FunctionKeywordNode(token_list[13], "print", [greater_string_node])
-        greater_still_string_node = StringNode(token_list[21], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[19], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[7], "1")
-        one_node = LiteralNode(token_list[9], "0")
-        greater_than_node = CompareNode(token_list[8], ">", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[5], "if", greater_than_node, None, [first_print_node, second_first_print_node], [second_print_node])
+        lower_string_node = StringNode(token_list[26], "lower")
+        second_print_node = FunctionKeywordNode(token_list[24], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[13], "greater")
+        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        greater_still_string_node = StringNode(token_list[18], "greater still")
+        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
+        greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
+        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [if_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -986,7 +934,6 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
@@ -994,41 +941,35 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 1, 12, "0", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 3, 14, "greater still", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 29, ")", 3),
             Token(EOL_TOKEN_TYPE, 3, 30, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 31, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 5, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 5, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 9, "(", 3),
             Token(STRING_TOKEN_TYPE, 5, 10, "lower", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 18, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 19, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[29], "lower")
-        second_print_node = FunctionKeywordNode(token_list[27], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[15], "greater")
-        first_print_node = FunctionKeywordNode(token_list[13], "print", [greater_string_node])
-        greater_still_string_node = StringNode(token_list[21], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[19], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[7], "1")
-        one_node = LiteralNode(token_list[9], "0")
-        greater_than_node = CompareNode(token_list[8], "<", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[5], "if", greater_than_node, None, [first_print_node, second_first_print_node])
+        lower_string_node = StringNode(token_list[24], "lower")
+        second_print_node = FunctionKeywordNode(token_list[22], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[13], "greater")
+        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        greater_still_string_node = StringNode(token_list[18], "greater still")
+        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
+        greater_than_node = CompareNode(token_list[7], "<", zero_node, one_node)
+        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1051,7 +992,6 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
@@ -1059,41 +999,35 @@ class TestKeywordParser:
             Token(NUM_TOKEN_TYPE, 1, 13, "0", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 14, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 16, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 17, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 3, 14, "greater still", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 29, ")", 3),
             Token(EOL_TOKEN_TYPE, 3, 30, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 31, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 5, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 5, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 9, "(", 3),
             Token(STRING_TOKEN_TYPE, 5, 10, "lower", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 18, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 19, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[29], "lower")
-        second_print_node = FunctionKeywordNode(token_list[27], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[15], "greater")
-        first_print_node = FunctionKeywordNode(token_list[13], "print", [greater_string_node])
-        greater_still_string_node = StringNode(token_list[21], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[19], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[7], "1")
-        one_node = LiteralNode(token_list[9], "0")
-        equal_node = CompareNode(token_list[8], "==", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[5], "if", equal_node, None, [first_print_node, second_first_print_node])
+        lower_string_node = StringNode(token_list[24], "lower")
+        second_print_node = FunctionKeywordNode(token_list[22], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[13], "greater")
+        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        greater_still_string_node = StringNode(token_list[18], "greater still")
+        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
+        equal_node = CompareNode(token_list[7], "==", zero_node, one_node)
+        if_node = LogicKeywordNode(token_list[4], "if", equal_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1116,29 +1050,24 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopUp", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 11, "3", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 14, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 15, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
         ]
-        string_node = StringNode(token_list[13], "looping")
-        print_node = FunctionKeywordNode(token_list[11], "print", [string_node])
-        three_node = LiteralNode(token_list[7], "3")
-        loop_node = LoopUpKeywordNode(token_list[5], "loopUp", three_node, loop_body=[print_node])
+        string_node = StringNode(token_list[11], "looping")
+        print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1161,29 +1090,24 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 14, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 16, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 17, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
         ]
-        string_node = StringNode(token_list[13], "looping")
-        print_node = FunctionKeywordNode(token_list[11], "print", [string_node])
-        three_node = LiteralNode(token_list[7], "3")
-        loop_node = LoopDownKeywordNode(token_list[5], "loopDown", three_node, loop_body=[print_node])
+        string_node = StringNode(token_list[11], "looping")
+        print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1206,33 +1130,28 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
-            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(NUM_TOKEN_TYPE, 1, 13, "0", 0),
             Token(RANGE_INDICATION_TOKEN_TYPE, 1, 14, "..", 0),
             Token(NUM_TOKEN_TYPE, 1, 16, "3", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 17, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 18, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 19, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 25, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
         ]
-        string_node = StringNode(token_list[15], "looping")
-        print_node = FunctionKeywordNode(token_list[13], "print", [string_node])
-        zero_node = LiteralNode(token_list[7], "3")
-        three_node = LiteralNode(token_list[9], "3")
-        range_node = RangeNode(token_list[8], "..", zero_node, three_node)
-        loop_node = LoopFromKeywordNode(token_list[5], "loopFrom", range_node, loop_body=[print_node])
+        string_node = StringNode(token_list[13], "looping")
+        print_node = FunctionKeywordNode(token_list[11], "print", [string_node])
+        zero_node = NumberNode(token_list[6], "0")
+        three_node = NumberNode(token_list[8], "3")
+        range_node = RangeNode(token_list[7], "..", zero_node, three_node)
+        loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1251,19 +1170,16 @@ class TestKeywordParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
             Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
             Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
             Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
             Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 14, 1, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 2, "\n", 0),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
         ]
-        three_node = LiteralNode(token_list[7], "3")
-        printl_node = FunctionKeywordNode(token_list[5], "printl", [three_node])
+        three_node = NumberNode(token_list[6], "3")
+        printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
         ast = StartNode(token_list[0], "main", [printl_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1290,13 +1206,11 @@ class TestKeywordAdvanced:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
             Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 6, "(", 3),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 7, "x", 0),
@@ -1306,43 +1220,37 @@ class TestKeywordAdvanced:
             Token(NUM_TOKEN_TYPE, 2, 15, "0", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 16, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 18, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 19, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 3, 14, "true", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
             Token(EOL_TOKEN_TYPE, 3, 21, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 22, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 6, "else", 4),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 11, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 12, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 5, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 5, 14, "false", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 21, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 23, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 7, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[33], "false")
-        second_print_node = FunctionKeywordNode(token_list[31], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[23], "true")
-        first_print_node = FunctionKeywordNode(token_list[21], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[8], "1")
-        x_node = VariableNode(token_list[6], "x")
-        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[13], "x")
-        one_minus_node = LiteralNode(token_list[15], "1")
-        subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
-        zero_node = LiteralNode(token_list[9], "0")
-        compare_node = CompareNode(token_list[16], ">", subtract_node, zero_node)
-        if_node = LogicKeywordNode(token_list[11], "if", compare_node, None, [first_print_node], [second_print_node])
+        lower_string_node = StringNode(token_list[28], "false")
+        second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[20], "true")
+        first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
+        one_node = NumberNode(token_list[7], "1")
+        x_node = VariableNode(token_list[5], "x")
+        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        one_minus_node = NumberNode(token_list[13], "1")
+        subtract_node = PlusMinusNode(token_list[12], "-", x_ref_node, one_minus_node)
+        zero_node = NumberNode(token_list[7], "0")
+        compare_node = CompareNode(token_list[14], ">", subtract_node, zero_node)
+        if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1366,13 +1274,11 @@ class TestKeywordAdvanced:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
             Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 6, "(", 3),
             Token(NUM_TOKEN_TYPE, 2, 7, "0", 0),
@@ -1382,43 +1288,37 @@ class TestKeywordAdvanced:
             Token(NUM_TOKEN_TYPE, 2, 15, "1", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 16, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 18, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 19, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 3, 14, "true", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
             Token(EOL_TOKEN_TYPE, 3, 21, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 22, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 6, "else", 4),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 11, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 12, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 5, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 5, 14, "false", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 21, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 23, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 7, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[33], "false")
-        second_print_node = FunctionKeywordNode(token_list[31], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[23], "true")
-        first_print_node = FunctionKeywordNode(token_list[21], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[8], "1")
-        x_node = VariableNode(token_list[6], "x")
-        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[15], "x")
-        one_minus_node = LiteralNode(token_list[17], "1")
-        subtract_node = PlusMinusNode(token_list[16], "-", x_ref_node, one_minus_node)
-        zero_node = LiteralNode(token_list[13], "0")
-        compare_node = CompareNode(token_list[14], ">", zero_node, subtract_node)
-        if_node = LogicKeywordNode(token_list[11], "if", compare_node, None, [first_print_node], [second_print_node])
+        lower_string_node = StringNode(token_list[28], "false")
+        second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[20], "true")
+        first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
+        one_node = NumberNode(token_list[7], "1")
+        x_node = VariableNode(token_list[5], "x")
+        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[13], "x")
+        one_minus_node = NumberNode(token_list[15], "1")
+        subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
+        zero_node = NumberNode(token_list[11], "0")
+        compare_node = CompareNode(token_list[12], ">", zero_node, subtract_node)
+        if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1443,19 +1343,16 @@ class TestKeywordAdvanced:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 2, 14, "1", 0),
             Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 4, "int16", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 2, 10, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 2, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 2, 14, "2", 0),
             Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 3, 4, "if", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 3, 6, "(", 3),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 7, "y", 0),
@@ -1467,49 +1364,43 @@ class TestKeywordAdvanced:
             Token(NUM_TOKEN_TYPE, 3, 19, "1", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 3, 20, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 22, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 23, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 4, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 4, 14, "true", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 4, 20, ")", 3),
             Token(EOL_TOKEN_TYPE, 4, 21, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 4, 22, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 5, 6, "else", 4),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 11, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 5, 12, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 6, 8, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 6, 13, "(", 3),
             Token(STRING_TOKEN_TYPE, 6, 14, "false", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 6, 21, ")", 3),
             Token(EOL_TOKEN_TYPE, 6, 22, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 6, 23, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 7, 5, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 8, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
         ]
-        lower_string_node = StringNode(token_list[41], "false")
-        second_print_node = FunctionKeywordNode(token_list[39], "print", [lower_string_node])
-        greater_string_node = StringNode(token_list[31], "true")
-        first_print_node = FunctionKeywordNode(token_list[29], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[8], "1")
-        x_node = VariableNode(token_list[6], "x")
-        x_assignment_node = AssignmentNode(token_list[7], "=", x_node, one_node)
-        keyword_node_x = VariableKeywordNode(token_list[5], "int16", x_assignment_node)
-        two_node = LiteralNode(token_list[14], "2")
-        y_node = VariableNode(token_list[12], "y")
-        y_assignment_node = AssignmentNode(token_list[13], "=", y_node, two_node)
-        keyword_node_y = VariableKeywordNode(token_list[11], "int16", y_assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[23], "x")
-        one_minus_node = LiteralNode(token_list[25], "1")
-        subtract_node = PlusMinusNode(token_list[24], "-", x_ref_node, one_minus_node)
-        y_ref_node = VariableReferenceNode(token_list[19], "y")
-        two_minus_node = LiteralNode(token_list[21], "2")
-        subtract_node_two = PlusMinusNode(token_list[20], "-", y_ref_node, two_minus_node)
-        compare_node = CompareNode(token_list[22], ">", subtract_node_two, subtract_node)
-        if_node = LogicKeywordNode(token_list[17], "if", compare_node, None, [first_print_node], [second_print_node])
+        lower_string_node = StringNode(token_list[35], "false")
+        second_print_node = FunctionKeywordNode(token_list[33], "print", [lower_string_node])
+        greater_string_node = StringNode(token_list[27], "true")
+        first_print_node = FunctionKeywordNode(token_list[25], "print", [greater_string_node])
+        one_node = NumberNode(token_list[7], "1")
+        x_node = VariableNode(token_list[5], "x")
+        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
+        keyword_node_x = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        two_node = NumberNode(token_list[12], "2")
+        y_node = VariableNode(token_list[10], "y")
+        y_assignment_node = AssignmentNode(token_list[11], "=", y_node, two_node)
+        keyword_node_y = VariableKeywordNode(token_list[9], "int16", y_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[20], "x")
+        one_minus_node = NumberNode(token_list[22], "1")
+        subtract_node = PlusMinusNode(token_list[21], "-", x_ref_node, one_minus_node)
+        y_ref_node = VariableReferenceNode(token_list[16], "y")
+        two_minus_node = NumberNode(token_list[18], "2")
+        subtract_node_two = PlusMinusNode(token_list[17], "-", y_ref_node, two_minus_node)
+        compare_node = CompareNode(token_list[19], ">", subtract_node_two, subtract_node)
+        if_node = LogicKeywordNode(token_list[14], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node_x, keyword_node_y, if_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1529,33 +1420,29 @@ class TestKeywordAdvanced:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
             Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 16, "\n", 0),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
             Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 8, "x", 0),
             Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
             Token(NUM_TOKEN_TYPE, 2, 12, "3", 0),
             Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 14, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
-        one_node = LiteralNode(token_list[8], "1")
-        x_var_node = VariableNode(token_list[6], "x")
-        x_assign_node = AssignmentNode(token_list[7], "=", x_var_node, one_node)
-        int_keyword_node = VariableKeywordNode(token_list[5], "int16", x_assign_node)
-        three_node = LiteralNode(token_list[15], "3")
-        x_ref_node = VariableReferenceNode(token_list[13], "x")
-        plus_node = PlusMinusNode(token_list[14], "+", x_ref_node, three_node)
-        x_left_assignmet_ref_node = VariableReferenceNode(token_list[11], "x")
-        reassign_node = AssignmentNode(token_list[12], "=", x_left_assignmet_ref_node, plus_node)
+        one_node = NumberNode(token_list[7], "1")
+        x_var_node = VariableNode(token_list[5], "x")
+        x_assign_node = AssignmentNode(token_list[6], "=", x_var_node, one_node)
+        int_keyword_node = VariableKeywordNode(token_list[4], "int16", x_assign_node)
+        three_node = NumberNode(token_list[13], "3")
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, three_node)
+        x_left_assignmet_ref_node = VariableReferenceNode(token_list[9], "x")
+        reassign_node = AssignmentNode(token_list[10], "=", x_left_assignmet_ref_node, plus_node)
         ast = StartNode(token_list[0], "main", [int_keyword_node, reassign_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -1573,7 +1460,6 @@ class TestQuotationParser:
         token_list = [
             Token(STRING_TOKEN_TYPE, 0, 1, "Hello, World!", 0),
             Token(EOL_TOKEN_TYPE, 14, 1, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 15, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", 0)
         ]
         ast = StringNode(token_list[0], "Hello, World!")
@@ -1600,7 +1486,6 @@ class TestMultiLineParser:
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 0, 8, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", 3),
             Token(NUM_TOKEN_TYPE, 1, 10, "1", 0),
@@ -1608,7 +1493,6 @@ class TestMultiLineParser:
             Token(NUM_TOKEN_TYPE, 1, 12, "2", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
             Token(EOL_TOKEN_TYPE, 1, 14, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 1, 15, "\n", 0),
             Token(KEYWORD_TOKEN_TYPE, 2, 4, "print", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 2, 9, "(", 3),
             Token(NUM_TOKEN_TYPE, 2, 10, "3", 0),
@@ -1616,21 +1500,19 @@ class TestMultiLineParser:
             Token(NUM_TOKEN_TYPE, 2, 12, "4", 0),
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 13, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 14, ";", 0),
-            Token(NEW_LINE_TOKEN_TYPE, 2, 15, "\n", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(NEW_LINE_TOKEN_TYPE, 3, 1, "\n", 0),
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
 
-        one_node = LiteralNode(token_list[7], "1")
-        two_node = LiteralNode(token_list[9], "2")
-        first_plus = PlusMinusNode(token_list[8], "+", one_node, two_node)
-        first_print = FunctionKeywordNode(token_list[5], "print", [first_plus])
+        one_node = NumberNode(token_list[6], "1")
+        two_node = NumberNode(token_list[8], "2")
+        first_plus = PlusMinusNode(token_list[7], "+", one_node, two_node)
+        first_print = FunctionKeywordNode(token_list[4], "print", [first_plus])
 
-        three_node = LiteralNode(token_list[15], "3")
-        four_node = LiteralNode(token_list[17], "4")
-        second_plus = PlusMinusNode(token_list[16], "+", three_node, four_node)
-        second_print = FunctionKeywordNode(token_list[13], "print", [second_plus])
+        three_node = NumberNode(token_list[13], "3")
+        four_node = NumberNode(token_list[15], "4")
+        second_plus = PlusMinusNode(token_list[14], "+", three_node, four_node)
+        second_print = FunctionKeywordNode(token_list[11], "print", [second_plus])
 
         ast = StartNode(token_list[0], "main", [first_print, second_print])
         parser = Parser(token_list)

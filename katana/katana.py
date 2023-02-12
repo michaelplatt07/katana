@@ -1,4 +1,3 @@
-# TODO(map) For all ASM put some more comments for debugging.
 import argparse
 import os
 # TODO(map) Move all the classes and enums outs so imports are nice
@@ -6,6 +5,7 @@ import os
 # GLOBALS
 #########
 verbose_flag = False
+raise_assertion_flag = True
 
 ###########
 # Constants
@@ -63,16 +63,17 @@ ALL_TOKENS = (
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    EOF_TOKEN_TYPE,
+    KEYWORD_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
     RIGHT_PAREN_TOKEN_TYPE,
     SPACE_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    EOF_TOKEN_TYPE,
     VARIABLE_NAME_TOKEN_TYPE,
     VARIABLE_REFERENCE_TOKEN_TYPE
 )
@@ -94,6 +95,13 @@ LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
 
+
+###################
+# Method Signatures
+###################
+CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from the STRING"
+MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
+PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
 
 ############
 # Exceptions
@@ -255,11 +263,11 @@ class Node:
 
     def __eq__(self, other):
         priority_equal = self.priority == other.priority
-        if not priority_equal:
+        if not priority_equal and raise_assertion_flag:
             assert False, f"{self} priority {self.priority} != {other} priority {other.priority}."
 
         token_equal = self.token == other.token
-        if not token_equal:
+        if not token_equal and raise_assertion_flag:
             assert False, f"Tokens {self.token} != {other.token}"
 
         return priority_equal and token_equal
@@ -435,8 +443,6 @@ class LoopDownKeywordNode(LoopKeywordNode):
     def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
-        # TODO(map) Is there value to this? The start/end value are really part
-        # of the child node in this case
         # Because this is loop up we will always loop from 0 to the end value.
         self.start_value = child_node.value
         self.end_value = 0
@@ -556,9 +562,9 @@ class ExpressionNode(Node):
 
     def __eq__(self, other):
         # Make sure there is a parent on both sides or no parent on either side
-        if self.parent_node and not other.parent_node:
+        if self.parent_node and not other.parent_node and raise_assertion_flag:
             assert False, (f"Found parent node on self {self} but not other {other}")
-        elif not self.parent_node and other.parent_node:
+        elif not self.parent_node and other.parent_node and raise_assertion_flag:
             assert False, (f"Found parent node on other {other} but not self {self}")
         elif not self.parent_node and not other.parent_node:
             parents_equal = True
@@ -569,19 +575,19 @@ class ExpressionNode(Node):
 
         left_side_equal = self.left_side == other.left_side
         right_side_equal = self.right_side == other.right_side
-        if not left_side_equal:
+        if not left_side_equal and raise_assertion_flag:
             assert False, "Left sides were not equal."
-        elif not right_side_equal:
+        elif not right_side_equal and raise_assertion_flag:
             assert False, "Right sides were not equal."
-        elif not parents_equal:
+        elif not parents_equal and raise_assertion_flag:
             assert False, "Parents were not equal"
 
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
 
         values_equal = self.value == other.value
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
 
         return (left_side_equal and right_side_equal and parents_equal and
@@ -603,7 +609,7 @@ class AssignmentNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -622,7 +628,7 @@ class PlusMinusNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -640,7 +646,7 @@ class MultiplyDivideNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -657,7 +663,7 @@ class CompareNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -683,7 +689,7 @@ class RangeNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
         return (types_equal and
                 super().__eq__(other))
@@ -692,7 +698,7 @@ class RangeNode(ExpressionNode):
         return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
 
-class LiteralNode(Node):
+class NumberNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
@@ -701,9 +707,9 @@ class LiteralNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -720,9 +726,9 @@ class BooleanNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -742,9 +748,9 @@ class VariableNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -761,9 +767,9 @@ class VariableReferenceNode(Node):
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
-        if not types_equal:
+        if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        if not values_equal:
+        if not values_equal and raise_assertion_flag:
             assert False, f"Value {self.value} != {other.value}"
         return (types_equal and values_equal)
 
@@ -847,8 +853,6 @@ class Lexer:
         self.comment_index = -1
 
     def lex(self):
-        paren_error_row = 0
-        paren_error_col = 0
         while self.program.has_next_char() and self.program.has_next_line():
             self.program.advance_character()
             self.update_comment_index()
@@ -896,45 +900,14 @@ class Lexer:
         # Always add end of file token to list
         self.token_list.append(Token(EOF_TOKEN_TYPE, 0, self.program.curr_line, EOF, LOW))
 
-        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
-            for token in self.token_list:
-                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens += 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
-                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens -= 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
+        # Do checking to make sure the tokens make sense to be parsed.
+        self.check_paren_pairing()
+        self.check_if_else_blocks()
 
-            if self.unpaired_parens != 0:
-                upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-                self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
-                print(upe)
-                raise upe
-
-        # TODO(map) Make this more robust as a method by itself.
-        if len(self.else_idx_list) > 0:
-            # TODO(map) This isn't great as it assumes the last else is the problem.
-            if len(self.if_idx_list) < len(self.else_idx_list):
-                err_token = self.token_list[self.else_idx_list[-1]]
-                raise UnpairedElseError(err_token.row, err_token.col)
-            for idx in reversed(self.else_idx_list):
-                token_list = self.token_list[:idx]
-                improperly_closed_if = False
-                bad_token = None
-                for token in reversed(token_list):
-                    if token.ttype == NEW_LINE_TOKEN_TYPE:
-                        continue
-                    elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
-                        break
-                    else:
-                        bad_token = token
-                        improperly_closed_if = True
-                if improperly_closed_if:
-                    raise BadFormattedLogicBlock(bad_token.row, 0)
-
-        return self.token_list
+        # Return the list of tokens but filter out any NEW_LINE_TOKEN_TYPE as
+        # they don't serve a value in the parser. Don't modify the original
+        # so that it can be viewed if desired for debugging.
+        return list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
 
     def update_comment_index(self):
         if "//" in self.program.get_curr_line():
@@ -1011,6 +984,10 @@ class Lexer:
             self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
             print(uqe)
             raise uqe
+        except InvalidCharException as ice:
+            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
+            print(ice)
+            raise ice
 
     def print_invalid_character_error(self, program, col, row):
         print(program.lines[row])
@@ -1020,7 +997,6 @@ class Lexer:
         if value == "\n":
             is_previous_token_continuation_type = self.token_list[len(self.token_list) - 1].ttype in CONTINUATION_TOKENS
             is_previous_token_eol = self.token_list[len(self.token_list) - 1].ttype == EOL_TOKEN_TYPE
-            # TODO(map) Should I check to make sure there is not a semicolon?
             if not is_previous_token_continuation_type and not is_previous_token_eol:
                 raise NoTerminatorError(self.program.curr_line, self.program.curr_col)
             elif is_previous_token_continuation_type or is_previous_token_eol:
@@ -1042,16 +1018,16 @@ class Lexer:
             assert False, "Invalid scenario to check for termination."
 
     def generate_keyword_token(self):
-        keyword = ""
+        # Set the keyword to the first character and mark the position in the
+        # program.
+        keyword = self.program.get_curr_char()
         original_pos = self.program.curr_col
-        while self.program.get_curr_char().isalpha() or self.program.get_curr_char().isnumeric():
-            keyword += self.program.get_curr_char()
-            # TODO(map) De-couple the advance from generating the token
-            self.program.curr_col += 1
 
-        # TODO(map) This is a dirty hack and will be resolved when I decouple
-        # the problem in the TODO above.
-        self.program.curr_col -= 1
+        # Loop while the next char is alphanumeric.
+        while self.program.get_next_char().isalpha() or self.program.get_next_char().isnumeric():
+            self.program.advance_character()
+            keyword += self.program.get_curr_char()
+
         if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
             if keyword == "if":
                 self.if_idx_list.append(len(self.token_list))
@@ -1111,6 +1087,59 @@ class Lexer:
         self.program.advance_character()
         return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
 
+    def check_paren_pairing(self):
+        # Check to make sure all the parenthesis line up accordingly.
+        paren_error_row = 0
+        paren_error_col = 0
+        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
+            for token in self.token_list:
+                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens += 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
+                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                    self.unpaired_parens -= 1
+                    paren_error_row = token.row
+                    paren_error_col = token.col
+
+        if self.unpaired_parens != 0:
+            upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
+            self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
+            print(upe)
+            raise upe
+
+    def check_if_else_blocks(self):
+        # Confirm there is at least one `else` present, otherwise no need to
+        # check if there are matching `if` blocks.
+        if len(self.else_idx_list) > 0:
+            # Case of there being an else with no matched if.
+            if len(self.if_idx_list) < len(self.else_idx_list):
+                for idx, if_idx in enumerate(reversed(self.if_idx_list)):
+                    brace_count = 0
+                    for token in self.token_list[if_idx:self.else_idx_list[idx]]:
+                        if token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+                            brace_count = brace_count + 1
+                        elif token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+                            brace_count = brace_count - 1
+                        else:
+                            # Token does not affect determining the if/else
+                            # matching algorithm.
+                            pass
+                    if brace_count != 0:
+                        err_token = self.token_list[self.else_idx_list[idx]]
+                        raise UnpairedElseError(err_token.row, err_token.col)
+                # All other if/else pairs matched so the final else must be
+                # the problem
+                err_token = self.token_list[self.else_idx_list[-1]]
+                raise UnpairedElseError(err_token.row, err_token.col)
+
+        # If/else blocks all match, make sure there is nothing between the end
+        # of an `if` block and the start of an `else` block
+        filtered_token_list = list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
+        for idx, token in enumerate(filtered_token_list):
+            if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                raise BadFormattedLogicBlock(token.row, 0)
+
 
 ########
 # PARSER
@@ -1134,6 +1163,9 @@ class Parser:
     def advance_token(self):
         self.curr_token_pos += 1
         self.curr_token = self.token_list[self.curr_token_pos]
+
+    def peek_next_token(self):
+        return self.token_list[self.curr_token_pos + 1]
 
     def process_token(self, root_node):
         try:
@@ -1199,13 +1231,13 @@ class Parser:
         parent_node because it will either get set later in the parse_op on
         the creation of the op node, or it isn't linked to anything anyways.
         """
-        return LiteralNode(self.curr_token, self.curr_token.value, None)
+        return NumberNode(self.curr_token, self.curr_token.value, None)
 
     def parse_op(self, op_type, root_node):
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = (
-                type(root_node) not in [LiteralNode, VariableNode, VariableReferenceNode]
+                type(root_node) not in [NumberNode, VariableNode, VariableReferenceNode]
                 and root_node.priority < self.curr_token.priority
                 and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
                 )
@@ -1255,14 +1287,11 @@ class Parser:
         left_node = root_node
         op_token = self.curr_token
         right_node = None
-        self.advance_token()
-        while self.curr_token.ttype != EOL_TOKEN_TYPE:
-            right_node = self.process_token(right_node)
+        # Peek ahead to ensure we are not getting an EOL token.
+        while self.peek_next_token().ttype != EOL_TOKEN_TYPE:
+            # Advance and process the token.
             self.advance_token()
-        # TODO(map) Have to do this because I advance the token here which puts
-        # me at the EOL token, but then I advance after the node is returned.
-        self.curr_token_pos = self.curr_token_pos - 1
-        self.curr_token = self.token_list[self.curr_token_pos]
+            right_node = self.process_token(right_node)
         return AssignmentNode(op_token, op_token.value,
                               left_side=left_node, right_side=right_node)
 
@@ -1271,17 +1300,16 @@ class Parser:
         # updated to handle those situations.
         root_node = None
 
-        if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
-            # Advance once to get past the paren token.
+        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
+        # Advance once to get past the paren token.
+        self.advance_token()
+
+        # Currently don't care about the previous token. Keeping this in
+        # so we can error out if the token isn't recognized.
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            root_node = self.process_token(root_node)
             self.advance_token()
 
-            # Currently don't care about the previous token. Keeping this in
-            # so we can error out if the token isn't recognized.
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                root_node = self.process_token(root_node)
-                self.advance_token()
-        else:
-            assert False, f"Token {self.token_list[self.curr_token_pos - 1]} not in ALL_TOKENS"
         return root_node
 
     def handle_string(self):
@@ -1290,197 +1318,110 @@ class Parser:
     def handle_keyword(self):
         node_value = self.curr_token.value
 
-        # TODO(map) Move the methods to a map based on the keyword.
-        if node_value in ["print", "printl"]:
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            contents = self.handle_print_keyword(keyword_token)
-            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
-        elif node_value == "charAt":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            contents = self.handle_char_at_keyword(keyword_token)
-            keyword_node = FunctionKeywordNode(keyword_token, keyword_token.value, contents, None)
-        elif node_value == "main":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-            children_nodes = self.handle_main_keyword(keyword_token)
-            keyword_node = StartNode(keyword_token, keyword_token.value, children_nodes)
-        elif node_value == "int16":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
+        # Used for logic nodes
+        truth_body = None
+        false_body = None
+        loop_body = None
 
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if not child_node.right_side.value.isnumeric():
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "string":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
+        keyword_token = self.curr_token
+        # Move past keyword token
+        self.advance_token()
 
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if type(child_node.right_side) != StringNode:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "char":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            assignment_is_char_type = type(child_node.right_side) == CharNode
-            assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
-            if not assignment_is_char_type and not assignment_is_char_at:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "bool":
-            keyword_token = self.curr_token
-            # Move past keyword token
-            self.advance_token()
-
-            child_node = None
-            while self.curr_token.ttype != EOL_TOKEN_TYPE:
-                child_node = self.process_token(child_node)
-                self.advance_token()
-            if type(child_node.right_side) != BooleanNode:
-                raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-            keyword_node = VariableKeywordNode(keyword_token, keyword_token.value, child_node, None)
-        elif node_value == "if":
-            keyword_token = self.curr_token
-            truth_body = None
-            false_body = None
-            # Move past keyword token
-            self.advance_token()
-
-            # TODO(map) Should I just call handle_parenthesis here?
-            # Move past paren token
-            self.advance_token()
-
-            # Get the comparison within the parens.
-            paren_contents = None
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                paren_contents = self.process_token(paren_contents)
-                self.advance_token()
-
-            # Move past closing paren on conditional check
-            self.advance_token()
-
-            # Move past left curl bracket
-            self.advance_token()
-
-            truth_node_list = []
-            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                ret_node = self.process_token(truth_body)
-                if type(ret_node) != NoOpNode:
-                    truth_body = ret_node
-                self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                    truth_node_list.append(truth_body)
-                    truth_body = None
-
-            # Move past the right curl brace to close the if body.
-            self.advance_token()
-
-            # Move past the new line after the curl bracket if present.
-            while self.curr_token.ttype == NEW_LINE_TOKEN_TYPE:
-                self.advance_token()
-
-            # Flag if there is an else keyword and parse it.
-            is_else_keyword_present = self.curr_token.value == "else"
-            false_node_list = []
-            if is_else_keyword_present:
-                # Move past the else keyword.
-                self.advance_token()
-
-                # Move past the curl bracket that starts the else body.
-                self.advance_token()
-
-                while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                    ret_node = self.process_token(false_body)
-                    if type(ret_node) != NoOpNode:
-                        false_body = ret_node
-                    self.advance_token()
-                    if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                        false_node_list.append(ret_node)
-                        false_body = None
-            else:
-                # TODO(map) Figure out how to not go back here
-                self.curr_token_pos -= 1
-
-            return LogicKeywordNode(keyword_token, keyword_token.value, paren_contents, true_side=truth_node_list, false_side=false_node_list)
-        elif node_value in ["loopUp", "loopDown", "loopFrom"]:
-            keyword_token = self.curr_token
-
-            # Move past keyword token
-            self.advance_token()
-
-            # TODO(map) Should I just call handle_parenthesis here?
-            # Move past paren token
-            self.advance_token()
-
-            # Get the comparison within the parens.
-            paren_contents = None
-            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-                paren_contents = self.process_token(paren_contents)
-                self.advance_token()
-
-            # Move past left curl bracket
-            self.advance_token()
-
-            loop_contents = []
-            loop_body = None
-
-            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                ret_node = self.process_token(loop_body)
-                if type(ret_node) != NoOpNode:
-                    loop_body = ret_node
-                self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
-                    loop_contents.append(loop_body)
-                    loop_body = None
-
-            # Move past the right curl brace to close the if body.
-            self.advance_token()
-
-            if node_value == "loopUp":
-                return LoopUpKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            elif node_value == "loopDown":
-                return LoopDownKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            elif node_value == "loopFrom":
-                return LoopFromKeywordNode(keyword_token, keyword_token.value, paren_contents, loop_body=loop_contents)
-            else:
-                assert False, f"Loop of type {node_value} is not recognized."
+        # Map of the functions needed to be called to parse certain tokens.
+        func_map = {
+            "main": (self.handle_main_keyword, StartNode, "children_nodes"),
+            "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "bool": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "print": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
+            "printl": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
+            "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
+            "if": (self.handle_parenthesis, LogicKeywordNode, "child_node"),
+            "loopUp": (self.handle_parenthesis, LoopUpKeywordNode, "child_node"),
+            "loopDown": (self.handle_parenthesis, LoopDownKeywordNode, "child_node"),
+            "loopFrom": (self.handle_parenthesis, LoopFromKeywordNode, "child_node"),
+        }
+        contents_function, node_class, node_args = func_map.get(node_value)
+        if node_class == LogicKeywordNode:
+            # Need to get the true and false body to assign to node.
+            contents = contents_function()
+            truth_body = self.get_truth_side()
+            false_body = self.get_false_side()
+        elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            # Need to get contents of the loop.
+            contents = contents_function()
+            loop_body = self.get_loop_body(node_value)
         else:
-            assert False, f"Keyword {node_value} not implemented"
+            contents = contents_function(keyword_token)
+        kwargs = {
+            "token": keyword_token,
+            "value": keyword_token.value,
+            node_args: contents
+        }
+        if truth_body:
+            kwargs["true_side"] = truth_body
+            kwargs["false_side"] = false_body
+        if loop_body:
+            kwargs["loop_body"] = loop_body
 
+        keyword_node = node_class(**kwargs)
         return keyword_node
+
+    def handle_main_keyword(self, keyword_token):
+        """Signature is `main() { BODY };`"""
+        # Confirm the left paren is right after the main keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Confirm the right paren closes the left.
+        if not self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
+
+        # Move pas the right paren
+        self.advance_token()
+
+        # Confirm left curl brack is present.
+        if not self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
+
+        # Move past the left curl brace
+        self.advance_token()
+
+        node_list = []
+        # Parse the body.
+        root_node = None
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if node and type(node) != NoOpNode:
+                root_node = node
+            if self.curr_token.ttype == EOL_TOKEN_TYPE:
+                # Add the node to the list because it is a logical unit of work
+                node_list.append(root_node)
+                root_node = None
+            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
+                # Need to add the node to the list because it is a logic unit
+                # of work not ended by a semicolon.
+                node_list.append(root_node)
+                root_node = None
+            self.advance_token()
+        return node_list
 
     def handle_print_keyword(self, keyword_token):
         """Signature is `print(VALUE)`"""
         # Confirm the left paren is right after print keyword
         if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE): prints the VALUE to the screen")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
 
         # Move past the left paren.
         self.advance_token()
 
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "print(VALUE);: prints the VALUE to the screen")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
 
         # Parse the inner parts of the print function
         root_node = None
@@ -1493,17 +1434,14 @@ class Parser:
         """Signature is `charAt(STRING, INDEX)`"""
         # Confirm the left paren is right after print keyword
         if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
 
         # Move past the left paren.
         self.advance_token()
 
-        # TODO(map) This should be something like a handle_function_keyword.
-        # TODO(map) There should be a map of the number of args for language
-        # specific functions and error messages for misuse.
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "charAt(STRING, INDEX): extracts the character at INDEX from the STRING")
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
 
         # Parse the inner parts of the print function
         arg_list = []
@@ -1521,45 +1459,94 @@ class Parser:
         arg_list.append(root_node)
         return arg_list
 
-    def handle_main_keyword(self, keyword_token):
-        """Signature is `main() { BODY };`"""
-        # Confirm the left paren is right after the main keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Confirm the right paren closes the left.
-        if not self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
-
-        # Move pas the right paren
-        self.advance_token()
-
-        # Confirm left curl brack is present.
-        if not self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, "main() { BODY; };: Executes the BODY of code within the main method.")
-
-        # Move past the left curl brace
-        self.advance_token()
-
-        node_list = []
-        # Parse the body.
-        root_node = None
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if node and type(node) != NoOpNode:
-                root_node = node
-            if self.curr_token.ttype == EOL_TOKEN_TYPE:
-                node_list.append(root_node)
-                root_node = None
-            # TODO(map) Is there a better check for this?
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
-                node_list.append(root_node)
-                root_node = None
+    def handle_var_declaration(self, keyword_token):
+        child_node = None
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            child_node = self.process_token(child_node)
             self.advance_token()
-        return node_list
+        # Check to see if the `char` initial assignment is the result of
+        # calling the `charAt` function since that's a fair initial declaration
+        assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
+        if keyword_token.value == "int16" and not child_node.right_side.value.isnumeric():
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "char" and type(child_node.right_side) != CharNode and not assignment_is_char_at:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        elif keyword_token.value == "bool" and type(child_node.right_side) != BooleanNode:
+            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+        else:
+            return child_node
+
+    def get_truth_side(self):
+        truth_body = None
+        truth_node_list = []
+        # Move past closing paren on conditional check
+        self.advance_token()
+
+        # Move past left curl bracket
+        self.advance_token()
+
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ret_node = self.process_token(truth_body)
+            if type(ret_node) != NoOpNode:
+                truth_body = ret_node
+            self.advance_token()
+            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                truth_node_list.append(truth_body)
+                truth_body = None
+
+        # We don't want to move past the curl brace that closes the if
+        # statement because the `handle_main` will always be stepping over it
+        # as part of its processing.
+
+        return truth_node_list
+
+    def get_false_side(self):
+        false_body = None
+        # Flag if there is an else keyword and parse it.
+        is_else_keyword_present = self.peek_next_token().value == "else"
+        false_node_list = []
+        if is_else_keyword_present:
+            # Move beyond the closing right curl brace of the `if` statment
+            self.advance_token()
+
+            # Move past the else keyword.
+            self.advance_token()
+
+            # Move past the curl bracket that starts the else body.
+            self.advance_token()
+
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ret_node = self.process_token(false_body)
+                if type(ret_node) != NoOpNode:
+                    false_body = ret_node
+                self.advance_token()
+                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
+                    false_node_list.append(ret_node)
+                    false_body = None
+        return false_node_list
+
+    def get_loop_body(self, node_value):
+        # Move past right paren
+        self.advance_token()
+
+        loop_contents = []
+        loop_body = None
+
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ret_node = self.process_token(loop_body)
+            if type(ret_node) != NoOpNode:
+                loop_body = ret_node
+            self.advance_token()
+            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
+                loop_contents.append(loop_body)
+                loop_body = None
+
+        if node_value not in ["loopUp", "loopDown", "loopFrom"]:
+            assert False, f"Loop of type {node_value} is not recognized."
+        else:
+            return loop_contents
 
 
 ##########
@@ -1652,7 +1639,7 @@ class Compiler:
                     return self.process_op_node(node) + self.traverse_tree(node.parent_node)
                 else:
                     return self.process_op_node(node)
-        elif isinstance(node, LiteralNode):
+        elif isinstance(node, NumberNode):
             node.visited = True
             if type(node.parent_node) == AssignmentNode:
                 return [] + self.traverse_tree(node.parent_node)
@@ -1665,7 +1652,7 @@ class Compiler:
             if node.value == "print":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_print_string_keyword_asm()
-                elif type(node.arg_nodes[0]) == LiteralNode:
+                elif type(node.arg_nodes[0]) == NumberNode:
                     keyword_call_asm = self.get_print_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_print_char_keyword_asm()
@@ -1679,7 +1666,7 @@ class Compiler:
             elif node.value == "printl":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_printl_string_keyword_asm()
-                elif type(node.arg_nodes[0]) == LiteralNode:
+                elif type(node.arg_nodes[0]) == NumberNode:
                     keyword_call_asm = self.get_printl_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_printl_char_keyword_asm()
@@ -1752,7 +1739,7 @@ class Compiler:
                 var_name = f"char_{self.char_count}"
                 var_type = "char"
                 type_count = self.char_count
-            elif type(value_node) == LiteralNode:
+            elif type(value_node) == NumberNode:
                 self.num_count += 1
                 var_name = f"number_{self.num_count}"
                 var_type = "num"
@@ -1784,11 +1771,22 @@ class Compiler:
             # If the ref node is the left node of an assignment we don't need
             # to push this onto the stack because the assignment assembly will
             # push the variable onto the stack during assignment.
-            if type(node.parent_node) == AssignmentNode and node.parent_node.left_side == node:
+            if type(node.parent_node) == AssignmentNode and node.parent_node.left_side.value == node.value:
                 if node.can_traverse_to_parent():
                     return [] + self.traverse_tree(node.parent_node)
                 else:
                     return []
+            elif type(node.parent_node) == AssignmentNode and type(node) in [NumberNode, VariableReferenceNode]:
+                # Case of right side of assignment is just a var
+                if node.can_traverse_to_parent():
+                    var_ref = self.variables[node.value]["var_name"]
+                    return [
+                        f"    push qword [{var_ref}]\n",
+                        "    pop rax\n"
+                    ] + self.traverse_tree(node.parent_node)
+                else:
+                    return []
+            # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
             var_len = self.variables[node.value]["var_len"]
             if node.can_traverse_to_parent():
@@ -1843,7 +1841,6 @@ class Compiler:
                     if not node.loop_body[0].visited:
                         self.loop_count += 1
                         self.loops[node] = self.loop_count
-                        # TODO(map) This isn't working as expected. Need a separate method.
                         return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
                     return []
         elif type(node) == BooleanNode:
@@ -1943,8 +1940,10 @@ class Compiler:
                     # TODO(map) Handle updating string.
                     # This seems like it'll be a char by char thing.
                     assert False, "Not implemented."
-                elif type(node.right_side) == LiteralNode:
+                elif type(node.right_side) == NumberNode:
                     return self.get_get_assign_int_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
+                elif type(node.right_side) == VariableReferenceNode:
+                    return self.get_assign_new_value_from_var_to_var_asm(self.variables[node.left_side.value]["var_name"])
                 else:
                     return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
@@ -2159,20 +2158,28 @@ class Compiler:
             compiled_program.write("    global _start\n")
 
     def get_push_number_onto_stack_asm(self, num):
-        return [f"    push {num}\n"]
+        return [
+            "    ;; Push number onto stack\n",
+            f"    push {num}\n"
+            ]
 
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
+                "    ;; Push string length and val onto stack\n",
                 f"    push {val_len}\n",
                 f"    push {val}\n"
             ]
         elif "char" in val:
             return [
+                "    ;; Push char var onto stack\n",
                 f"    mov bl, [{val}]\n",
                 f"    push bx\n"
             ]
-        return [f"    push qword [{val}]\n"]
+        return [
+            "    ;; Push var val onto stack\n",
+            f"    push qword [{val}]\n",
+        ]
 
     def get_push_boolean_onto_stack(self, node_value):
         if node_value == "true":
@@ -2182,7 +2189,7 @@ class Compiler:
             ]
         else:
             return [
-                "    ;; Push true onto stack\n",
+                "    ;; Push false onto stack\n",
                 "    push 0\n"
             ]
 
@@ -2287,6 +2294,7 @@ class Compiler:
 
     def get_loop_up_asm_end(self, loop_count):
         return [
+            "    ;; Compare if counter is below loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    inc rcx\n",
@@ -2301,6 +2309,7 @@ class Compiler:
 
     def get_loop_down_asm_end(self, loop_count):
         return [
+            "    ;; Compare if counter is above loop end\n",
             "    pop rcx\n",
             "    pop rbx\n",
             "    dec rcx\n",
@@ -2315,6 +2324,7 @@ class Compiler:
 
     def get_loop_from_ascending_asm(self, loop_count):
         return [
+            "    ;; Compare if counter is below loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    inc rcx\n",
@@ -2329,6 +2339,7 @@ class Compiler:
 
     def get_loop_from_descending_asm(self, loop_count):
         return [
+            "    ;; Compare if counter is above loop end\n",
             "    pop rbx\n",
             "    pop rcx\n",
             "    dec rcx\n",
@@ -2374,6 +2385,7 @@ class Compiler:
 
     def get_conditional_greater_than_asm(self, conditional_count):
         return [
+            "    ;; Pop values for comparing greater than\n",
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
@@ -2383,6 +2395,7 @@ class Compiler:
 
     def get_conditional_less_than_asm(self, conditional_count):
         return [
+            "    ;; Pop values for comparing less than\n",
             "    pop rax\n",
             "    pop rbx\n",
             "    cmp rbx, rax\n",
@@ -2393,6 +2406,7 @@ class Compiler:
     def get_conditional_equal_asm(self, conditional_count, compare_types):
         if compare_types == "char":
             return [
+                "    ;; Pop values for comparing equal on char\n",
                 "    pop ax\n",
                 "    pop bx\n",
                 "    cmp bx, ax\n",
@@ -2401,6 +2415,7 @@ class Compiler:
             ]
         else:
             return [
+                "    ;; Pop values for comparing equal on other\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
@@ -2409,6 +2424,7 @@ class Compiler:
             ]
 
     def get_raw_string_asm(self, string, string_length, string_count):
+        string = string.replace("\\n", "',10,13,'")
         return [
             f"section .raw_string_{string_count}\n",
             f"    raw_string_{string_count} db '{string}', {string_length}\n",
@@ -2422,6 +2438,7 @@ class Compiler:
         ]
 
     def get_string_asm(self, string, string_length, string_count):
+        string = string.replace("\\n", "',10,13,'")
         return [
             f"section .string_{string_count}\n",
             f"    string_{string_count} db '{string}', {string_length}\n",
@@ -2430,12 +2447,14 @@ class Compiler:
 
     def get_push_string_asm(self, string_count, string_length):
         return [
+            "    ;; Push a raw string and length onto stack\n",
             f"    push {string_length}\n",
             f"    push raw_string_{string_count}\n",
         ]
 
     def get_push_char_asm(self, char_count):
         return [
+            "    ;; Push a raw char onto the stack\n",
             f"    mov bl, [raw_char_{char_count}]\n",
             f"    push bx\n",
         ]
@@ -2469,6 +2488,7 @@ class Compiler:
 
     def get_assign_char_value_to_var_asm(self, var_name):
         return [
+            "    ;; Assign new value to char var\n",
             f"    mov rdi, {var_name}\n",
             "    mov byte [rdi], bl\n",
             "    pop bx\n"
@@ -2476,11 +2496,13 @@ class Compiler:
 
     def get_get_assign_int_value_to_var_asm(self, var_name, new_value):
         return [
+            "    ;; Assign new int to int var\n",
             f"    mov word [{var_name}], {new_value}\n",
         ]
 
     def get_assign_new_string_to_var_asm(self, var_name, new_value):
         return [
+            "    ;; Assign new string to string var\n",
             f"    mov word [{var_name}], '{new_value}'\n",
         ]
 
@@ -2490,11 +2512,19 @@ class Compiler:
         elif new_value == "false":
             new_value = 0
         return [
+            "    ;; Assign new bool to bool var\n",
             f"    mov word [{var_name}], {new_value}\n",
+        ]
+
+    def get_assign_new_value_from_var_to_var_asm(self, var_name):
+        return [
+            "    ;; Assign var value to new var\n",
+            f"    mov qword [{var_name}], rax\n",
         ]
 
     def get_assign_new_value_to_var_from_expression(self, var_name):
         return [
+            "    ;; Assign expression value to new var\n",
             "    pop rax\n",
             f"    mov qword [{var_name}], rax\n",
         ]
@@ -2532,6 +2562,8 @@ if __name__ == "__main__":
         "--program", help="The program that should be parse.")
     arg_parser.add_argument("--verbose", action="store_true",
                             help="Adds verbosity output to the steps.")
+    arg_parser.add_argument("--no-raise", action="store_false",
+                            help="Avoids assertions in the __eq__ methods.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
@@ -2543,6 +2575,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     verbose_flag = args.verbose
+    raise_assertion_flag = args.no_raise
     with open(args.program, 'r') as code:
         token_list = None
         ast = None

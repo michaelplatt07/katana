@@ -29,6 +29,7 @@ class TestComiplerSingleNodes:
         with open(curr_dir + "/tests/test_programs/sample_literal.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
             ]
 
@@ -40,13 +41,16 @@ class TestCompilerMathematics:
         with open(curr_dir + "/tests/test_programs/sample_add.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    add rax, rbx\n",
                 "    push rax\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Add\n",
                 "    pop rax\n",
@@ -60,13 +64,16 @@ class TestCompilerMathematics:
         with open(curr_dir + "/tests/test_programs/sample_sub.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Subtract\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    sub rbx, rax\n",
                 "    push rbx\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Subtract\n",
                 "    pop rax\n",
@@ -80,13 +87,16 @@ class TestCompilerMathematics:
         with open(curr_dir + "/tests/test_programs/sample_multiply.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Multiply\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    mul rbx\n",
                 "    push rax\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Multiply\n",
                 "    pop rax\n",
@@ -100,13 +110,16 @@ class TestCompilerMathematics:
         with open(curr_dir + "/tests/test_programs/sample_divide.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Divide\n",
                 "    pop rbx\n",
                 "    pop rax\n",
                 "    div rbx\n",
                 "    push rax\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Divide\n",
                 "    pop rbx\n",
@@ -120,14 +133,18 @@ class TestCompilerMathematics:
         with open(curr_dir + "/tests/test_programs/sample_mathematics.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Multiply\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    mul rbx\n",
                 "    push rax\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
+                "    ;; Push number onto stack\n",
                 "    push 4\n",
                 "    ;; Divide\n",
                 "    pop rbx\n",
@@ -149,13 +166,16 @@ class TestCompilerParenthesis:
         with open(curr_dir + "/tests/test_programs/sample_parenthesis.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    add rax, rbx\n",
                 "    push rax\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Multiply\n",
                 "    pop rax\n",
@@ -172,6 +192,7 @@ class TestCompilerKeywords:
         with open(curr_dir + "/tests/test_programs/sample_print.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Keyword Func\n",
                 "    call print_num\n",
@@ -182,6 +203,7 @@ class TestCompilerKeywords:
         with open(curr_dir + "/tests/test_programs/sample_printl.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Keyword Func\n",
                 "    call printl_num\n",
@@ -192,6 +214,7 @@ class TestCompilerKeywords:
         with open(curr_dir + "/tests/test_programs/sample_printl_char.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push a raw char onto the stack\n",
                 "    mov bl, [raw_char_1]\n",
                 "    push bx\n",
                 "    ;; Keyword Func\n",
@@ -205,6 +228,7 @@ class TestCompilerKeywords:
         with open(curr_dir + "/tests/test_programs/sample_printl_string.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
@@ -216,6 +240,7 @@ class TestCompilerKeywords:
         with open(curr_dir + "/tests/test_programs/sample_main.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 14\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
@@ -282,11 +307,14 @@ class TestCompilerKeywords:
                 }
             }
             assert assembly == [
+                "    ;; Push a raw char onto the stack\n",
                 "    mov bl, [raw_char_1]\n",
                 "    push bx\n",
+                "    ;; Assign new value to char var\n",
                 "    mov rdi, char_1\n",
                 "    mov byte [rdi], bl\n",
                 "    pop bx\n",
+                "    ;; Push char var onto stack\n",
                 "    mov bl, [char_1]\n",
                 "    push bx\n",
                 "    ;; Keyword Func\n",
@@ -313,7 +341,9 @@ class TestCompilerKeywords:
                 }
             }
             assert assembly == [
+                "    ;; Assign new int to int var\n",
                 "    mov word [number_1], 1\n",
+                "    ;; Push var val onto stack\n",
                 "    push qword [number_1]\n",
                 "    ;; Keyword Func\n",
                 "    call print_num\n"
@@ -337,6 +367,7 @@ class TestCompilerKeywords:
                 }
             }
             assert assembly == [
+                "    ;; Push var val onto stack\n",
                 "    push qword [number_1]\n",
                 "    ;; Keyword Func\n",
                 "    call print_num\n"
@@ -391,6 +422,7 @@ class TestCompilerKeywords:
             assert compiler.variables == {
             }
             assert assembly == [
+                "    ;; Push a raw char onto the stack\n",
                 "    mov bl, [raw_char_1]\n",
                 "    push bx\n",
                 "    ;; Keyword Func\n",
@@ -417,6 +449,7 @@ class TestCompilerKeywords:
                 }
             }
             assert assembly == [
+                "    ;; Push char var onto stack\n",
                 "    mov bl, [char_1]\n",
                 "    push bx\n",
                 "    ;; Keyword Func\n",
@@ -431,22 +464,27 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push char var onto stack\n",
                 "    mov bl, [char_1]\n",
                 "    push bx\n",
+                "    ;; Push a raw char onto the stack\n",
                 "    mov bl, [raw_char_1]\n",
                 "    push bx\n",
+                "    ;; Pop values for comparing equal on char\n",
                 "    pop ax\n",
                 "    pop bx\n",
                 "    cmp bx, ax\n",
                 "    je equal_1\n",
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    jmp end_1\n",
                 "    not_equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -461,8 +499,10 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 14\n",
                 "    push raw_string_1\n",
+                "    ;; Push number onto stack\n",
                 "    push 2\n",
                 "    ;; Keyword Func\n",
                 "    call char_at\n",
@@ -471,16 +511,20 @@ class TestCompilerKeywords:
                 "    ;; Update var with value\n",
                 "    mov rdi, char_1\n",
                 "    mov byte [rdi], al\n",
+                "    ;; Push char var onto stack\n",
                 "    mov bl, [char_1]\n",
                 "    push bx\n",
+                "    ;; Push a raw char onto the stack\n",
                 "    mov bl, [raw_char_1]\n",
                 "    push bx\n",
+                "    ;; Pop values for comparing equal on char\n",
                 "    pop ax\n",
                 "    pop bx\n",
                 "    cmp bx, ax\n",
                 "    je equal_1\n",
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -489,6 +533,18 @@ class TestCompilerKeywords:
                 "    not_equal_1:\n",
                 "    ;; End if/else block\n",
                 "    end_1:\n",
+            ]
+
+    def test_set_var_to_another_var(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push qword [number_2]\n",
+                "    pop rax\n",
+                "    ;; Assign var value to new var\n",
+                "    mov qword [number_1], rax\n"
             ]
 
     def test_bool_false_keyword_assignment(self):
@@ -549,21 +605,25 @@ class TestCompilerKeywords:
                 }
             }
             assert assembly == [
+                "    ;; Push var val onto stack\n",
                 "    push qword [bool_1]\n",
                 "    ;; Push true onto stack\n",
                 "    push 1\n",
+                "    ;; Pop values for comparing equal on other\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
                 "    je equal_1\n",
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 4\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    jmp end_1\n",
                 "    not_equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -578,14 +638,18 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 0\n",
+                "    ;; Pop values for comparing greater than\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
                 "    jg greater_1\n",
                 "    jle less_1\n",
                 "    greater_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
@@ -594,6 +658,7 @@ class TestCompilerKeywords:
                 "    less_1:\n",
                 "    ;; End if/else block\n",
                 "    end_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -606,20 +671,25 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 0\n",
+                "    ;; Pop values for comparing less than\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
                 "    jl less_1\n",
                 "    jge greater_1\n",
                 "    less_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 10\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    jmp end_1\n",
                 "    greater_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 13\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -634,20 +704,25 @@ class TestCompilerKeywords:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push number onto stack\n",
                 "    push 1\n",
+                "    ;; Push number onto stack\n",
                 "    push 0\n",
+                "    ;; Pop values for comparing equal on other\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    cmp rbx, rax\n",
                 "    je equal_1\n",
                 "    jne not_equal_1\n",
                 "    equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 5\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    jmp end_1\n",
                 "    not_equal_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_2\n",
                 "    ;; Keyword Func\n",
@@ -664,13 +739,16 @@ class TestCompilerKeywords:
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
                 "    push 0\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Loop up\n",
                 "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
+                "    ;; Compare if counter is below loop end\n",
                 "    pop rbx\n",
                 "    pop rcx\n",
                 "    inc rcx\n",
@@ -691,13 +769,16 @@ class TestCompilerKeywords:
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
                 "    push 0\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Loop down\n",
                 "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
+                "    ;; Compare if counter is above loop end\n",
                 "    pop rcx\n",
                 "    pop rbx\n",
                 "    dec rcx\n",
@@ -717,14 +798,18 @@ class TestCompilerKeywords:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
+                "    ;; Push number onto stack\n",
                 "    push 0\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
                 "    ;; Loop up\n",
                 "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
+                "    ;; Compare if counter is below loop end\n",
                 "    pop rbx\n",
                 "    pop rcx\n",
                 "    inc rcx\n",
@@ -744,14 +829,18 @@ class TestCompilerKeywords:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
+                "    ;; Push number onto stack\n",
                 "    push 3\n",
+                "    ;; Push number onto stack\n",
                 "    push 0\n",
                 "    ;; Loop down\n",
                 "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
+                "    ;; Compare if counter is above loop end\n",
                 "    pop rbx\n",
                 "    pop rcx\n",
                 "    dec rcx\n",
@@ -772,6 +861,7 @@ class TestCompilerString:
         with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
             assembly = get_assembly_for_program(f.readlines())
             assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
                 "    push 13\n",
                 "    push raw_string_1\n",
             ]
