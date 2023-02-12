@@ -6,7 +6,7 @@ from katana.katana import (
     CharNode,
     CompareNode,
     FunctionKeywordNode,
-    LiteralNode,
+    NumberNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
     LoopFromKeywordNode,
@@ -58,14 +58,14 @@ class TestParserLiterals:
     def test_parser_single_digit_literal(self):
         token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = LiteralNode(token_list[0], "1")
+        ast = NumberNode(token_list[0], "1")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
     def test_parser_multi_digit_literal(self):
         token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "123", LOW),
                       Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = LiteralNode(token_list[0], "123")
+        ast = NumberNode(token_list[0], "123")
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -84,8 +84,8 @@ class TestParserAddition:
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "1")
-        right_node = LiteralNode(token_list[2], "2")
+        left_node = NumberNode(token_list[0], "1")
+        right_node = NumberNode(token_list[2], "2")
         ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
         left_node.parent_node = ast
         right_node.parent_node = ast
@@ -107,11 +107,11 @@ class TestParserAddition:
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_1 = LiteralNode(token_list[0], "1")
-        right_node_1 = LiteralNode(token_list[2], "2")
+        left_node_1 = NumberNode(token_list[0], "1")
+        right_node_1 = NumberNode(token_list[2], "2")
         first_plus = PlusMinusNode(
             token_list[1], "+", left_node_1, right_node_1)
-        right_node_2 = LiteralNode(token_list[4], "3")
+        right_node_2 = NumberNode(token_list[4], "3")
         ast = PlusMinusNode(token_list[3], "+", first_plus, right_node_2)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -132,8 +132,8 @@ class TestParserSubtraction:
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "1")
-        right_node = LiteralNode(token_list[2], "2")
+        left_node = NumberNode(token_list[0], "1")
+        right_node = NumberNode(token_list[2], "2")
         ast = PlusMinusNode(token_list[1], "-", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -154,11 +154,11 @@ class TestParserSubtraction:
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_1 = LiteralNode(token_list[0], "1")
-        right_node_1 = LiteralNode(token_list[2], "2")
+        left_node_1 = NumberNode(token_list[0], "1")
+        right_node_1 = NumberNode(token_list[2], "2")
         first_plus = PlusMinusNode(
             token_list[1], "-", left_node_1, right_node_1)
-        right_node_2 = LiteralNode(token_list[4], "3")
+        right_node_2 = NumberNode(token_list[4], "3")
         ast = PlusMinusNode(token_list[3], "-", first_plus, right_node_2)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -178,8 +178,8 @@ class TestMultiply:
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = MultiplyDivideNode(token_list[1], "*", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -199,8 +199,8 @@ class TestDivide:
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = MultiplyDivideNode(token_list[1], "/", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -221,8 +221,8 @@ class TestComments:
             Token(COMMENT_TOKEN_TYPE, 8, 1, "// Add numbers", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = LiteralNode(token_list[0], "3")
-        right_node = LiteralNode(token_list[2], "4")
+        left_node = NumberNode(token_list[0], "3")
+        right_node = NumberNode(token_list[2], "4")
         ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -244,9 +244,9 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_add = LiteralNode(token_list[0], "2")
-        left_node_multiply = LiteralNode(token_list[2], "3")
-        right_node_multiply = LiteralNode(token_list[4], "4")
+        left_node_add = NumberNode(token_list[0], "2")
+        left_node_multiply = NumberNode(token_list[2], "3")
+        right_node_multiply = NumberNode(token_list[4], "4")
         multiply_node = MultiplyDivideNode(
             token_list[3], "*", left_node_multiply, right_node_multiply)
         add_node = PlusMinusNode(
@@ -272,10 +272,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[1], "*", two_node, three_node)
         sub_node = PlusMinusNode(token_list[3], "-", multiply_node, four_node)
@@ -301,10 +301,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[5], "*", four_node, five_node)
         plus_node = PlusMinusNode(token_list[1], "+", two_node, three_node)
@@ -330,10 +330,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = LiteralNode(token_list[0], "2")
-        three_node = LiteralNode(token_list[2], "3")
-        four_node = LiteralNode(token_list[4], "4")
-        five_node = LiteralNode(token_list[6], "5")
+        two_node = NumberNode(token_list[0], "2")
+        three_node = NumberNode(token_list[2], "3")
+        four_node = NumberNode(token_list[4], "4")
+        five_node = NumberNode(token_list[6], "5")
         multiply_node = MultiplyDivideNode(
             token_list[3], "*", three_node, four_node)
         plus_node = PlusMinusNode(token_list[1], "+", two_node, multiply_node)
@@ -359,10 +359,10 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 12, 1, "2", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        first_eight_node = LiteralNode(token_list[0], "8")
-        second_eight_node = LiteralNode(token_list[2], "8")
-        three_node = LiteralNode(token_list[4], "3")
-        two_node = LiteralNode(token_list[6], "2")
+        first_eight_node = NumberNode(token_list[0], "8")
+        second_eight_node = NumberNode(token_list[2], "8")
+        three_node = NumberNode(token_list[4], "3")
+        two_node = NumberNode(token_list[6], "2")
         divide_node = MultiplyDivideNode(
             token_list[1], "/", first_eight_node, second_eight_node)
         multiply_node = MultiplyDivideNode(
@@ -396,9 +396,9 @@ class TestParserParenthesis:
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = LiteralNode(token_list[0], "1")
-        two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[5], "3")
+        one_node = NumberNode(token_list[0], "1")
+        two_node = NumberNode(token_list[3], "2")
+        three_node = NumberNode(token_list[5], "3")
         first_plus = PlusMinusNode(
             token_list[4], "+", two_node, three_node)
         ast = PlusMinusNode(token_list[1], "+", one_node, first_plus)
@@ -422,9 +422,9 @@ class TestParserParenthesis:
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = LiteralNode(token_list[1], "1")
-        two_node = LiteralNode(token_list[3], "2")
-        three_node = LiteralNode(token_list[6], "3")
+        one_node = NumberNode(token_list[1], "1")
+        two_node = NumberNode(token_list[3], "2")
+        three_node = NumberNode(token_list[6], "3")
         first_plus = PlusMinusNode(
             token_list[2], "+", one_node, two_node)
         ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
@@ -449,7 +449,7 @@ class TestKeywordParser:
             Token(EOL_TOKEN_TYPE, 8, 1, ";", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        three_node = LiteralNode(token_list[2], "3")
+        three_node = NumberNode(token_list[2], "3")
         ast = FunctionKeywordNode(token_list[0], "print", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -472,7 +472,7 @@ class TestKeywordParser:
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[4], "3")
+        three_node = NumberNode(token_list[4], "3")
         ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
@@ -499,7 +499,7 @@ class TestKeywordParser:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[7], "3")
+        three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x")
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
@@ -570,7 +570,7 @@ class TestKeywordParser:
         x_node = VariableNode(token_list[5], "x")
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
         string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
-        two_node = LiteralNode(token_list[16], "2")
+        two_node = NumberNode(token_list[16], "2")
         x_ref_node = VariableReferenceNode(token_list[14], "x")
         char_at_node = FunctionKeywordNode(token_list[12], "charAt", [x_ref_node, two_node])
         y_node = VariableNode(token_list[10], "y")
@@ -616,7 +616,7 @@ class TestKeywordParser:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
-        three_node = LiteralNode(token_list[7], "3")
+        three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x")
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
         variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
@@ -796,8 +796,8 @@ class TestKeywordParser:
         second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[6], "1")
-        zero_node = LiteralNode(token_list[8], "0")
+        one_node = NumberNode(token_list[6], "1")
+        zero_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], ">", one_node, zero_node)
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
@@ -846,8 +846,8 @@ class TestKeywordParser:
         second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
-        zero_node = LiteralNode(token_list[6], "0")
-        one_node = LiteralNode(token_list[8], "1")
+        zero_node = NumberNode(token_list[6], "0")
+        one_node = NumberNode(token_list[8], "1")
         greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
@@ -908,8 +908,8 @@ class TestKeywordParser:
         first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[6], "1")
-        one_node = LiteralNode(token_list[8], "0")
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [if_node])
@@ -966,8 +966,8 @@ class TestKeywordParser:
         first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[6], "1")
-        one_node = LiteralNode(token_list[8], "0")
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], "<", zero_node, one_node)
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
@@ -1024,8 +1024,8 @@ class TestKeywordParser:
         first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
-        zero_node = LiteralNode(token_list[6], "1")
-        one_node = LiteralNode(token_list[8], "0")
+        zero_node = NumberNode(token_list[6], "1")
+        one_node = NumberNode(token_list[8], "0")
         equal_node = CompareNode(token_list[7], "==", zero_node, one_node)
         if_node = LogicKeywordNode(token_list[4], "if", equal_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
@@ -1066,7 +1066,7 @@ class TestKeywordParser:
         ]
         string_node = StringNode(token_list[11], "looping")
         print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
-        three_node = LiteralNode(token_list[6], "3")
+        three_node = NumberNode(token_list[6], "3")
         loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
@@ -1106,7 +1106,7 @@ class TestKeywordParser:
         ]
         string_node = StringNode(token_list[11], "looping")
         print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
-        three_node = LiteralNode(token_list[6], "3")
+        three_node = NumberNode(token_list[6], "3")
         loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
@@ -1148,8 +1148,8 @@ class TestKeywordParser:
         ]
         string_node = StringNode(token_list[13], "looping")
         print_node = FunctionKeywordNode(token_list[11], "print", [string_node])
-        zero_node = LiteralNode(token_list[6], "0")
-        three_node = LiteralNode(token_list[8], "3")
+        zero_node = NumberNode(token_list[6], "0")
+        three_node = NumberNode(token_list[8], "3")
         range_node = RangeNode(token_list[7], "..", zero_node, three_node)
         loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
@@ -1178,7 +1178,7 @@ class TestKeywordParser:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
         ]
-        three_node = LiteralNode(token_list[6], "3")
+        three_node = NumberNode(token_list[6], "3")
         printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
         ast = StartNode(token_list[0], "main", [printl_node])
         parser = Parser(token_list)
@@ -1241,14 +1241,14 @@ class TestKeywordAdvanced:
         second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[7], "1")
+        one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x")
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
-        one_minus_node = LiteralNode(token_list[13], "1")
+        one_minus_node = NumberNode(token_list[13], "1")
         subtract_node = PlusMinusNode(token_list[12], "-", x_ref_node, one_minus_node)
-        zero_node = LiteralNode(token_list[7], "0")
+        zero_node = NumberNode(token_list[7], "0")
         compare_node = CompareNode(token_list[14], ">", subtract_node, zero_node)
         if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
@@ -1309,14 +1309,14 @@ class TestKeywordAdvanced:
         second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[7], "1")
+        one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x")
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[13], "x")
-        one_minus_node = LiteralNode(token_list[15], "1")
+        one_minus_node = NumberNode(token_list[15], "1")
         subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
-        zero_node = LiteralNode(token_list[11], "0")
+        zero_node = NumberNode(token_list[11], "0")
         compare_node = CompareNode(token_list[12], ">", zero_node, subtract_node)
         if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
@@ -1385,19 +1385,19 @@ class TestKeywordAdvanced:
         second_print_node = FunctionKeywordNode(token_list[33], "print", [lower_string_node])
         greater_string_node = StringNode(token_list[27], "true")
         first_print_node = FunctionKeywordNode(token_list[25], "print", [greater_string_node])
-        one_node = LiteralNode(token_list[7], "1")
+        one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x")
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node_x = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
-        two_node = LiteralNode(token_list[12], "2")
+        two_node = NumberNode(token_list[12], "2")
         y_node = VariableNode(token_list[10], "y")
         y_assignment_node = AssignmentNode(token_list[11], "=", y_node, two_node)
         keyword_node_y = VariableKeywordNode(token_list[9], "int16", y_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[20], "x")
-        one_minus_node = LiteralNode(token_list[22], "1")
+        one_minus_node = NumberNode(token_list[22], "1")
         subtract_node = PlusMinusNode(token_list[21], "-", x_ref_node, one_minus_node)
         y_ref_node = VariableReferenceNode(token_list[16], "y")
-        two_minus_node = LiteralNode(token_list[18], "2")
+        two_minus_node = NumberNode(token_list[18], "2")
         subtract_node_two = PlusMinusNode(token_list[17], "-", y_ref_node, two_minus_node)
         compare_node = CompareNode(token_list[19], ">", subtract_node_two, subtract_node)
         if_node = LogicKeywordNode(token_list[14], "if", compare_node, None, [first_print_node], [second_print_node])
@@ -1434,11 +1434,11 @@ class TestKeywordAdvanced:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
-        one_node = LiteralNode(token_list[7], "1")
+        one_node = NumberNode(token_list[7], "1")
         x_var_node = VariableNode(token_list[5], "x")
         x_assign_node = AssignmentNode(token_list[6], "=", x_var_node, one_node)
         int_keyword_node = VariableKeywordNode(token_list[4], "int16", x_assign_node)
-        three_node = LiteralNode(token_list[13], "3")
+        three_node = NumberNode(token_list[13], "3")
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, three_node)
         x_left_assignmet_ref_node = VariableReferenceNode(token_list[9], "x")
@@ -1504,13 +1504,13 @@ class TestMultiLineParser:
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
 
-        one_node = LiteralNode(token_list[6], "1")
-        two_node = LiteralNode(token_list[8], "2")
+        one_node = NumberNode(token_list[6], "1")
+        two_node = NumberNode(token_list[8], "2")
         first_plus = PlusMinusNode(token_list[7], "+", one_node, two_node)
         first_print = FunctionKeywordNode(token_list[4], "print", [first_plus])
 
-        three_node = LiteralNode(token_list[13], "3")
-        four_node = LiteralNode(token_list[15], "4")
+        three_node = NumberNode(token_list[13], "3")
+        four_node = NumberNode(token_list[15], "4")
         second_plus = PlusMinusNode(token_list[14], "+", three_node, four_node)
         second_print = FunctionKeywordNode(token_list[11], "print", [second_plus])
 

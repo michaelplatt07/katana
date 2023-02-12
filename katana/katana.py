@@ -698,8 +698,7 @@ class RangeNode(ExpressionNode):
         return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
 
-# TODO(map) Make me a NumberNode
-class LiteralNode(Node):
+class NumberNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
@@ -1232,13 +1231,13 @@ class Parser:
         parent_node because it will either get set later in the parse_op on
         the creation of the op node, or it isn't linked to anything anyways.
         """
-        return LiteralNode(self.curr_token, self.curr_token.value, None)
+        return NumberNode(self.curr_token, self.curr_token.value, None)
 
     def parse_op(self, op_type, root_node):
         # This determines whether or not the root node is an operation or a
         # number and if we should replace the right side with an op
         replace_right_side_with_op = (
-                type(root_node) not in [LiteralNode, VariableNode, VariableReferenceNode]
+                type(root_node) not in [NumberNode, VariableNode, VariableReferenceNode]
                 and root_node.priority < self.curr_token.priority
                 and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
                 )
@@ -1640,7 +1639,7 @@ class Compiler:
                     return self.process_op_node(node) + self.traverse_tree(node.parent_node)
                 else:
                     return self.process_op_node(node)
-        elif isinstance(node, LiteralNode):
+        elif isinstance(node, NumberNode):
             node.visited = True
             if type(node.parent_node) == AssignmentNode:
                 return [] + self.traverse_tree(node.parent_node)
@@ -1653,7 +1652,7 @@ class Compiler:
             if node.value == "print":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_print_string_keyword_asm()
-                elif type(node.arg_nodes[0]) == LiteralNode:
+                elif type(node.arg_nodes[0]) == NumberNode:
                     keyword_call_asm = self.get_print_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_print_char_keyword_asm()
@@ -1667,7 +1666,7 @@ class Compiler:
             elif node.value == "printl":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_printl_string_keyword_asm()
-                elif type(node.arg_nodes[0]) == LiteralNode:
+                elif type(node.arg_nodes[0]) == NumberNode:
                     keyword_call_asm = self.get_printl_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_printl_char_keyword_asm()
@@ -1740,7 +1739,7 @@ class Compiler:
                 var_name = f"char_{self.char_count}"
                 var_type = "char"
                 type_count = self.char_count
-            elif type(value_node) == LiteralNode:
+            elif type(value_node) == NumberNode:
                 self.num_count += 1
                 var_name = f"number_{self.num_count}"
                 var_type = "num"
@@ -1777,7 +1776,7 @@ class Compiler:
                     return [] + self.traverse_tree(node.parent_node)
                 else:
                     return []
-            elif type(node.parent_node) == AssignmentNode and type(node) in [LiteralNode, VariableReferenceNode]:
+            elif type(node.parent_node) == AssignmentNode and type(node) in [NumberNode, VariableReferenceNode]:
                 # Case of right side of assignment is just a var
                 if node.can_traverse_to_parent():
                     var_ref = self.variables[node.value]["var_name"]
@@ -1941,7 +1940,7 @@ class Compiler:
                     # TODO(map) Handle updating string.
                     # This seems like it'll be a char by char thing.
                     assert False, "Not implemented."
-                elif type(node.right_side) == LiteralNode:
+                elif type(node.right_side) == NumberNode:
                     return self.get_get_assign_int_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
                 elif type(node.right_side) == VariableReferenceNode:
                     return self.get_assign_new_value_from_var_to_var_asm(self.variables[node.left_side.value]["var_name"])
