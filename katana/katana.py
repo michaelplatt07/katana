@@ -1931,7 +1931,12 @@ class Compiler:
 
     def process_op_node(self, node):
         if node.value == "+":
-            return self.get_add_asm()
+            # Check if the left side of the add if a variable and its type. If
+            # it's a string we don't want to do the basic add assembly.
+            if type(node.left_side) == VariableReferenceNode and self.variables[node.left_side.value]["var_type"] == "string":
+                return self.get_string_concat_asm(node.left_side.value, self.variables[node.left_side.value]["var_len"])
+            else:
+                return self.get_add_asm()
         elif node.value == "-":
             return self.get_sub_asm()
         elif node.value == "*":
@@ -1961,7 +1966,16 @@ class Compiler:
                 # If the right side of the assignment is an expression then we
                 # don't need to pop any values to clean up because the assembly
                 # will pop the data to do the expression.
-                if type(node.right_side) in [PlusMinusNode, MultiplyDivideNode]:
+                if type(node.right_side) == PlusMinusNode:
+                    if self.variables[node.left_side.value]["var_type"] == "string":
+                        # Do not return the standard assignment of string as we
+                        # are doing a concat on the string.
+                        return []
+                    else:
+                        # Otherwise get the standard assignment asm for plus or
+                        # minus token.
+                        return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
+                elif type(node.right_side) == MultiplyDivideNode:
                     return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
                 elif node.right_side.value == "charAt":
                     return self.get_assign_char_at_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
@@ -2230,6 +2244,19 @@ class Compiler:
                 "    pop rbx\n",
                 "    add rax, rbx\n",
                 "    push rax\n"]
+
+    def get_string_concat_asm(self, val, string_len):
+        # Update the length of the string to the new value.
+        self.variables[val]["var_len"] += 1
+        return [
+            "    ;; Concat string\n",
+            "    pop ax\n",
+            "    pop rbx\n",
+            "    ;; Remove string length from stack\n",
+            "    pop rcx\n",
+            "    ;; Append char to string\n",
+            f"    mov byte [rbx+{string_len}], al\n",
+        ]
 
     def get_sub_asm(self):
         return ["    ;; Subtract\n",

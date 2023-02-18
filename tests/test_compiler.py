@@ -866,6 +866,45 @@ class TestCompilerString:
                 "    push raw_string_1\n",
             ]
 
+    def test_concatenate_char_to_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_concatenation.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 6,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 db 'Hello'\n",
+                        "    len_1 equ $ - 5\n"
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Push string length and val onto stack\n",
+                "    push 5\n",
+                "    push string_1\n",
+                "    ;; Push a raw char onto the stack\n",
+                "    mov bl, [raw_char_1]\n",
+                "    push bx\n",
+                "    ;; Concat string\n",
+                "    pop ax\n",
+                "    pop rbx\n",
+                "    ;; Remove string length from stack\n",
+                "    pop rcx\n",
+                "    ;; Append char to string\n",
+                "    mov byte [rbx+5], al\n",
+                "    ;; Push string length and val onto stack\n",
+                "    push 6\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
+            ]
+
 
 class TestCompilerMultipleVarDeclarations:
 
