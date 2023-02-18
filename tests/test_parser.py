@@ -20,6 +20,7 @@ from katana.katana import (
     VariableNode,
     VariableKeywordNode,
     VariableReferenceNode,
+    InvalidConcatenationException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
@@ -1517,3 +1518,84 @@ class TestMultiLineParser:
         ast = StartNode(token_list[0], "main", [first_print, second_print])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+
+class TestConcatenation:
+
+    def test_successful_concatenate_char_to_string(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            string x = "Hello";
+            x = x + '!';
+        }
+        ```
+        Expected to return an AST like:
+        (main (string(x=Hello)), (x=(x+!)))
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 8, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(CHARACTER_TOKEN_TYPE, 2, 13, "!", 0),
+            Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+        ]
+        string_node = StringNode(token_list[7], "Hello")
+        x_dec_node = VariableNode(token_list[5], "x")
+        x_assign_node = AssignmentNode(token_list[6], "=", x_dec_node, string_node)
+        keyword_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        char_node = CharNode(token_list[13], "!")
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, char_node)
+        x_reassign_ref = VariableReferenceNode(token_list[9], "x")
+        x_reassign_val_node = AssignmentNode(token_list[10], "=", x_reassign_ref, plus_node)
+        ast = StartNode(token_list[0], "main", [keyword_node, x_reassign_val_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_concatenate_other_to_string_raises_exception(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            string x = "Hello";
+            x = x + ", Katana!";
+        }
+        ```
+        Expected an exception to be raised for invalid concatenation
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
+            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 4, 2, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 6, 2, "=", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 8, 2, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 10, 2, "+", 1),
+            Token(STRING_TOKEN_TYPE, 13, 2, ", Katana!", 0),
+            Token(EOL_TOKEN_TYPE, 23, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(InvalidConcatenationException, match="3:8 Cannot concatenate a string with a <class 'katana.katana.StringNode'>."):
+            parser.parse()

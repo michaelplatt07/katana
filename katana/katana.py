@@ -103,6 +103,7 @@ CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from
 MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
 PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
 
+
 ############
 # Exceptions
 ############
@@ -221,6 +222,17 @@ class InvalidTypeDeclarationException(Exception):
     def __str__(self):
         return f"Invalid type at {self.line_num}:{self.col_num}."
 
+
+class InvalidConcatenationException(Exception):
+    def __init__(self, line_num, col_num, base_type, concat_type):
+        super().__init__("Invalid concatenation")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.base_type = base_type
+        self.concat_type = concat_type
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
 
 
 ########
@@ -1150,6 +1162,7 @@ class Parser:
         self.has_next_token = True
         self.curr_token_pos = -1
         self.root_node = None
+        self.variable_to_type_map = {}
 
     def parse(self):
         root_node = None
@@ -1250,6 +1263,9 @@ class Parser:
         right_node = self.process_token(root_node)
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
+
+        self.check_if_valid_operation(op_token.value, left_node, right_node)
+
         if replace_right_side_with_op:
             ret_node = root_node
             node.parent_node = ret_node
@@ -1464,6 +1480,11 @@ class Parser:
         while self.curr_token.ttype != EOL_TOKEN_TYPE:
             child_node = self.process_token(child_node)
             self.advance_token()
+
+        # Put the variable and type in the map to be able to check references
+        # and uses later.
+        self.variable_to_type_map[child_node.left_side.value] = keyword_token.value
+
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
         assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
@@ -1547,6 +1568,16 @@ class Parser:
             assert False, f"Loop of type {node_value} is not recognized."
         else:
             return loop_contents
+
+    def check_if_valid_operation(self, op_type, left_node, right_node):
+        # Checking for add operation being of the same type.
+        if op_type == "+":
+            if type(left_node) == VariableReferenceNode and self.variable_to_type_map[left_node.value] == "string" and type(right_node) != CharNode:
+                raise InvalidConcatenationException(left_node.token.row, left_node.token.col, self.variable_to_type_map[left_node.value], type(right_node))
+        # TODO(map) Implement the checks for all the other op types.
+        else:
+            pass
+
 
 
 ##########
