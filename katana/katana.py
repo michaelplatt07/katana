@@ -2240,9 +2240,9 @@ class Compiler:
         if "string" in val:
             return [
                 "    ;; Calculate string length and push onto stack with string\n",
-                f"    push {val}\n"
-                f"    push {val}\n"
-                "    call string_length\n"
+                f"    push {val}\n",
+                f"    push {val}\n",
+                "    call string_length\n",
                 f"    push {val}\n"
             ]
         elif "char" in val:
