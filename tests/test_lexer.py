@@ -35,7 +35,6 @@ from katana.katana import (
     ULTRA_HIGH,
     BadFormattedLogicBlock,
     InvalidCharException,
-    InvalidConcatenationException,
     InvalidTokenException,
     InvalidVariableNameError,
     NoTerminatorError,
@@ -534,6 +533,25 @@ class TestKeyword:
         lexer = Lexer(program)
         with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
             lexer.lex()
+
+    def test_const_int_variable_delcaration(self):
+        """
+        Test to make sure that if `const` is used in the variable declaration
+        we can lex it correctly.
+        """
+        program = Program(["main() {\n", "const int16 x = 0;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "const", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 6, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 12, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 14, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 16, 1, "0", LOW),
+            Token(EOL_TOKEN_TYPE, 17, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert lexer.lex() == token_list
 
     def test_character_variable_declaration(self):
         """
