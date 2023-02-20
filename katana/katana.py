@@ -2009,6 +2009,7 @@ class Compiler:
         self.create_printl_num_function()
         self.create_printl_char_function()
         self.create_char_at_function()
+        self.create_string_length()
 
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2197,6 +2198,33 @@ class Compiler:
             compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
 
+    def create_string_length(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    string_length:\n")
+            compiled_program.write("        ;; strLen function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Get the first string reference\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get the second string reference\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        loop_str_len:\n")
+            compiled_program.write("            cmp byte[rax], 0\n")
+            compiled_program.write("            jne loop_again\n")
+            compiled_program.write("            je end_str_len\n")
+            compiled_program.write("        loop_again:\n")
+            compiled_program.write("            inc rax\n")
+            compiled_program.write("            jmp loop_str_len\n")
+            compiled_program.write("        end_str_len:\n")
+            compiled_program.write("            ;; Calculate actual difference in length\n")
+            compiled_program.write("            sub rax, rbx\n")
+            compiled_program.write("            push rax\n")
+            compiled_program.write("            ;; Push return address onto stack\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rcx\n")
+            compiled_program.write("        ret\n")
+
     def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
@@ -2211,8 +2239,10 @@ class Compiler:
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
-                "    ;; Push string length and val onto stack\n",
-                f"    push {val_len}\n",
+                "    ;; Calculate string length and push onto stack with string\n",
+                f"    push {val}\n"
+                f"    push {val}\n"
+                "    call string_length\n"
                 f"    push {val}\n"
             ]
         elif "char" in val:
@@ -2255,7 +2285,7 @@ class Compiler:
             "    ;; Remove string length from stack\n",
             "    pop rcx\n",
             "    ;; Append char to string\n",
-            f"    mov byte [rbx+{string_len}], al\n",
+            f"    mov byte [rbx+rcx], al\n",
         ]
 
     def get_sub_asm(self):
@@ -2485,21 +2515,21 @@ class Compiler:
         string = string.replace("\\n", "',10,13,'")
         return [
             f"section .raw_string_{string_count}\n",
-            f"    raw_string_{string_count} db '{string}', {string_length}\n",
+            f"    raw_string_{string_count} db '{string}', 0\n",
             f"    raw_len_{string_count} equ $ - raw_string_{string_count}\n"
         ]
 
     def get_raw_char_asm(self, char, char_count):
         return [
             f"section .raw_char_{char_count}\n",
-            f"    raw_char_{char_count} db '{char}'\n",
+            f"    raw_char_{char_count} db '{char}', 0\n",
         ]
 
     def get_string_asm(self, string, string_length, string_count):
         string = string.replace("\\n", "',10,13,'")
         return [
             f"section .string_{string_count}\n",
-            f"    string_{string_count} db '{string}', {string_length}\n",
+            f"    string_{string_count} db '{string}', 0\n",
             f"    len_{string_count} equ $ - string_{string_count}\n"
         ]
 
@@ -2520,11 +2550,11 @@ class Compiler:
     def get_assignment_asm(self, var_count, type_count, value, var_type):
         if var_type == StringNode:
             var_decl = [
-                f"    string_{type_count} db '{value}'\n",
-                f"    len_{type_count} equ $ - {len(value)}\n"]
+                f"    string_{type_count} db '{value}', 0\n",
+            ]
         elif var_type == CharNode:
             var_decl = [
-                f"    char_{type_count} db '{value}'\n",
+                f"    char_{type_count} db '{value}', 0\n",
             ]
         elif var_type == BooleanNode:
             var_decl = [
