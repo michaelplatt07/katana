@@ -35,6 +35,7 @@ from katana.katana import (
     ULTRA_HIGH,
     BadFormattedLogicBlock,
     InvalidCharException,
+    InvalidConcatenationException,
     InvalidTokenException,
     InvalidVariableNameError,
     NoTerminatorError,
@@ -943,3 +944,26 @@ class TestQuotationCharacter:
         lexer = Lexer(program)
         with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
             lexer.lex()
+
+
+class TestStringExtension:
+
+    def test_extending_string_with_a_single_char_succeeds(self):
+        program = Program(["main() {\n", "string x = \"Hello\";\n", "x = x + '!';\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "Hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 0, 2, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 2, "=", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 4, 2, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 6, 2, "+", 1),
+            Token(CHARACTER_TOKEN_TYPE, 9, 2, "!", 0),
+            Token(EOL_TOKEN_TYPE, 11, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()

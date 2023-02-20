@@ -281,7 +281,7 @@ class TestCompilerKeywords:
                     "var_len": 5,
                     "asm": [
                         "section .var_1 write\n",
-                        "    string_1 db 'Hello'\n",
+                        "    string_1 db 'Hello', 0\n",
                         "    len_1 equ $ - 5\n"
                     ]
                 }
@@ -302,7 +302,7 @@ class TestCompilerKeywords:
                     "var_len": 1,
                     "asm": [
                         "section .var_1 write\n",
-                        "    char_1 db 'a'\n"
+                        "    char_1 db 'a', 0\n"
                     ]
                 }
             }
@@ -386,8 +386,7 @@ class TestCompilerKeywords:
                     "var_len": 5,
                     "asm": [
                         "section .var_1 write\n",
-                        "    string_1 db 'hello'\n",
-                        "    len_1 equ $ - 5\n"
+                        "    string_1 db 'hello', 0\n",
                     ]
                 }
             }
@@ -407,7 +406,7 @@ class TestCompilerKeywords:
                     "var_len": 1,
                     "asm": [
                         "section .var_1 write\n",
-                        "    char_1 db 'h'\n",
+                        "    char_1 db 'h', 0\n",
                     ]
                 }
             }
@@ -444,7 +443,7 @@ class TestCompilerKeywords:
                     "var_len": 1,
                     "asm": [
                         "section .var_1 write\n",
-                        "    char_1 db 'A'\n",
+                        "    char_1 db 'A', 0\n",
                     ]
                 }
             }
@@ -866,6 +865,48 @@ class TestCompilerString:
                 "    push raw_string_1\n",
             ]
 
+    def test_concatenate_char_to_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_concatenation.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 6,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 db 'Hello', 0\n",
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push string_1\n",
+                "    push string_1\n",
+                "    call string_length\n",
+                "    push string_1\n",
+                "    ;; Push a raw char onto the stack\n",
+                "    mov bl, [raw_char_1]\n",
+                "    push bx\n",
+                "    ;; Concat string\n",
+                "    pop ax\n",
+                "    pop rbx\n",
+                "    ;; Remove string length from stack\n",
+                "    pop rcx\n",
+                "    ;; Append char to string\n",
+                "    mov byte [rbx+rcx], al\n",
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push string_1\n",
+                "    push string_1\n",
+                "    call string_length\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
+            ]
+
 
 class TestCompilerMultipleVarDeclarations:
 
@@ -892,8 +933,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_len": 14,
                     "asm": [
                         "section .var_2 write\n",
-                        "    string_1 db 'Hello, Katana!'\n",
-                        "    len_1 equ $ - 14\n"
+                        "    string_1 db 'Hello, Katana!', 0\n",
                     ]
                 },
                 "z": {
@@ -903,7 +943,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_len": 1,
                     "asm": [
                         "section .var_3 write\n",
-                        "    char_1 db 'A'\n",
+                        "    char_1 db 'A', 0\n",
                     ]
                 }
             }

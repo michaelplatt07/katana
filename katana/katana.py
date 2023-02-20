@@ -103,6 +103,7 @@ CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from
 MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
 PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
 
+
 ############
 # Exceptions
 ############
@@ -221,6 +222,17 @@ class InvalidTypeDeclarationException(Exception):
     def __str__(self):
         return f"Invalid type at {self.line_num}:{self.col_num}."
 
+
+class InvalidConcatenationException(Exception):
+    def __init__(self, line_num, col_num, base_type, concat_type):
+        super().__init__("Invalid concatenation")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.base_type = base_type
+        self.concat_type = concat_type
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
 
 
 ########
@@ -1150,6 +1162,7 @@ class Parser:
         self.has_next_token = True
         self.curr_token_pos = -1
         self.root_node = None
+        self.variable_to_type_map = {}
 
     def parse(self):
         root_node = None
@@ -1250,6 +1263,9 @@ class Parser:
         right_node = self.process_token(root_node)
         node = op_type(op_token, op_token.value,
                        left_side=left_node, right_side=right_node)
+
+        self.check_if_valid_operation(op_token.value, left_node, right_node)
+
         if replace_right_side_with_op:
             ret_node = root_node
             node.parent_node = ret_node
@@ -1464,6 +1480,11 @@ class Parser:
         while self.curr_token.ttype != EOL_TOKEN_TYPE:
             child_node = self.process_token(child_node)
             self.advance_token()
+
+        # Put the variable and type in the map to be able to check references
+        # and uses later.
+        self.variable_to_type_map[child_node.left_side.value] = keyword_token.value
+
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
         assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
@@ -1547,6 +1568,16 @@ class Parser:
             assert False, f"Loop of type {node_value} is not recognized."
         else:
             return loop_contents
+
+    def check_if_valid_operation(self, op_type, left_node, right_node):
+        # Checking for add operation being of the same type.
+        if op_type == "+":
+            if type(left_node) == VariableReferenceNode and self.variable_to_type_map[left_node.value] == "string" and type(right_node) != CharNode:
+                raise InvalidConcatenationException(left_node.token.row, left_node.token.col, self.variable_to_type_map[left_node.value], type(right_node))
+        # TODO(map) Implement the checks for all the other op types.
+        else:
+            pass
+
 
 
 ##########
@@ -1900,7 +1931,12 @@ class Compiler:
 
     def process_op_node(self, node):
         if node.value == "+":
-            return self.get_add_asm()
+            # Check if the left side of the add if a variable and its type. If
+            # it's a string we don't want to do the basic add assembly.
+            if type(node.left_side) == VariableReferenceNode and self.variables[node.left_side.value]["var_type"] == "string":
+                return self.get_string_concat_asm(node.left_side.value, self.variables[node.left_side.value]["var_len"])
+            else:
+                return self.get_add_asm()
         elif node.value == "-":
             return self.get_sub_asm()
         elif node.value == "*":
@@ -1930,7 +1966,16 @@ class Compiler:
                 # If the right side of the assignment is an expression then we
                 # don't need to pop any values to clean up because the assembly
                 # will pop the data to do the expression.
-                if type(node.right_side) in [PlusMinusNode, MultiplyDivideNode]:
+                if type(node.right_side) == PlusMinusNode:
+                    if self.variables[node.left_side.value]["var_type"] == "string":
+                        # Do not return the standard assignment of string as we
+                        # are doing a concat on the string.
+                        return []
+                    else:
+                        # Otherwise get the standard assignment asm for plus or
+                        # minus token.
+                        return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
+                elif type(node.right_side) == MultiplyDivideNode:
                     return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
                 elif node.right_side.value == "charAt":
                     return self.get_assign_char_at_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
@@ -1964,6 +2009,7 @@ class Compiler:
         self.create_printl_num_function()
         self.create_printl_char_function()
         self.create_char_at_function()
+        self.create_string_length()
 
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2152,6 +2198,33 @@ class Compiler:
             compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
 
+    def create_string_length(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    string_length:\n")
+            compiled_program.write("        ;; strLen function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Get the first string reference\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get the second string reference\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        loop_str_len:\n")
+            compiled_program.write("            cmp byte[rax], 0\n")
+            compiled_program.write("            jne loop_again\n")
+            compiled_program.write("            je end_str_len\n")
+            compiled_program.write("        loop_again:\n")
+            compiled_program.write("            inc rax\n")
+            compiled_program.write("            jmp loop_str_len\n")
+            compiled_program.write("        end_str_len:\n")
+            compiled_program.write("            ;; Calculate actual difference in length\n")
+            compiled_program.write("            sub rax, rbx\n")
+            compiled_program.write("            push rax\n")
+            compiled_program.write("            ;; Push return address onto stack\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rcx\n")
+            compiled_program.write("        ret\n")
+
     def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
@@ -2166,8 +2239,10 @@ class Compiler:
     def get_push_var_onto_stack_asm(self, val, val_len):
         if "string" in val:
             return [
-                "    ;; Push string length and val onto stack\n",
-                f"    push {val_len}\n",
+                "    ;; Calculate string length and push onto stack with string\n",
+                f"    push {val}\n",
+                f"    push {val}\n",
+                "    call string_length\n",
                 f"    push {val}\n"
             ]
         elif "char" in val:
@@ -2199,6 +2274,19 @@ class Compiler:
                 "    pop rbx\n",
                 "    add rax, rbx\n",
                 "    push rax\n"]
+
+    def get_string_concat_asm(self, val, string_len):
+        # Update the length of the string to the new value.
+        self.variables[val]["var_len"] += 1
+        return [
+            "    ;; Concat string\n",
+            "    pop ax\n",
+            "    pop rbx\n",
+            "    ;; Remove string length from stack\n",
+            "    pop rcx\n",
+            "    ;; Append char to string\n",
+            f"    mov byte [rbx+rcx], al\n",
+        ]
 
     def get_sub_asm(self):
         return ["    ;; Subtract\n",
@@ -2427,21 +2515,21 @@ class Compiler:
         string = string.replace("\\n", "',10,13,'")
         return [
             f"section .raw_string_{string_count}\n",
-            f"    raw_string_{string_count} db '{string}', {string_length}\n",
+            f"    raw_string_{string_count} db '{string}', 0\n",
             f"    raw_len_{string_count} equ $ - raw_string_{string_count}\n"
         ]
 
     def get_raw_char_asm(self, char, char_count):
         return [
             f"section .raw_char_{char_count}\n",
-            f"    raw_char_{char_count} db '{char}'\n",
+            f"    raw_char_{char_count} db '{char}', 0\n",
         ]
 
     def get_string_asm(self, string, string_length, string_count):
         string = string.replace("\\n", "',10,13,'")
         return [
             f"section .string_{string_count}\n",
-            f"    string_{string_count} db '{string}', {string_length}\n",
+            f"    string_{string_count} db '{string}', 0\n",
             f"    len_{string_count} equ $ - string_{string_count}\n"
         ]
 
@@ -2462,11 +2550,11 @@ class Compiler:
     def get_assignment_asm(self, var_count, type_count, value, var_type):
         if var_type == StringNode:
             var_decl = [
-                f"    string_{type_count} db '{value}'\n",
-                f"    len_{type_count} equ $ - {len(value)}\n"]
+                f"    string_{type_count} db '{value}', 0\n",
+            ]
         elif var_type == CharNode:
             var_decl = [
-                f"    char_{type_count} db '{value}'\n",
+                f"    char_{type_count} db '{value}', 0\n",
             ]
         elif var_type == BooleanNode:
             var_decl = [

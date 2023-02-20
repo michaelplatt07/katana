@@ -529,77 +529,115 @@
 ;         syscall
 
 
+; Working with chars
+; section .text
+;     global _start
+; section .string_1
+;     char_1 db 'j'
+; section .text
+;     _start:
+;         mov rsi, char_1
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
 ; String indices
+; section .text
+;     global _start
+
+; section .string_1
+;     string_1 db 'hELLO'
+;     char_1 db 'h'
+
+; ;; This will get the single byte from string_1 and put it in al, the lower 8
+; ;; bytes of register ax (16 bits).
+; section .text
+;     _start:
+;         ;; H
+;         mov al, [string_1]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+        
+;         ;; Compare a byte to a byte.
+;         mov al, [string_1]
+;         cmp al, [char_1]
+;         jne not_rest
+;         je rest
+;         not_rest:
+;         mov al, [string_1 + 1]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+;         rest:
+;         ;; e
+;         mov al, [string_1 + 1]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+
+;         ;; l
+;         mov al, [string_1 + 2]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+
+;         ;; l
+;         mov al, [string_1 + 3]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+
+;         ;; 0
+;         mov al, [string_1 + 4]
+;         push ax
+;         mov rsi, rsp
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, 1
+;         syscall
+
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+;; Appending string
 section .text
     global _start
 
-section .string_1
-    string_1 db 'hELLO'
-    char_1 db 'h'
+section .string_1 write
+    string_1 db 'Hello', 5
+    len equ $ - string_1
 
-;; This will get the single byte from string_1 and put it in al, the lower 8
-;; bytes of register ax (16 bits).
 section .text
     _start:
-        ;; H
-        mov al, [string_1]
-        push ax
-        mov rsi, rsp
+        mov al, '!'
+        mov byte [string_1+5], al
+        mov rsi, string_1
         mov rax, 1
         mov rdi, 1
-        mov rdx, 1
+        mov rdx, len
         syscall
-        
-        ;; Compare a byte to a byte.
-        mov al, [string_1]
-        cmp al, [char_1]
-        jne not_rest
-        je rest
-        not_rest:
-        mov al, [string_1 + 1]
-        push ax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-        rest:
-        ;; e
-        mov al, [string_1 + 1]
-        push ax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-
-        ;; l
-        mov al, [string_1 + 2]
-        push ax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-
-        ;; l
-        mov al, [string_1 + 3]
-        push ax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-
-        ;; 0
-        mov al, [string_1 + 4]
-        push ax
-        mov rsi, rsp
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, 1
-        syscall
-
         mov rax, 60
         mov rdi, 0
         syscall
