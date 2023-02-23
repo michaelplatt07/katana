@@ -1346,6 +1346,7 @@ class Parser:
         # Map of the functions needed to be called to parse certain tokens.
         func_map = {
             "main": (self.handle_main_keyword, StartNode, "children_nodes"),
+            "const": (self.handle_const_keyword, VariableKeywordNode, "child_node"),
             "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
@@ -1474,6 +1475,12 @@ class Parser:
         # Add the final calculated node to the list
         arg_list.append(root_node)
         return arg_list
+
+    def handle_const_keyword(self, keyword_token):
+        child_node = None
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            child_node = self.process_token(child_node)
+        return child_node
 
     def handle_var_declaration(self, keyword_token):
         child_node = None

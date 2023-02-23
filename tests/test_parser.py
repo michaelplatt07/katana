@@ -589,6 +589,37 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_keyword_const_with_int(self):
+        """
+        main() {
+            const int16 x = 3;
+        }
+        Expected to return an AST like:
+        (main[(const(int16((x=3))))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "const", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 6, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 12, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 14, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 17, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        three_node = NumberNode(token_list[8], "3")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
+        variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        const_node = VariableKeywordNode(token_list[4], "const", variable_dec_node)
+        ast = StartNode(token_list[0], "main", [const_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
     def test_keyword_int_16_reference(self):
         """
         Given a program like:
