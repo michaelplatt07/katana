@@ -1,4 +1,4 @@
 main() {
-    char x = 'A';
+    const char x = 'A';
     print(x);
 }

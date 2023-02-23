@@ -1,4 +1,4 @@
 main() {
-    int16 x = 3;
+    const int16 x = 3;
     print(x);
 }

@@ -1796,12 +1796,17 @@ class Compiler:
                 self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
+            # Check if the variable has the const keyword associated with it.
+            if node.parent_node.parent_node.parent_node.value == "const":
+                asm = self.get_const_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
+            else:
+                assert False, "Cannot handle variables that mutate yet."
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
                 "var_type": var_type,
                 "var_len": len(value_node.value),
-                "asm": self.get_assignment_asm(self.var_count, type_count, value_node.value, type(value_node))
+                "asm": asm
             }
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
@@ -2554,7 +2559,7 @@ class Compiler:
             f"    push bx\n",
         ]
 
-    def get_assignment_asm(self, var_count, type_count, value, var_type):
+    def get_const_creation_asm(self, var_count, type_count, value, var_type):
         if var_type == StringNode:
             var_decl = [
                 f"    string_{type_count} db '{value}', 0\n",
@@ -2578,7 +2583,7 @@ class Compiler:
         else:
             var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
-            f"section .var_{var_count} write\n",
+            f"section .var_{var_count}\n",
         ] + var_decl
 
     def get_assign_char_value_to_var_asm(self, var_name):
