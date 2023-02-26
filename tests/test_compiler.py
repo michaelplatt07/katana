@@ -307,8 +307,6 @@ class TestCompilerKeywords:
                 }
             }
 
-
-    @pytest.mark.skip
     def test_assign_new_value_char(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_assign_new_value_to_char.ktna") as f:

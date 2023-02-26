@@ -223,6 +223,18 @@ class InvalidTypeDeclarationException(Exception):
         return f"Invalid type at {self.line_num}:{self.col_num}."
 
 
+class InvalidAssignmentException(Exception):
+    def __init__(self, line_num, col_num, base_type, assignment_type):
+        super().__init__("Invalid assignment")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.base_type = base_type
+        self.assignment_type = assignment_type
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot assign a {self.base_type} with a {self.assignment_type}."
+
+
 class InvalidConcatenationException(Exception):
     def __init__(self, line_num, col_num, base_type, concat_type):
         super().__init__("Invalid concatenation")
@@ -1307,9 +1319,19 @@ class Parser:
         while self.peek_next_token().ttype != EOL_TOKEN_TYPE:
             # Advance and process the token.
             self.advance_token()
+
             right_node = self.process_token(right_node)
+        self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node))
         return AssignmentNode(op_token, op_token.value,
                               left_side=left_node, right_side=right_node)
+
+    # NOTE(map) This method is very brittle right now.
+    def check_assignment_type_matching(self, left_side_type, right_side_type):
+        # The `parse_assignment` could be the initial assignment of the var
+        # so we need to confirm there is a type before checking if they match.
+        if left_side_type:
+            if left_side_type == "char" and right_side_type != CharNode:
+                raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
 
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
@@ -1800,7 +1822,7 @@ class Compiler:
             if node.parent_node.parent_node.parent_node.value == "const":
                 asm = self.get_const_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
             else:
-                assert False, "Cannot handle variables that mutate yet."
+                asm = self.get_var_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
@@ -2585,6 +2607,36 @@ class Compiler:
         return [
             f"section .var_{var_count}\n",
         ] + var_decl
+
+    def get_var_creation_asm(self, var_count, type_count, value, var_type):
+        if var_type == CharNode:
+            var_decl = [
+                f"    char_{type_count} db '{value}', 0\n",
+            ]
+        # elif var_type == StringNode:
+        #     var_decl = [
+        #         f"    string_{type_count} db '{value}', 0\n",
+        #     ]
+        # elif var_type == BooleanNode:
+        #     var_decl = [
+        #         f"    bool_{type_count} dq 0\n",
+        #         ] if value == "false" else [
+        #             f"    bool_{type_count} dq 1\n",
+        #         ]
+        # elif value == "charAt":
+        #     # Case where we are initializing a variable to the return of a
+        #     # method. We should initialized to 0, then update in the assembly.
+        #     var_decl = [
+        #         f"    char_{type_count} db 0\n",
+        #     ]
+        # else:
+        #     var_decl = [f"    number_{type_count} dq {value}\n"]
+        else:
+            assert False, f"Cannot declare var of type {var_type} that is mutable."
+        return [
+            f"section .var_{var_count} write\n",
+        ] + var_decl
+
 
     def get_assign_char_value_to_var_asm(self, var_name):
         return [

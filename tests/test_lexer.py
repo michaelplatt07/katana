@@ -54,7 +54,7 @@ def get_main_tokens():
     ]
 
 
-class TestComments:
+class TestLexerComments:
     """Testing to make sure comments are picked up appropriately."""
 
     def test_single_line_comment(self):
@@ -98,10 +98,11 @@ class TestComments:
         assert token_list == lexer.lex()
 
 
-class TestLexerWellFormattedPrograms:
+class TestLexerBasicLexingAbilities:
     """
-    These tests are for programs that are well formatted, no extra spaces,
-    stuff like that.
+    These are not complete programs as they don't have a `main` method but
+    rather designed to be small snippets of code to ensure the lexing works as
+    expected.
     """
 
     def test_lex_single_digit_number(self):
@@ -263,10 +264,10 @@ class TestLexerWellFormattedPrograms:
         assert token_list == lexer.lex()
 
 
-class TestLexerBadFormat:
+class TestLexerUncommonFormatting:
     """
-    Testing the lexer with programs that are poorly formatted, like extra
-    spaces.
+    Tests to check if the lexer can handle code snippets that have extra
+    spaces, additional new lines between different snippets, etc.
     """
 
     def test_lex_extra_spaces(self):
@@ -284,7 +285,8 @@ class TestLexerBadFormat:
 
 class TestLexerParenthesis:
     """
-    Testing that the parenthesis tokens get lexed correctly.
+    Tests that parenthesis in various places in the program get lexed
+    appropriately.
     """
 
     def test_paren_with_add_only(self):
@@ -332,7 +334,10 @@ class TestLexerParenthesis:
             lexer.lex()
 
 
-class TestEndOfLineSemicolon:
+class TestLexerEndOfLineSemicolon:
+    """
+    Tests to ensure that the lines that should end in a semicolon do so.
+    """
 
     def test_line_ends_with_semicolon(self):
         program = Program(["3 + 4;\n"])
@@ -346,6 +351,9 @@ class TestEndOfLineSemicolon:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    # TODO(map) Write some tests on the lexer for if statements and other
+    # conditions where a line needn't end in a semicolon.
+
     def test_error_if_line_ends_without_semicolon(self):
         program = Program(["3 + 4\n"])
         lexer = Lexer(program)
@@ -353,7 +361,7 @@ class TestEndOfLineSemicolon:
             lexer.lex()
 
 
-class TestInvalidTokenException:
+class TestLexerInvalidTokenException:
 
     def test_invalid_token_raises_exception(self):
         """
@@ -365,7 +373,10 @@ class TestInvalidTokenException:
             lexer.lex()
 
 
-class TestKeyword:
+class TestLexerInvalidKeyword:
+    """
+    Tests to ensure that an invalid keyword gets flagged by the lexer.
+    """
 
     def test_invalid_keyword(self):
         """
@@ -375,6 +386,12 @@ class TestKeyword:
         lexer = Lexer(program)
         with pytest.raises(UnknownKeywordError, match="Unknown keyword 'foo' at 1:0 in program."):
             lexer.lex()
+
+
+class TestLexerPrintKeyword:
+    """
+    All tests related to using the print keyword.
+    """
 
     def test_print_function_keyword(self):
         """
@@ -394,9 +411,39 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_main_function_keyword(self):
+    def test_printl_function_keyword(self):
         """
         Ensures the main method keyword is lexed correctly.
+        """
+        program = Program(["main() {\n", "printl(1+2);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "printl", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 8, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 9, 1, "2", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    # TODO(map) Write test for invalid use of print keyword
+    def test_print_use_invalid(self):
+        assert False, "Not implemented."
+
+
+class TestLexerMainKeyword:
+    """
+    All tests related to the main keyword.
+    """
+
+    def test_main_function_keyword_one_line(self):
+        """
+        Ensures the main method keyword is lexed correctly if everything is
+        kept to a single line.
         """
         program = Program(["main() {print(1+2);};\n"])
         token_list = get_main_tokens() + [
@@ -433,44 +480,11 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_main_should_error_all_one_line(self):
-        """
-        Tests the continuation logic if everything is on one line.
-        """
-        program = Program(["main() {print(1+2)}\n"])
-        lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match="Line 1:18 must end with a semicolon."):
-            lexer.lex()
 
-    def test_main_function_should_error_multi_line(self):
-        """
-        If there is no semicolon ending the line, an error should be raised for
-        multiline program.
-        """
-        program = Program(["main() {\n", "print(1+2)\n", "}\n"])
-        lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match="Line 2:10 must end with a semicolon."):
-            lexer.lex()
-
-    def test_printl_function_keyword(self):
-        """
-        Ensures the main method keyword is lexed correctly.
-        """
-        program = Program(["main() {\n", "printl(1+2);\n", "}\n"])
-        token_list = get_main_tokens() + [
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "printl", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
-            Token(NUM_TOKEN_TYPE, 7, 1, "1", LOW),
-            Token(PLUS_TOKEN_TYPE, 8, 1, "+", MEDIUM),
-            Token(NUM_TOKEN_TYPE, 9, 1, "2", LOW),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
-            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
-        ]
-        lexer = Lexer(program)
-        assert token_list == lexer.lex()
-
+class TestLexerIntKeyword:
+    """
+    All tests related to all the different type of int declarations.
+    """
     def test_int_16_variable_declaration(self):
         """
         Tests that declaring an int16 variable correctly declares the
@@ -489,7 +503,7 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_int_16_variable_usage(self):
+    def test_int_16_variable_referenced(self):
         """
         Tests that declaring and using an int16 variable correctly lexes to the
         appropriate tokens.
@@ -517,8 +531,7 @@ class TestKeyword:
         Test to make sure if a variable is anything other than alpha numeric
         an error is raised.
         """
-        program = Program(
-            ["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"])
+        program = Program(["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"])
         lexer = Lexer(program)
         with pytest.raises(InvalidTokenException, match="Invalid token '_' at 2:9."):
             lexer.lex()
@@ -553,6 +566,12 @@ class TestKeyword:
         lexer = Lexer(program)
         assert lexer.lex() == token_list
 
+
+class TestLexerCharKeyword:
+    """
+    All tests related to the char keyword.
+    """
+
     def test_character_variable_declaration(self):
         """
         Tests that declaring a character variable correctly declares the
@@ -580,6 +599,15 @@ class TestKeyword:
         with pytest.raises(InvalidCharException, match="Invalid declaration of `char` at 2:11."):
             lexer.lex()
 
+    def test_char_variable_reference(self):
+        assert False, "Not implemented."
+
+
+class TestLexerString:
+    """
+    All tests related to the string keyword.
+    """
+
     def test_string_variable_declaration(self):
         """
         Tests that declaring a string variable correctly declares the
@@ -598,7 +626,7 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_string_variable_usage(self):
+    def test_string_variable_referenced(self):
         """
         Confirms that referencing the string appropriately works.
         """
@@ -620,6 +648,15 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_improper_string_declaration(self):
+        assert False, "Not implemented."
+
+
+class TestLexerBoolKeyword:
+    """
+    All tests related to the bool keyword.
+    """
+
     def test_bool_variable_declaration(self):
         """
         Tests that declaring a string variable correctly declares the
@@ -637,6 +674,18 @@ class TestKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_bool_variable_referenced(self):
+        assert False, "Not implemented."
+
+    def test_bool_invalid_value(self):
+        assert False, "Not implemented."
+
+
+class TestLexerIfElseKeyword:
+    """
+    All tests related to the if/else logical operators.
+    """
 
     def test_if_keyword_success(self):
         """
@@ -809,7 +858,6 @@ class TestKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 12, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 13, 2, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-
             Token(KEYWORD_TOKEN_TYPE, 0, 4, "else", ULTRA_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 4, "{", VERY_HIGH),
             Token(KEYWORD_TOKEN_TYPE, 0, 5, "print", ULTRA_HIGH),
@@ -818,7 +866,6 @@ class TestKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 11, 5, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 12, 5, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", VERY_HIGH),
-
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 7, "}", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 8, "EOF", LOW),
         ]
@@ -860,6 +907,15 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_if_with_invalid_conditional_raises_exception(self):
+        assert False, "Not implemented."
+
+
+class TestLexerLoopKeyword:
+    """
+    All tests related to the various loop keywords and how they are parse.
+    """
+
     def test_basic_loop_up_keyword(self):
         program = Program(["main() {\n", "loopUp(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
         token_list = get_main_tokens() + [
@@ -880,6 +936,9 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_basic_loop_up_invalid_syntax(self):
+        assert False, "Not implemented."
+
     def test_basic_loop_down_keyword(self):
         program = Program(["main() {\n", "loopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
         token_list = get_main_tokens() + [
@@ -899,6 +958,9 @@ class TestKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_basic_loop_down_invalid_syntax(self):
+        assert False, "Not implemented."
 
     def test_basic_loop_from_keyword(self):
         program = Program(["main() {\n", "loopFrom(0..3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
@@ -922,6 +984,15 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_basic_loop_from_invalid_syntax(self):
+        assert False, "Not implemented."
+
+
+class TestLexerCharAt:
+    """
+    All tests related to the charAt function.
+    """
+
     def test_char_at_function(self):
         program = Program(["main() {\n", "charAt(\"Hello\", 3);\n", "}\n"])
         token_list = get_main_tokens() + [
@@ -938,8 +1009,14 @@ class TestKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
+    def test_char_at_invalid_syntax(self):
+        assert False, "Not implemented."
 
-class TestQuotationCharacter:
+
+class TestLexerQuotationCharacter:
+    """
+    All tests related to useing the quotation character.
+    """
 
     def test_quote_character(self):
         program = Program(["\"test string\";\n"])
@@ -964,9 +1041,12 @@ class TestQuotationCharacter:
             lexer.lex()
 
 
-class TestStringExtension:
+class TestLexerStringConcatenation:
+    """
+    All tests related to conatenating strings.
+    """
 
-    def test_extending_string_with_a_single_char_succeeds(self):
+    def test_string_concatenation_with_char(self):
         program = Program(["main() {\n", "string x = \"Hello\";\n", "x = x + '!';\n", "}\n"])
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
@@ -985,3 +1065,9 @@ class TestStringExtension:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_string_concatenation_with_int_fails(self):
+        assert False, "Not implemented."
+
+    def test_string_concatenation_with_string_fails(self):
+        assert False, "Not implemented"

@@ -1,0 +1,5 @@
+main() {
+    char x = 'a';
+    x = 12; // This should raise an error.
+    print(x);
+}
