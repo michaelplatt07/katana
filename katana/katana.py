@@ -1326,17 +1326,19 @@ class Parser:
             self.advance_token()
 
             right_node = self.process_token(right_node)
-        self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node))
+        self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node), right_node.value)
         return AssignmentNode(op_token, op_token.value,
                               left_side=left_node, right_side=right_node)
 
     # NOTE(map) This method is very brittle right now.
     # TODO(map) Can these left to right side maps exist as a dict?
-    def check_assignment_type_matching(self, left_side_type, right_side_type):
+    def check_assignment_type_matching(self, left_side_type, right_side_type, right_side_value):
         # The `parse_assignment` could be the initial assignment of the var
         # so we need to confirm there is a type before checking if they match.
         if left_side_type:
-            if left_side_type == "char" and right_side_type != CharNode:
+            right_side_char = right_side_type == CharNode
+            right_side_char_at = right_side_type == FunctionKeywordNode and right_side_value == "charAt"
+            if left_side_type == "char" and not right_side_char and not right_side_char_at:
                 raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
 
     def handle_parenthesis(self):
@@ -2638,15 +2640,15 @@ class Compiler:
             ] if value == "false" else [
                 f"    bool_{type_count} dq 1\n",
             ]
+        elif value == "charAt":
+            # Case where we are initializing a variable to the return of a
+            # method. We should initialized to -1, then update in the assembly.
+            var_decl = [
+                f"    char_{type_count} db -1\n",
+            ]
         # elif var_type == StringNode:
         #     var_decl = [
         #         f"    string_{type_count} db '{value}', 0\n",
-        #     ]
-                # elif value == "charAt":
-        #     # Case where we are initializing a variable to the return of a
-        #     # method. We should initialized to 0, then update in the assembly.
-        #     var_decl = [
-        #         f"    char_{type_count} db 0\n",
         #     ]
         else:
             assert False, f"Cannot declare var of type {var_type} that is mutable."

@@ -603,7 +603,6 @@ class TestCompilerChar:
                 "    end_1:\n"
             ]
 
-    @pytest.mark.skip
     def test_set_char_var_to_char_at(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_char_at_used.ktna") as f:
