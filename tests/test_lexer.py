@@ -36,6 +36,7 @@ from katana.katana import (
     BadFormattedLogicBlock,
     InvalidCharException,
     InvalidTokenException,
+    InvalidTypeDeclarationException,
     InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
@@ -430,10 +431,6 @@ class TestLexerPrintKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    # TODO(map) Write test for invalid use of print keyword
-    def test_print_use_invalid(self):
-        assert False, "Not implemented."
-
 
 class TestLexerMainKeyword:
     """
@@ -600,7 +597,27 @@ class TestLexerCharKeyword:
             lexer.lex()
 
     def test_char_variable_reference(self):
-        assert False, "Not implemented."
+        """
+        Tests the referencing a char is correctly lexed.
+        """
+        program = Program(["main() {\n", "    const char x = 'A';\n", "    print(x);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "const", 4),
+            Token(KEYWORD_TOKEN_TYPE, 10, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 15, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 17, 1, "=", 2),
+            Token(CHARACTER_TOKEN_TYPE, 20, 1, "A", 0),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 2, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 10, 2, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 12, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestLexerString:
@@ -648,9 +665,6 @@ class TestLexerString:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_improper_string_declaration(self):
-        assert False, "Not implemented."
-
 
 class TestLexerBoolKeyword:
     """
@@ -676,10 +690,23 @@ class TestLexerBoolKeyword:
         assert token_list == lexer.lex()
 
     def test_bool_variable_referenced(self):
-        assert False, "Not implemented."
-
-    def test_bool_invalid_value(self):
-        assert False, "Not implemented."
+        program = Program(["main() {\n", "bool x = false;\n", "print(x);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "bool", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
+            Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestLexerIfElseKeyword:
@@ -907,9 +934,6 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_if_with_invalid_conditional_raises_exception(self):
-        assert False, "Not implemented."
-
 
 class TestLexerLoopKeyword:
     """
@@ -936,9 +960,6 @@ class TestLexerLoopKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_basic_loop_up_invalid_syntax(self):
-        assert False, "Not implemented."
-
     def test_basic_loop_down_keyword(self):
         program = Program(["main() {\n", "loopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
         token_list = get_main_tokens() + [
@@ -958,9 +979,6 @@ class TestLexerLoopKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
-
-    def test_basic_loop_down_invalid_syntax(self):
-        assert False, "Not implemented."
 
     def test_basic_loop_from_keyword(self):
         program = Program(["main() {\n", "loopFrom(0..3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
@@ -984,9 +1002,6 @@ class TestLexerLoopKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_basic_loop_from_invalid_syntax(self):
-        assert False, "Not implemented."
-
 
 class TestLexerCharAt:
     """
@@ -1008,9 +1023,6 @@ class TestLexerCharAt:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
-
-    def test_char_at_invalid_syntax(self):
-        assert False, "Not implemented."
 
 
 class TestLexerQuotationCharacter:
@@ -1065,9 +1077,3 @@ class TestLexerStringConcatenation:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
-
-    def test_string_concatenation_with_int_fails(self):
-        assert False, "Not implemented."
-
-    def test_string_concatenation_with_string_fails(self):
-        assert False, "Not implemented"

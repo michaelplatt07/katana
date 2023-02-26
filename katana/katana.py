@@ -102,6 +102,9 @@ VARIABLE_KEYWORDS = ("const", "int16", "string", "bool", "char")
 CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from the STRING"
 MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
 PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
+LOOP_UP_SIGNATURE = "loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BODY each time"
+LOOP_DOWN_SIGNATURE = "loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time"
+LOOP_FROM_SIGNATURE = "loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time"
 
 
 ############
@@ -1245,8 +1248,10 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
+            raise kme
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
+            raise itde
 
     def parse_literal(self):
         """
@@ -1326,6 +1331,7 @@ class Parser:
                               left_side=left_node, right_side=right_node)
 
     # NOTE(map) This method is very brittle right now.
+    # TODO(map) Can these left to right side maps exist as a dict?
     def check_assignment_type_matching(self, left_side_type, right_side_type):
         # The `parse_assignment` could be the initial assignment of the var
         # so we need to confirm there is a type before checking if they match.
@@ -1390,6 +1396,15 @@ class Parser:
         elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
             # Need to get contents of the loop.
             contents = contents_function()
+            # TODO(map) The loop methods should have their own methods that
+            # raise these exceptions.
+            if not contents:
+                if node_class == LoopUpKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_UP_SIGNATURE)
+                if node_class == LoopDownKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_DOWN_SIGNATURE)
+                if node_class == LoopFromKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_FROM_SIGNATURE)
             loop_body = self.get_loop_body(node_value)
         else:
             contents = contents_function(keyword_token)
@@ -2707,7 +2722,7 @@ def run_program():
 ######
 # main
 ######
-program_lines = None
+program_lines = []
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(

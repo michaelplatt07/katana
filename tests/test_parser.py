@@ -1,4 +1,5 @@
 import pytest
+import re
 
 from katana.katana import (
     AssignmentNode,
@@ -20,6 +21,7 @@ from katana.katana import (
     VariableNode,
     VariableKeywordNode,
     VariableReferenceNode,
+    KeywordMisuseException,
     InvalidAssignmentException,
     InvalidConcatenationException,
     Token,
@@ -509,6 +511,30 @@ class TestParserPrint:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_print_use_invalid(self):
+        """
+        Given a progrma like:
+        main() {
+            print();
+        }
+        Expected KeywordMisuseException to be raised
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 10, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 11, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'print' at 5:1 in program. \n   Sample Usage: print(VALUE);: prints the VALUE to the screen")):
+            parser.parse()
+
 
 class TestParserMain:
     """
@@ -729,6 +755,66 @@ class TestParserCharAt:
         ast = StartNode(token_list[0], "main", [string_declare_node, char_declare_node, conditional_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_char_at_invalid_syntax(self):
+        """
+        Given a program like:
+        main() {
+            char x = charAt();
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+            parser.parse()
+
+    # TODO(map) Fix this test.
+    @pytest.mark.skip
+    def test_char_at_invalid_type_first_param(self):
+        """
+        Given a program like:
+        main() {
+            char x = charAt(12, 2);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 20, "12", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 22, ",", 0),
+            Token(NUM_TOKEN_TYPE, 1, 24, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+            parser.parse()
+
 
 
 class TestParserString:
@@ -1325,6 +1411,76 @@ class TestParserLoopKeyword:
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_basic_loop_up_invalid_syntax(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopUp' at 5:1 in program. \n   Sample Usage: loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BODY each time")):
+            parser.parse()
+
+    def test_basic_loop_down_invalid_syntax(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopDown' at 5:1 in program. \n   Sample Usage: loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time")):
+            parser.parse()
+
+    def test_basic_loop_from_invalid_syntax(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopFrom' at 5:1 in program. \n   Sample Usage: loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time")):
+            parser.parse()
+
 
 class TestKeywordAdvanced:
 
