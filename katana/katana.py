@@ -2628,6 +2628,10 @@ class Compiler:
             var_decl = [
                 f"    char_{type_count} db '{value}', 0\n",
             ]
+        elif var_type == NumberNode:
+            var_decl = [
+                f"    number_{type_count} dq {value}\n",
+            ]
         # elif var_type == StringNode:
         #     var_decl = [
         #         f"    string_{type_count} db '{value}', 0\n",

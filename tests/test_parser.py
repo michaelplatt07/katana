@@ -783,7 +783,8 @@ class TestParserCharAt:
         with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
             parser.parse()
 
-    # TODO(map) Fix this test.
+    # TODO(map) Fix this test by doing type checking on params. Write tests for
+    # all the other methods as well.
     @pytest.mark.skip
     def test_char_at_invalid_type_first_param(self):
         """
