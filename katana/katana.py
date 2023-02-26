@@ -2632,24 +2632,22 @@ class Compiler:
             var_decl = [
                 f"    number_{type_count} dq {value}\n",
             ]
+        elif var_type == BooleanNode:
+            var_decl = [
+                f"    bool_{type_count} dq 0\n",
+            ] if value == "false" else [
+                f"    bool_{type_count} dq 1\n",
+            ]
         # elif var_type == StringNode:
         #     var_decl = [
         #         f"    string_{type_count} db '{value}', 0\n",
         #     ]
-        # elif var_type == BooleanNode:
-        #     var_decl = [
-        #         f"    bool_{type_count} dq 0\n",
-        #         ] if value == "false" else [
-        #             f"    bool_{type_count} dq 1\n",
-        #         ]
-        # elif value == "charAt":
+                # elif value == "charAt":
         #     # Case where we are initializing a variable to the return of a
         #     # method. We should initialized to 0, then update in the assembly.
         #     var_decl = [
         #         f"    char_{type_count} db 0\n",
         #     ]
-        # else:
-        #     var_decl = [f"    number_{type_count} dq {value}\n"]
         else:
             assert False, f"Cannot declare var of type {var_type} that is mutable."
         return [

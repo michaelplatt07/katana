@@ -737,6 +737,28 @@ class TestCompilerBool:
                 "    end_1:\n",
             ]
 
+    def test_bool_updated(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_bool_updated.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "bool_1",
+                    "var_type": "bool",
+                    "var_len": 4,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    bool_1 dq 1\n",
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Assign new bool to bool var\n",
+                "    mov word [bool_1], 0\n",
+            ]
+
 
 class TestCompilerIfElse:
     """
