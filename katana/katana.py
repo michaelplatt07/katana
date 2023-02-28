@@ -1870,11 +1870,10 @@ class Compiler:
                     return []
             # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
-            var_len = self.variables[node.value]["var_len"]
             if node.can_traverse_to_parent():
-                return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
+                return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_var_onto_stack_asm(var_ref, var_len)
+                return self.get_push_var_onto_stack_asm(var_ref)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -2061,6 +2060,7 @@ class Compiler:
         self.create_printl_char_function()
         self.create_char_at_function()
         self.create_string_length()
+        self.allocate_memory()
 
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2276,6 +2276,31 @@ class Compiler:
             compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
 
+    def allocate_memory(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text")
+            compiled_program.write("    allocate_memory:")
+            compiled_program.write("        ;; Save return address")
+            compiled_program.write("        pop rbx")
+            compiled_program.write("        ;; Get current break address")
+            compiled_program.write("        mov rdi, 0")
+            compiled_program.write("        mov rax, 12")
+            compiled_program.write("        syscall")
+            compiled_program.write("        ;; Move the current break to rdi")
+            compiled_program.write("        mov rdi, rax")
+            compiled_program.write("        ;; Get the number of bytes to allocate")
+            compiled_program.write("        pop rcx")
+            compiled_program.write("        ;; Attempt to allocate the bytes")
+            compiled_program.write("        add rdi, rcx")
+            compiled_program.write("        mov rax, 12")
+            compiled_program.write("        syscall")
+            compiled_program.write("        ;; Set memory address to variable")
+            compiled_program.write("        pop rcx")
+            compiled_program.write("        mov qword [rcx], rax")
+            compiled_program.write("        ;; Push return address onto stack")
+            compiled_program.write("        push rbx")
+            compiled_program.write("        ret")
+
     def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
@@ -2287,7 +2312,7 @@ class Compiler:
             f"    push {num}\n"
             ]
 
-    def get_push_var_onto_stack_asm(self, val, val_len):
+    def get_push_var_onto_stack_asm(self, val):
         if "string" in val:
             return [
                 "    ;; Calculate string length and push onto stack with string\n",
