@@ -1,5 +1,5 @@
 main() {
-    char x = 'l';
+    const char x = 'l';
     if (x == 'l') {
         print("Equal");
     } else{

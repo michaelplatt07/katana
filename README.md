@@ -208,3 +208,4 @@ main() {
 - [ ] Modulo calcuations
 - [ ] Formatting numbers like 1_000_000 is supported for easier reading
 - [ ] Add ability to exclude code during compilation. This is similar to #define
+- [ ] Update anywhere the pointers are being used to use `LEA` instead of `MOV`

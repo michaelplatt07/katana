@@ -93,7 +93,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
+VARIABLE_KEYWORDS = ("const", "int16", "string", "bool", "char")
 
 
 ###################
@@ -102,6 +102,9 @@ VARIABLE_KEYWORDS = ("int16", "string", "bool", "char")
 CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from the STRING"
 MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
 PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
+LOOP_UP_SIGNATURE = "loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BODY each time"
+LOOP_DOWN_SIGNATURE = "loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time"
+LOOP_FROM_SIGNATURE = "loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time"
 
 
 ############
@@ -221,6 +224,18 @@ class InvalidTypeDeclarationException(Exception):
 
     def __str__(self):
         return f"Invalid type at {self.line_num}:{self.col_num}."
+
+
+class InvalidAssignmentException(Exception):
+    def __init__(self, line_num, col_num, base_type, assignment_type):
+        super().__init__("Invalid assignment")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.base_type = base_type
+        self.assignment_type = assignment_type
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot assign a {self.base_type} with a {self.assignment_type}."
 
 
 class InvalidConcatenationException(Exception):
@@ -1233,8 +1248,10 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
+            raise kme
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
+            raise itde
 
     def parse_literal(self):
         """
@@ -1307,9 +1324,22 @@ class Parser:
         while self.peek_next_token().ttype != EOL_TOKEN_TYPE:
             # Advance and process the token.
             self.advance_token()
+
             right_node = self.process_token(right_node)
+        self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node), right_node.value)
         return AssignmentNode(op_token, op_token.value,
                               left_side=left_node, right_side=right_node)
+
+    # NOTE(map) This method is very brittle right now.
+    # TODO(map) Can these left to right side maps exist as a dict?
+    def check_assignment_type_matching(self, left_side_type, right_side_type, right_side_value):
+        # The `parse_assignment` could be the initial assignment of the var
+        # so we need to confirm there is a type before checking if they match.
+        if left_side_type:
+            right_side_char = right_side_type == CharNode
+            right_side_char_at = right_side_type == FunctionKeywordNode and right_side_value == "charAt"
+            if left_side_type == "char" and not right_side_char and not right_side_char_at:
+                raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
 
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
@@ -1346,6 +1376,7 @@ class Parser:
         # Map of the functions needed to be called to parse certain tokens.
         func_map = {
             "main": (self.handle_main_keyword, StartNode, "children_nodes"),
+            "const": (self.handle_const_keyword, VariableKeywordNode, "child_node"),
             "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
@@ -1367,6 +1398,15 @@ class Parser:
         elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
             # Need to get contents of the loop.
             contents = contents_function()
+            # TODO(map) The loop methods should have their own methods that
+            # raise these exceptions.
+            if not contents:
+                if node_class == LoopUpKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_UP_SIGNATURE)
+                if node_class == LoopDownKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_DOWN_SIGNATURE)
+                if node_class == LoopFromKeywordNode:
+                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_FROM_SIGNATURE)
             loop_body = self.get_loop_body(node_value)
         else:
             contents = contents_function(keyword_token)
@@ -1474,6 +1514,12 @@ class Parser:
         # Add the final calculated node to the list
         arg_list.append(root_node)
         return arg_list
+
+    def handle_const_keyword(self, keyword_token):
+        child_node = None
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            child_node = self.process_token(child_node)
+        return child_node
 
     def handle_var_declaration(self, keyword_token):
         child_node = None
@@ -1789,13 +1835,23 @@ class Compiler:
                 self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
+            # Check if the variable has the const keyword associated with it.
+            if node.parent_node.parent_node.parent_node.value == "const":
+                asm = self.get_const_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
+            else:
+                asm = self.get_var_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
                 "var_type": var_type,
                 "var_len": len(value_node.value),
-                "asm": self.get_assignment_asm(self.var_count, type_count, value_node.value, type(value_node))
+                "is_const": True,
+                "asm": asm
             }
+            if value_node.parent_node.parent_node.parent_node.value != "const":
+                if type(value_node) == StringNode:
+                    self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
+                self.variables[node.value]["is_const"] = False
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
             node.visited = True
@@ -1819,11 +1875,11 @@ class Compiler:
                     return []
             # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
-            var_len = self.variables[node.value]["var_len"]
+            is_const = self.variables[node.value]["is_const"]
             if node.can_traverse_to_parent():
-                return self.get_push_var_onto_stack_asm(var_ref, var_len) + self.traverse_tree(node.parent_node)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_var_onto_stack_asm(var_ref, var_len)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -2010,6 +2066,7 @@ class Compiler:
         self.create_printl_char_function()
         self.create_char_at_function()
         self.create_string_length()
+        self.allocate_memory()
 
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2225,6 +2282,31 @@ class Compiler:
             compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
 
+    def allocate_memory(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    allocate_memory:\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get current break address\n")
+            compiled_program.write("        mov rdi, 0\n")
+            compiled_program.write("        mov rax, 12\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Move the current break to rdi\n")
+            compiled_program.write("        mov rdi, rax\n")
+            compiled_program.write("        ;; Get the number of bytes to allocate\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Attempt to allocate the bytes\n")
+            compiled_program.write("        add rdi, rcx\n")
+            compiled_program.write("        mov rax, 12\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Set memory address to variable\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        mov qword [rcx], rax\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
+
     def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
             compiled_program.write("section .text\n")
@@ -2236,14 +2318,22 @@ class Compiler:
             f"    push {num}\n"
             ]
 
-    def get_push_var_onto_stack_asm(self, val, val_len):
-        if "string" in val:
+    def get_push_var_onto_stack_asm(self, val, is_const):
+        if "string" in val and is_const:
             return [
                 "    ;; Calculate string length and push onto stack with string\n",
                 f"    push {val}\n",
                 f"    push {val}\n",
                 "    call string_length\n",
                 f"    push {val}\n"
+            ]
+        if "string" in val and not is_const:
+            return [
+                "    ;; Calculate string length and push onto stack with string\n",
+                f"    push qword [{val}]\n",
+                f"    push qword [{val}]\n",
+                "    call string_length\n",
+                f"    push qword [{val}]\n"
             ]
         elif "char" in val:
             return [
@@ -2533,6 +2623,7 @@ class Compiler:
             f"    len_{string_count} equ $ - string_{string_count}\n"
         ]
 
+    # TODO(map) Probably need to pass the is_const for the raw string here too.
     def get_push_string_asm(self, string_count, string_length):
         return [
             "    ;; Push a raw string and length onto stack\n",
@@ -2547,7 +2638,7 @@ class Compiler:
             f"    push bx\n",
         ]
 
-    def get_assignment_asm(self, var_count, type_count, value, var_type):
+    def get_const_creation_asm(self, var_count, type_count, value, var_type):
         if var_type == StringNode:
             var_decl = [
                 f"    string_{type_count} db '{value}', 0\n",
@@ -2571,8 +2662,51 @@ class Compiler:
         else:
             var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
+            f"section .var_{var_count}\n",
+        ] + var_decl
+
+    def get_var_creation_asm(self, var_count, type_count, value, var_type):
+        if var_type == CharNode:
+            var_decl = [
+                f"    char_{type_count} db '{value}', 0\n",
+            ]
+        elif var_type == NumberNode:
+            var_decl = [
+                f"    number_{type_count} dq {value}\n",
+            ]
+        elif var_type == BooleanNode:
+            var_decl = [
+                f"    bool_{type_count} dq 0\n",
+            ] if value == "false" else [
+                f"    bool_{type_count} dq 1\n",
+            ]
+        elif value == "charAt":
+            # Case where we are initializing a variable to the return of a
+            # method. We should initialized to -1, then update in the assembly.
+            var_decl = [
+                f"    char_{type_count} db -1\n",
+            ]
+        elif var_type == StringNode:
+            var_decl = [
+                f"    string_{type_count} dq 0\n",
+            ]
+        else:
+            assert False, f"Cannot declare var of type {var_type} that is mutable."
+        return [
             f"section .var_{var_count} write\n",
         ] + var_decl
+
+    def get_initialize_var_asm(self, var_name, var_len, var_val):
+        asm = [
+           f"    push {var_name}\n",
+           f"    push {var_len}\n",
+           "    call allocate_memory\n",
+           f"    mov rax, qword [{var_name}]\n",
+        ]
+        for idx, char in enumerate(var_val):
+            asm.append(f"    mov byte [rax+{idx}], '{char}'\n")
+        asm.append(f"    mov byte [rax+{var_len}], 0\n")
+        return asm
 
     def get_assign_char_value_to_var_asm(self, var_name):
         return [
@@ -2643,7 +2777,7 @@ def run_program():
 ######
 # main
 ######
-program_lines = None
+program_lines = []
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(

@@ -1,4 +1,5 @@
 import pytest
+import re
 
 from katana.katana import (
     AssignmentNode,
@@ -20,6 +21,8 @@ from katana.katana import (
     VariableNode,
     VariableKeywordNode,
     VariableReferenceNode,
+    KeywordMisuseException,
+    InvalidAssignmentException,
     InvalidConcatenationException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
@@ -72,6 +75,10 @@ class TestParserLiterals:
 
 
 class TestParserAddition:
+    """
+    Tests for snippets for addition.
+    """
+
     def test_parser_adding_two_numbers(self):
         """
         Given the simple program:
@@ -119,6 +126,10 @@ class TestParserAddition:
 
 
 class TestParserSubtraction:
+    """
+    Tests for parsing subtraction snippets.
+    """
+
     def test_parser_two_subtracting_numbers(self):
         """
         Given the simple program:
@@ -126,7 +137,6 @@ class TestParserSubtraction:
         Epxected to return an AST like:
         (1-2)
         """
-
         token_list = [
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(MINUS_TOKEN_TYPE, 2, 1, "-", MEDIUM),
@@ -146,7 +156,6 @@ class TestParserSubtraction:
         Expected to return an AST like:
         ((1-2)-3)
         """
-
         token_list = [
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(MINUS_TOKEN_TYPE, 2, 1, "-", MEDIUM),
@@ -166,6 +175,10 @@ class TestParserSubtraction:
 
 
 class TestMultiply:
+    """
+    Tests for snippets for multiplication.
+    """
+
     def test_parser_multiply_two_numbers(self):
         """
         Given a simple program like:
@@ -187,6 +200,10 @@ class TestMultiply:
 
 
 class TestDivide:
+    """
+    Tests for snippets for division.
+    """
+
     def test_parser_divide_two_numbers(self):
         """
         Given a simple program like:
@@ -208,6 +225,10 @@ class TestDivide:
 
 
 class TestComments:
+    """
+    All tests related to parsing out comments.
+    """
+
     def test_parser_simple_add_with_comment(self):
         """
         Given a simple program like:
@@ -230,6 +251,10 @@ class TestComments:
 
 
 class TestArithmetic:
+    """
+    Tests for order of operations for mathematics.
+    """
+
     def test_parser_add_and_multiply(self):
         """
         Given a program like:
@@ -433,7 +458,10 @@ class TestParserParenthesis:
         assert ast == parser.parse()
 
 
-class TestKeywordParser:
+class TestParserPrint:
+    """
+    All tests related to the print keyword.
+    """
 
     def test_keyword_print_with_literal(self):
         """
@@ -454,6 +482,64 @@ class TestKeywordParser:
         ast = FunctionKeywordNode(token_list[0], "print", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_keyword_printl(self):
+        """
+        Given a program like:
+        main() {
+            printl(3);
+        }
+        Expected to return an AST like:
+        (main[(printl(3))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
+            Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        three_node = NumberNode(token_list[6], "3")
+        printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
+        ast = StartNode(token_list[0], "main", [printl_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_print_use_invalid(self):
+        """
+        Given a progrma like:
+        main() {
+            print();
+        }
+        Expected KeywordMisuseException to be raised
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 10, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 11, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'print' at 5:1 in program. \n   Sample Usage: print(VALUE);: prints the VALUE to the screen")):
+            parser.parse()
+
+
+class TestParserMain:
+    """
+    All tests related to the main keyword.
+    """
 
     def test_keyword_main_with_literal(self):
         """
@@ -477,6 +563,12 @@ class TestKeywordParser:
         ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+
+class TestParserInt:
+    """
+    All tests related to the int keyword.
+    """
 
     def test_keyword_int_16_declaration(self):
         """
@@ -507,6 +599,81 @@ class TestKeywordParser:
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    def test_keyword_const_with_int(self):
+        """
+        main() {
+            const int16 x = 3;
+        }
+        Expected to return an AST like:
+        (main[(const(int16((x=3))))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "const", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 6, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 12, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 14, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 17, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        three_node = NumberNode(token_list[8], "3")
+        x_node = VariableNode(token_list[6], "x")
+        assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
+        variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        const_node = VariableKeywordNode(token_list[4], "const", variable_dec_node)
+        ast = StartNode(token_list[0], "main", [const_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_keyword_int_16_reference(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 3;
+            print(x);
+        }
+        Expected to return an AST like:
+        (main[(int16((x=3))), (print(x))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+        ]
+        three_node = NumberNode(token_list[7], "3")
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
+        variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
+        ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+
+class TestParserCharAt:
+    """
+    All tests related to the charAt keyword.
+    """
 
     def test_char_at_keyword(self):
         """
@@ -589,43 +756,72 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
-    def test_keyword_int_16_reference(self):
+    def test_char_at_invalid_syntax(self):
         """
         Given a program like:
         main() {
-            int16 x = 3;
-            print(x);
+            char x = charAt();
         }
-        Expected to return an AST like:
-        (main[(int16((x=3))), (print(x))])
+        Expected to get a KeywordMisuseException
         """
         token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
-            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
-            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
-            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
-            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 6, 2, "x", LOW),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
-            Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
         ]
-        three_node = NumberNode(token_list[7], "3")
-        x_node = VariableNode(token_list[5], "x")
-        assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
-        variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
-        x_ref_node = VariableReferenceNode(token_list[11], "x")
-        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
-        ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+            parser.parse()
+
+    # TODO(map) Fix this test by doing type checking on params. Write tests for
+    # all the other methods as well.
+    @pytest.mark.skip
+    def test_char_at_invalid_type_first_param(self):
+        """
+        Given a program like:
+        main() {
+            char x = charAt(12, 2);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 20, "12", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 22, ",", 0),
+            Token(NUM_TOKEN_TYPE, 1, 24, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+            parser.parse()
+
+
+
+class TestParserString:
+    """
+    All tests related to the string keyword
+    """
 
     def test_keyword_string_declaration(self):
         """
@@ -695,6 +891,12 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+
+class TestParserChar:
+    """
+    All tests related to the char keyword.
+    """
+
     def test_keyword_char_declaration(self):
         """
         Given a program like:
@@ -725,6 +927,48 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_update_char_with_invalid_type_fails(self):
+        """
+        Given a program like:
+        main() {
+            char x = 'h';
+            x = 12;
+        }
+        Expected to return an AST like:
+        (main[(char((x="hello")))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(CHARACTER_TOKEN_TYPE, 1, 14, "a", 0),
+            Token(EOL_TOKEN_TYPE, 1, 16, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 8, "12", 0),
+            Token(EOL_TOKEN_TYPE, 2, 10, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 9, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 10, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 11, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 12, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(InvalidAssignmentException, match="9:2 Cannot assign a char with a <class 'katana.katana.NumberNode'>."):
+            parser.parse()
+
+
+class TestParserBool:
+    """
+    All tests related to the bool keyword.
+    """
+
     def test_keyword_bool_declaration(self):
         """
         Given a program like:
@@ -754,6 +998,12 @@ class TestKeywordParser:
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+
+class TestParserIfElse:
+    """
+    All tests related to the if/else conditionals.
+    """
 
     def test_if_keyword(self):
         """
@@ -1033,6 +1283,12 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+
+class TestParserLoopKeyword:
+    """
+    All tests related to the various loop keywords.
+    """
+
     def test_loop_up_keyword(self):
         """
         Given a program like:
@@ -1157,33 +1413,74 @@ class TestKeywordParser:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
-    def test_keyword_printl(self):
-        """
-        Given a program like:
-        main() {
-            printl(3);
-        }
-        Expected to return an AST like:
-        (main[(printl(3))])
-        """
+    def test_basic_loop_up_invalid_syntax(self):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
-            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
-            Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
-            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
-        three_node = NumberNode(token_list[6], "3")
-        printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
-        ast = StartNode(token_list[0], "main", [printl_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopUp' at 5:1 in program. \n   Sample Usage: loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BODY each time")):
+            parser.parse()
+
+    def test_basic_loop_down_invalid_syntax(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopDown' at 5:1 in program. \n   Sample Usage: loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time")):
+            parser.parse()
+
+    def test_basic_loop_from_invalid_syntax(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 13, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 18, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'loopFrom' at 5:1 in program. \n   Sample Usage: loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time")):
+            parser.parse()
 
 
 class TestKeywordAdvanced:
@@ -1449,7 +1746,10 @@ class TestKeywordAdvanced:
         assert ast == parser.parse()
 
 
-class TestQuotationParser:
+class TestParserQuote:
+    """
+    All tests related to quotation mark.
+    """
 
     def test_quotation(self):
         """
@@ -1468,59 +1768,10 @@ class TestQuotationParser:
         assert ast == parser.parse()
 
 
-class TestMultiLineParser:
-
-    def test_simple_multi_line(self):
-        """
-        Given a program like:
-        ```
-        main() {
-            print(1+2);
-            print(3+4);
-        }
-        ```
-        Expected to return an AST like:
-        (main (print(1+2)), (print(3+4)))
-        """
-        token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", 3),
-            Token(NUM_TOKEN_TYPE, 1, 10, "1", 0),
-            Token(PLUS_TOKEN_TYPE, 1, 11, "+", 1),
-            Token(NUM_TOKEN_TYPE, 1, 12, "2", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
-            Token(EOL_TOKEN_TYPE, 1, 14, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 2, 4, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 2, 9, "(", 3),
-            Token(NUM_TOKEN_TYPE, 2, 10, "3", 0),
-            Token(PLUS_TOKEN_TYPE, 2, 11, "+", 1),
-            Token(NUM_TOKEN_TYPE, 2, 12, "4", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 13, ")", 3),
-            Token(EOL_TOKEN_TYPE, 2, 14, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
-        ]
-
-        one_node = NumberNode(token_list[6], "1")
-        two_node = NumberNode(token_list[8], "2")
-        first_plus = PlusMinusNode(token_list[7], "+", one_node, two_node)
-        first_print = FunctionKeywordNode(token_list[4], "print", [first_plus])
-
-        three_node = NumberNode(token_list[13], "3")
-        four_node = NumberNode(token_list[15], "4")
-        second_plus = PlusMinusNode(token_list[14], "+", three_node, four_node)
-        second_print = FunctionKeywordNode(token_list[11], "print", [second_plus])
-
-        ast = StartNode(token_list[0], "main", [first_print, second_print])
-        parser = Parser(token_list)
-        assert ast == parser.parse()
-
-
 class TestConcatenation:
+    """
+    Tests related all concatentaion.
+    """
 
     def test_successful_concatenate_char_to_string(self):
         """

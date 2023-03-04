@@ -185,7 +185,10 @@ class TestCompilerParenthesis:
             ]
 
 
-class TestCompilerKeywords:
+class TestCompilerPrint:
+    """
+    All tests related to the print keyword.
+    """
 
     def test_print_keyword(self):
         curr_dir = os.getcwd()
@@ -235,6 +238,37 @@ class TestCompilerKeywords:
                 "    call printl_string\n",
             ]
 
+    def test_assignment_keyword_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_assignment_used.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dq 3\n"
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Push var val onto stack\n",
+                "    push qword [number_1]\n",
+                "    ;; Keyword Func\n",
+                "    call print_num\n"
+            ]
+
+
+class TestCompilerMain:
+    """
+    All tests related to the main keyword. 
+    """
+
     def test_main_keyword(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_main.ktna") as f:
@@ -247,7 +281,13 @@ class TestCompilerKeywords:
                 "    call print_string\n",
             ]
 
-    def test_assignment_keyword(self):
+
+class TestCompilerInt:
+    """
+    All tests related to the int keyword
+    """
+
+    def test_declare_int_const(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_assignment.ktna") as f:
             compiler = get_compiler_class(f.readlines())
@@ -258,13 +298,202 @@ class TestCompilerKeywords:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    number_1 dq 3\n"
                     ]
                 }
             }
             assert assembly == [
+            ]
+
+    def test_const_int_being_declared(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_const_int.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dq 0\n"
+                    ]
+                }
+            }
+
+    def test_assign_new_value_int(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_assign_new_value_to_int.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    number_1 dq 0\n"
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Assign new int to int var\n",
+                "    mov word [number_1], 1\n",
+                "    ;; Push var val onto stack\n",
+                "    push qword [number_1]\n",
+                "    ;; Keyword Func\n",
+                "    call print_num\n"
+            ]
+
+    def test_set_var_to_another_var(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    push qword [number_2]\n",
+                "    pop rax\n",
+                "    ;; Assign var value to new var\n",
+                "    mov qword [number_1], rax\n"
+            ]
+
+
+class TestCompilerString:
+    """
+    All tests related to the string keyword.
+    """
+
+    def test_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 13\n",
+                "    push raw_string_1\n",
+            ]
+
+    def test_string_with_const_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_assignment.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 5,
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    string_1 db 'hello', 0\n",
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_non_const_string_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_not_const.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 14,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 dq 0\n",
+                    ]
+                }
+            }
+            assert compiler.initialize_vars_asm == [
+                "    push string_1\n",
+                "    push 14\n",
+                "    call allocate_memory\n",
+                "    mov rax, qword [string_1]\n",
+                "    mov byte [rax+0], 'H'\n",
+                "    mov byte [rax+1], 'e'\n",
+                "    mov byte [rax+2], 'l'\n",
+                "    mov byte [rax+3], 'l'\n",
+                "    mov byte [rax+4], 'o'\n",
+                "    mov byte [rax+5], ','\n",
+                "    mov byte [rax+6], ' '\n",
+                "    mov byte [rax+7], 'K'\n",
+                "    mov byte [rax+8], 'a'\n",
+                "    mov byte [rax+9], 't'\n",
+                "    mov byte [rax+10], 'a'\n",
+                "    mov byte [rax+11], 'n'\n",
+                "    mov byte [rax+12], 'a'\n",
+                "    mov byte [rax+13], '!'\n",
+                "    mov byte [rax+14], 0\n",
+            ]
+            assert assembly == [
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push qword [string_1]\n",
+                "    push qword [string_1]\n",
+                "    call string_length\n",
+                "    push qword [string_1]\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n"
+            ]
+
+    @pytest.mark.skip
+    def test_concatenate_char_to_string(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_concatenation.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 6,
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 db 'Hello', 0\n",
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push string_1\n",
+                "    push string_1\n",
+                "    call string_length\n",
+                "    push string_1\n",
+                "    ;; Push a raw char onto the stack\n",
+                "    mov bl, [raw_char_1]\n",
+                "    push bx\n",
+                "    ;; Concat string\n",
+                "    pop ax\n",
+                "    pop rbx\n",
+                "    ;; Remove string length from stack\n",
+                "    pop rcx\n",
+                "    ;; Append char to string\n",
+                "    mov byte [rbx+rcx], al\n",
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push string_1\n",
+                "    push string_1\n",
+                "    call string_length\n",
+                "    push string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
             ]
 
     @pytest.mark.skip
@@ -279,6 +508,7 @@ class TestCompilerKeywords:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "is_const": True,
                     "asm": [
                         "section .var_1 write\n",
                         "    string_1 db 'Hello', 0\n",
@@ -288,6 +518,12 @@ class TestCompilerKeywords:
             }
             assert assembly == [
             ]
+
+
+class TestCompilerChar:
+    """
+    All tests related to the char keyword.
+    """
 
     def test_assign_new_value_char(self):
         curr_dir = os.getcwd()
@@ -300,6 +536,7 @@ class TestCompilerKeywords:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
                         "    char_1 db 'a', 0\n"
@@ -323,76 +560,6 @@ class TestCompilerKeywords:
                 "    pop bx\n",
             ]
 
-    def test_assign_new_value_int(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_assign_new_value_to_int.ktna") as f:
-            compiler = get_compiler_class(f.readlines())
-            assembly = compiler.get_assembly()
-            assert compiler.variables == {
-                "x": {
-                    "section": "var_1",
-                    "var_name": "number_1",
-                    "var_type": "num",
-                    "var_len": 1,
-                    "asm": [
-                        "section .var_1 write\n",
-                        "    number_1 dq 0\n"
-                    ]
-                }
-            }
-            assert assembly == [
-                "    ;; Assign new int to int var\n",
-                "    mov word [number_1], 1\n",
-                "    ;; Push var val onto stack\n",
-                "    push qword [number_1]\n",
-                "    ;; Keyword Func\n",
-                "    call print_num\n"
-            ]
-
-    def test_assignment_keyword_used(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_assignment_used.ktna") as f:
-            compiler = get_compiler_class(f.readlines())
-            assembly = compiler.get_assembly()
-            assert compiler.variables == {
-                "x": {
-                    "section": "var_1",
-                    "var_name": "number_1",
-                    "var_type": "num",
-                    "var_len": 1,
-                    "asm": [
-                        "section .var_1 write\n",
-                        "    number_1 dq 3\n"
-                    ]
-                }
-            }
-            assert assembly == [
-                "    ;; Push var val onto stack\n",
-                "    push qword [number_1]\n",
-                "    ;; Keyword Func\n",
-                "    call print_num\n"
-            ]
-
-    def test_string_keyword_assignment(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_string_assignment.ktna") as f:
-            compiler = get_compiler_class(f.readlines())
-            assembly = compiler.get_assembly()
-            assert compiler.variables == {
-                "x": {
-                    "section": "var_1",
-                    "var_name": "string_1",
-                    "var_type": "string",
-                    "var_len": 5,
-                    "asm": [
-                        "section .var_1 write\n",
-                        "    string_1 db 'hello', 0\n",
-                    ]
-                }
-            }
-            assert assembly == [
-            ]
-
     def test_char_keyword_assignment(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_char_assignment.ktna") as f:
@@ -404,8 +571,9 @@ class TestCompilerKeywords:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    char_1 db 'h', 0\n",
                     ]
                 }
@@ -441,8 +609,9 @@ class TestCompilerKeywords:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    char_1 db 'A', 0\n",
                     ]
                 }
@@ -534,17 +703,11 @@ class TestCompilerKeywords:
                 "    end_1:\n",
             ]
 
-    def test_set_var_to_another_var(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
-            compiler = get_compiler_class(f.readlines())
-            assembly = compiler.get_assembly()
-            assert assembly == [
-                "    push qword [number_2]\n",
-                "    pop rax\n",
-                "    ;; Assign var value to new var\n",
-                "    mov qword [number_1], rax\n"
-            ]
+
+class TestCompilerBool:
+    """
+    All tests related to the bool keyword.
+    """
 
     def test_bool_false_keyword_assignment(self):
         curr_dir = os.getcwd()
@@ -557,8 +720,9 @@ class TestCompilerKeywords:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 5,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    bool_1 dq 0\n",
                     ]
                 }
@@ -577,8 +741,9 @@ class TestCompilerKeywords:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    bool_1 dq 1\n",
                     ]
                 }
@@ -597,8 +762,9 @@ class TestCompilerKeywords:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    bool_1 dq 1\n",
                     ]
                 }
@@ -630,6 +796,35 @@ class TestCompilerKeywords:
                 "    ;; End if/else block\n",
                 "    end_1:\n",
             ]
+
+    def test_bool_updated(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_bool_updated.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "bool_1",
+                    "var_type": "bool",
+                    "var_len": 4,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    bool_1 dq 1\n",
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Assign new bool to bool var\n",
+                "    mov word [bool_1], 0\n",
+            ]
+
+
+class TestCompilerIfElse:
+    """
+    All tests related the if/else conditional block.  
+    """
 
     def test_if_keyword(self):
         curr_dir = os.getcwd()
@@ -729,6 +924,12 @@ class TestCompilerKeywords:
                 "    ;; End if/else block\n",
                 "    end_1:\n"
             ]
+
+
+class TestCompilerLoop:
+    """
+    All tests related to the loop keywords.
+    """
 
     def test_loop_up(self):
         curr_dir = os.getcwd()
@@ -853,61 +1054,6 @@ class TestCompilerKeywords:
             ]
 
 
-class TestCompilerString:
-
-    def test_string(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_string.ktna") as f:
-            assembly = get_assembly_for_program(f.readlines())
-            assert assembly == [
-                "    ;; Push a raw string and length onto stack\n",
-                "    push 13\n",
-                "    push raw_string_1\n",
-            ]
-
-    def test_concatenate_char_to_string(self):
-        curr_dir = os.getcwd()
-        with open(curr_dir + "/tests/test_programs/sample_string_concatenation.ktna") as f:
-            compiler = get_compiler_class(f.readlines())
-            assembly = compiler.get_assembly()
-            assert compiler.variables == {
-                "x": {
-                    "section": "var_1",
-                    "var_name": "string_1",
-                    "var_type": "string",
-                    "var_len": 6,
-                    "asm": [
-                        "section .var_1 write\n",
-                        "    string_1 db 'Hello', 0\n",
-                    ]
-                }
-            }
-            assert assembly == [
-                "    ;; Calculate string length and push onto stack with string\n",
-                "    push string_1\n",
-                "    push string_1\n",
-                "    call string_length\n",
-                "    push string_1\n",
-                "    ;; Push a raw char onto the stack\n",
-                "    mov bl, [raw_char_1]\n",
-                "    push bx\n",
-                "    ;; Concat string\n",
-                "    pop ax\n",
-                "    pop rbx\n",
-                "    ;; Remove string length from stack\n",
-                "    pop rcx\n",
-                "    ;; Append char to string\n",
-                "    mov byte [rbx+rcx], al\n",
-                "    ;; Calculate string length and push onto stack with string\n",
-                "    push string_1\n",
-                "    push string_1\n",
-                "    call string_length\n",
-                "    push string_1\n",
-                "    ;; Keyword Func\n",
-                "    call print_string\n",
-            ]
-
-
 class TestCompilerMultipleVarDeclarations:
 
     def test_multiple_var_type_declarations(self):
@@ -921,8 +1067,9 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
-                        "section .var_1 write\n",
+                        "section .var_1\n",
                         "    number_1 dq 1\n",
                     ]
                 },
@@ -931,8 +1078,9 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 14,
+                    "is_const": True,
                     "asm": [
-                        "section .var_2 write\n",
+                        "section .var_2\n",
                         "    string_1 db 'Hello, Katana!', 0\n",
                     ]
                 },
@@ -941,8 +1089,9 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
-                        "section .var_3 write\n",
+                        "section .var_3\n",
                         "    char_1 db 'A', 0\n",
                     ]
                 }

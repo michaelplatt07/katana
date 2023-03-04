@@ -1,5 +1,5 @@
 main() {
-    int16 x = 1;
-    string y = "Hello, Katana!";
-    char z = 'A';
+    const int16 x = 1;
+    const string y = "Hello, Katana!";
+    const char z = 'A';
 }
