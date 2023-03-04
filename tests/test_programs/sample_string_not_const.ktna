@@ -1,0 +1,4 @@
+main() {
+    string x = "Hello, Katana!";
+    print(x);
+}

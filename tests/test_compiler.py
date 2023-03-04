@@ -249,6 +249,7 @@ class TestCompilerPrint:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    number_1 dq 3\n"
@@ -297,6 +298,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    number_1 dq 3\n"
@@ -317,6 +319,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    number_1 dq 0\n"
@@ -335,6 +338,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
                         "    number_1 dq 0\n"
@@ -379,7 +383,7 @@ class TestCompilerString:
                 "    push raw_string_1\n",
             ]
 
-    def test_string_keyword_assignment(self):
+    def test_string_with_const_keyword_assignment(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_string_assignment.ktna") as f:
             compiler = get_compiler_class(f.readlines())
@@ -390,6 +394,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    string_1 db 'hello', 0\n",
@@ -397,6 +402,55 @@ class TestCompilerString:
                 }
             }
             assert assembly == [
+            ]
+
+    def test_non_const_string_keyword_assignment(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_string_not_const.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 14,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 dq 0\n",
+                    ]
+                }
+            }
+            assert compiler.initialize_vars_asm == [
+                "    push string_1\n",
+                "    push 14\n",
+                "    call allocate_memory\n",
+                "    mov rax, qword [string_1]\n",
+                "    mov byte [rax+0], 'H'\n",
+                "    mov byte [rax+1], 'e'\n",
+                "    mov byte [rax+2], 'l'\n",
+                "    mov byte [rax+3], 'l'\n",
+                "    mov byte [rax+4], 'o'\n",
+                "    mov byte [rax+5], ','\n",
+                "    mov byte [rax+6], ' '\n",
+                "    mov byte [rax+7], 'K'\n",
+                "    mov byte [rax+8], 'a'\n",
+                "    mov byte [rax+9], 't'\n",
+                "    mov byte [rax+10], 'a'\n",
+                "    mov byte [rax+11], 'n'\n",
+                "    mov byte [rax+12], 'a'\n",
+                "    mov byte [rax+13], '!'\n",
+                "    mov byte [rax+14], 0\n",
+            ]
+            assert assembly == [
+                "    ;; Calculate string length and push onto stack with string\n",
+                "    push qword [string_1]\n",
+                "    push qword [string_1]\n",
+                "    call string_length\n",
+                "    push qword [string_1]\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n"
             ]
 
     @pytest.mark.skip
@@ -411,6 +465,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 6,
+                    "is_const": True,
                     "asm": [
                         "section .var_1 write\n",
                         "    string_1 db 'Hello', 0\n",
@@ -454,6 +509,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "is_const": True,
                     "asm": [
                         "section .var_1 write\n",
                         "    string_1 db 'Hello', 0\n",
@@ -481,6 +537,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
                         "    char_1 db 'a', 0\n"
@@ -515,6 +572,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    char_1 db 'h', 0\n",
@@ -552,6 +610,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    char_1 db 'A', 0\n",
@@ -662,6 +721,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 5,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    bool_1 dq 0\n",
@@ -682,6 +742,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    bool_1 dq 1\n",
@@ -702,6 +763,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    bool_1 dq 1\n",
@@ -747,6 +809,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
                         "    bool_1 dq 1\n",
@@ -1005,6 +1068,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    number_1 dq 1\n",
@@ -1015,6 +1079,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 14,
+                    "is_const": True,
                     "asm": [
                         "section .var_2\n",
                         "    string_1 db 'Hello, Katana!', 0\n",
@@ -1025,6 +1090,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "is_const": True,
                     "asm": [
                         "section .var_3\n",
                         "    char_1 db 'A', 0\n",

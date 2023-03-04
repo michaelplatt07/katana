@@ -9,6 +9,7 @@ hi KatanaBuiltinMethods ctermfg=130
 hi KatanaLogic ctermfg=140
 hi KatanaComment ctermfg=202
 hi KatanaString ctermfg=191
+hi KatanaVar ctermfg=191
 hi KatanaChar ctermfg=191
 
 " Main keyword
@@ -16,12 +17,16 @@ syn keyword katanaKeyword main
 highlight link katanaKeyword KatanaMain
 
 " Variable declaration keywords
-syn keyword katanaVarKeyword int16 bool char const string 
+syn keyword katanaVarKeyword int16 bool char const string
 highlight link katanaVarKeyword KatanaVarDecKeyword
 
 " Builtin function keywords
 syn keyword katanaBuiltinFuncKeyword charAt print printl
 highlight link katanaBuiltinFuncKeyword KatanaBuiltinMethods
+
+" Builtin constant var values
+syn keyword katanaBuiltinVarsKeyword true false
+highlight link katanaBuiltinVarsKeyword KatanaVar
 
 " Logic keywords
 syn keyword katanaLogicKeyword if else loopUp loopDown loopFrom

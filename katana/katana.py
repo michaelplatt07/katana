@@ -1845,8 +1845,12 @@ class Compiler:
                 "var_name": var_name,
                 "var_type": var_type,
                 "var_len": len(value_node.value),
+                "is_const": True,
                 "asm": asm
             }
+            if value_node.parent_node.parent_node.parent_node.value != "const":
+                self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
+                self.variables[node.value]["is_const"] = False
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
             node.visited = True
@@ -1870,10 +1874,11 @@ class Compiler:
                     return []
             # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
+            is_const = self.variables[node.value]["is_const"]
             if node.can_traverse_to_parent():
-                return self.get_push_var_onto_stack_asm(var_ref) + self.traverse_tree(node.parent_node)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_var_onto_stack_asm(var_ref)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -2278,28 +2283,28 @@ class Compiler:
 
     def allocate_memory(self):
         with open(self.output_path, 'a') as compiled_program:
-            compiled_program.write("section .text")
-            compiled_program.write("    allocate_memory:")
-            compiled_program.write("        ;; Save return address")
-            compiled_program.write("        pop rbx")
-            compiled_program.write("        ;; Get current break address")
-            compiled_program.write("        mov rdi, 0")
-            compiled_program.write("        mov rax, 12")
-            compiled_program.write("        syscall")
-            compiled_program.write("        ;; Move the current break to rdi")
-            compiled_program.write("        mov rdi, rax")
-            compiled_program.write("        ;; Get the number of bytes to allocate")
-            compiled_program.write("        pop rcx")
-            compiled_program.write("        ;; Attempt to allocate the bytes")
-            compiled_program.write("        add rdi, rcx")
-            compiled_program.write("        mov rax, 12")
-            compiled_program.write("        syscall")
-            compiled_program.write("        ;; Set memory address to variable")
-            compiled_program.write("        pop rcx")
-            compiled_program.write("        mov qword [rcx], rax")
-            compiled_program.write("        ;; Push return address onto stack")
-            compiled_program.write("        push rbx")
-            compiled_program.write("        ret")
+            compiled_program.write("section .text\n")
+            compiled_program.write("    allocate_memory:\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Get current break address\n")
+            compiled_program.write("        mov rdi, 0\n")
+            compiled_program.write("        mov rax, 12\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Move the current break to rdi\n")
+            compiled_program.write("        mov rdi, rax\n")
+            compiled_program.write("        ;; Get the number of bytes to allocate\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Attempt to allocate the bytes\n")
+            compiled_program.write("        add rdi, rcx\n")
+            compiled_program.write("        mov rax, 12\n")
+            compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Set memory address to variable\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        mov qword [rcx], rax\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rbx\n")
+            compiled_program.write("        ret\n")
 
     def create_global_start(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2312,14 +2317,22 @@ class Compiler:
             f"    push {num}\n"
             ]
 
-    def get_push_var_onto_stack_asm(self, val):
-        if "string" in val:
+    def get_push_var_onto_stack_asm(self, val, is_const):
+        if "string" in val and is_const:
             return [
                 "    ;; Calculate string length and push onto stack with string\n",
                 f"    push {val}\n",
                 f"    push {val}\n",
                 "    call string_length\n",
                 f"    push {val}\n"
+            ]
+        if "string" in val and not is_const:
+            return [
+                "    ;; Calculate string length and push onto stack with string\n",
+                f"    push qword [{val}]\n",
+                f"    push qword [{val}]\n",
+                "    call string_length\n",
+                f"    push qword [{val}]\n"
             ]
         elif "char" in val:
             return [
@@ -2609,6 +2622,7 @@ class Compiler:
             f"    len_{string_count} equ $ - string_{string_count}\n"
         ]
 
+    # TODO(map) Probably need to pass the is_const for the raw string here too.
     def get_push_string_asm(self, string_count, string_length):
         return [
             "    ;; Push a raw string and length onto stack\n",
@@ -2671,16 +2685,27 @@ class Compiler:
             var_decl = [
                 f"    char_{type_count} db -1\n",
             ]
-        # elif var_type == StringNode:
-        #     var_decl = [
-        #         f"    string_{type_count} db '{value}', 0\n",
-        #     ]
+        elif var_type == StringNode:
+            var_decl = [
+                f"    string_{type_count} dq 0\n",
+            ]
         else:
             assert False, f"Cannot declare var of type {var_type} that is mutable."
         return [
             f"section .var_{var_count} write\n",
         ] + var_decl
 
+    def get_initialize_var_asm(self, var_name, var_len, var_val):
+        asm = [
+           f"    push {var_name}\n",
+           f"    push {var_len}\n",
+           "    call allocate_memory\n",
+           f"    mov rax, qword [{var_name}]\n",
+        ]
+        for idx, char in enumerate(var_val):
+            asm.append(f"    mov byte [rax+{idx}], '{char}'\n")
+        asm.append(f"    mov byte [rax+{var_len}], 0\n")
+        return asm
 
     def get_assign_char_value_to_var_asm(self, var_name):
         return [
