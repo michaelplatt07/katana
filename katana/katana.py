@@ -1849,7 +1849,8 @@ class Compiler:
                 "asm": asm
             }
             if value_node.parent_node.parent_node.parent_node.value != "const":
-                self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
+                if type(value_node) == StringNode:
+                    self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
                 self.variables[node.value]["is_const"] = False
             return self.traverse_tree(node.parent_node)
         elif isinstance(node, VariableReferenceNode):
