@@ -36,7 +36,6 @@ from katana.katana import (
     BadFormattedLogicBlock,
     InvalidCharException,
     InvalidTokenException,
-    InvalidTypeDeclarationException,
     InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
@@ -1051,6 +1050,34 @@ class TestLexerQuotationCharacter:
         lexer = Lexer(program)
         with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
             lexer.lex()
+
+
+class TestLexerUpdateCharKeyword:
+    """
+    All tests related to updating a char through the updateChar method.
+    """
+    def test_update_char_can_be_parsed(self):
+        program = Program(["main() {\n", "string x = \"Hello\";\n", "updateChar(x, 0, 'Q');\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "Hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "updateChar", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 2, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 11, 2, "x", LOW),
+            Token(COMMA_TOKEN_TYPE, 12, 2, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 14, 2, "0", LOW),
+            Token(COMMA_TOKEN_TYPE, 15, 2, ",", LOW),
+            Token(CHARACTER_TOKEN_TYPE, 18, 2, "Q", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 20, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 21, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestLexerStringConcatenation:

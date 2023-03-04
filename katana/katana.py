@@ -90,7 +90,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
 )
-FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt")
+FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("const", "int16", "string", "bool", "char")
