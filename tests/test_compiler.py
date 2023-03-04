@@ -354,7 +354,6 @@ class TestCompilerInt:
                 "    call print_num\n"
             ]
 
-    @pytest.mark.skip
     def test_set_var_to_another_var(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_set_var_to_another.ktna") as f:
