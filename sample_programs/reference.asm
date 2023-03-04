@@ -622,22 +622,174 @@
 ;         syscall
 
 ;; Appending string
+; section .text
+;     global _start
+
+; section .string_1 write
+;     string_1 db 'Hello', 5
+;     len equ $ - string_1
+
+; section .text
+;     _start:
+;         mov al, '!'
+;         mov byte [string_1+5], al
+;         mov rsi, string_1
+;         mov rax, 1
+;         mov rdi, 1
+;         mov rdx, len
+;         syscall
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+;; Calculate string length
+; section .text
+;     global _start
+
+; section .string_1 write
+;     string_1 db 'Hello'
+
+; section .text
+;     print_num:
+;         ;; Print function
+;         ;; Save return address
+;         pop rbx
+;         ;; Get variable value
+;         pop rax
+;         add rax, 48
+;         push rax
+;         mov rsi, rsp
+;         mov rdx, 4
+;         mov rax, 1
+;         mov rdi, 1
+;         syscall
+;         ;; Remove value at top of stack.
+;         pop rax
+;         ;; Push return address back.
+;         push rbx
+;         ret
+
+; section .text
+;     string_length:
+;         ;; Save return address
+;         pop rbx
+;         ;; Get string to loop over
+;         pop rax
+;         pop rcx
+;         loop_str_len:
+;             cmp byte[rax], 0
+;             jne loop_again
+;             je end
+;         loop_again:
+;             inc rax
+;             jmp loop_str_len
+;         end:
+;             ;; Calculate actual difference in length
+;             sub rax, rcx
+;             push rax
+;             ;; Push return address onto stack
+;             push rbx
+;             ret
+
+; section .text
+;     _start:
+;         push string_1
+;         push string_1
+;         call string_length
+;         call print_num
+;         mov rax, 60
+;         mov rdi, 0
+;         syscall
+
+
+;; Dynamic heap allocation.
 section .text
     global _start
 
-section .string_1 write
-    string_1 db 'Hello', 5
-    len equ $ - string_1
+section .text
+    string_length:
+        ;; Save return address
+        pop rbx
+        ;; Get string to loop over
+        pop rax
+        pop rcx
+        loop_str_len:
+            cmp byte[rax], 0
+            jne loop_again
+            je end
+        loop_again:
+            inc rax
+            jmp loop_str_len
+        end:
+            ;; Calculate actual difference in length
+            sub rax, rcx
+            push rax
+            ;; Push return address onto stack
+            push rbx
+            ret
+
+section .text
+    printl_string:
+        ;; Print function
+        ;; Save return address
+        pop rbx
+        ;; Get variable value
+        pop rax
+        ;; Get variable length
+        pop rdx
+        mov rsi, rax
+        mov rax, 1
+        mov rdi, 1
+        syscall
+        ;; Add linefeed.
+        push 10
+        mov rsi, rsp
+        mov rdx, 4
+        mov rax, 1
+        mov rdi, 1
+        syscall
+        ;; Remove value at top of stack.
+        pop rax
+        ;; Add return carriage.
+        push 13
+        mov rsi, rsp
+        mov rdx, 4
+        mov rax, 1
+        mov rdi, 1
+        syscall
+        ;; Remove value at top of stack.
+        pop rax
+        ;; Push return address back.
+        push rbx
+        ret
 
 section .text
     _start:
-        mov al, '!'
-        mov byte [string_1+5], al
-        mov rsi, string_1
-        mov rax, 1
-        mov rdi, 1
-        mov rdx, len
+        ;; Get current break address
+        mov rdi, 0
+        mov rax, 12
         syscall
+        mov rdi, rax
+
+        ;; Attempt to allocate 6 bytes for string
+        add rdi, 6
+        mov rax, 12
+        syscall
+
+        ; push rax ; Pushes the address of the memory onto the stack
+        ;; Try declaring a string
+        mov byte [rax], 'H'
+        mov byte [rax+1], 'e'
+        mov byte [rax+2], 'l'
+        mov byte [rax+3], 'l'
+        mov byte [rax+4], 'o'
+        mov byte [rax+5], '!'
+        mov byte [rax+6], 0
+        push 6
+        push rax
+        call printl_string
+        ;; Exit
         mov rax, 60
         mov rdi, 0
         syscall
