@@ -1787,6 +1787,8 @@ class Compiler:
                         keyword_call_asm = self.get_printl_num_keyword_asm()
             elif node.value == "charAt":
                 keyword_call_asm = self.get_char_at_keyword_asm()
+            elif node.value == "updateChar":
+                keyword_call_asm = self.get_update_char_asm()
             else:
                 # We don't know how to parse this keyword.
                 assert False, f"Unable to parse Function Keyword Node {node}"
@@ -1907,10 +1909,11 @@ class Compiler:
             # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
             is_const = self.variables[node.value]["is_const"]
+            need_str_len = type(node.parent_node) == FunctionKeywordNode and node.parent_node.value in ["print", "printl"]
             if node.can_traverse_to_parent():
-                return self.get_push_var_onto_stack_asm(var_ref, is_const) + self.traverse_tree(node.parent_node)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const, need_str_len) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_var_onto_stack_asm(var_ref, is_const)
+                return self.get_push_var_onto_stack_asm(var_ref, is_const, need_str_len)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -2096,6 +2099,7 @@ class Compiler:
         self.create_printl_num_function()
         self.create_printl_char_function()
         self.create_char_at_function()
+        self.create_update_char_function()
         self.create_string_length()
         self.allocate_memory()
 
@@ -2276,12 +2280,31 @@ class Compiler:
             compiled_program.write("        pop rbx\n")
             compiled_program.write("        ;; Get string value\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        ;; Pop string length\n")
-            compiled_program.write("        pop rdx\n")
             compiled_program.write("        ;; Get byte of string at index\n")
             compiled_program.write("        mov dl, [rax + rbx]\n")
             compiled_program.write("        ;; Push byte back onto stack\n")
             compiled_program.write("        push dx\n")
+            compiled_program.write("        ;; Push return address onto stack\n")
+            compiled_program.write("        push rcx\n")
+            compiled_program.write("        ret\n")
+
+    def create_update_char_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("    update_char:\n")
+            compiled_program.write("        ;; updateChar function\n")
+            compiled_program.write("        ;; Save return address\n")
+            compiled_program.write("        pop rcx\n")
+            compiled_program.write("        ;; Get the new char\n")
+            compiled_program.write("        pop dx\n")
+            compiled_program.write("        ;; Get the index to replace\n")
+            compiled_program.write("        pop rbx\n")
+            compiled_program.write("        ;; Load up string\n")
+            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Move to rdi to replace\n")
+            compiled_program.write("        mov rdi, rax\n")
+            compiled_program.write("        ;; Update with the char\n")
+            compiled_program.write("        mov byte [rdi+rbx], dl\n")
             compiled_program.write("        ;; Push return address onto stack\n")
             compiled_program.write("        push rcx\n")
             compiled_program.write("        ret\n")
@@ -2349,23 +2372,35 @@ class Compiler:
             f"    push {num}\n"
             ]
 
-    def get_push_var_onto_stack_asm(self, val, is_const):
+    def get_push_var_onto_stack_asm(self, val, is_const, need_str_len):
         if "string" in val and is_const:
-            return [
-                "    ;; Calculate string length and push onto stack with string\n",
-                f"    push {val}\n",
-                f"    push {val}\n",
-                "    call string_length\n",
-                f"    push {val}\n"
-            ]
+            if need_str_len:
+                return [
+                    "    ;; Calculate const string length and push onto stack with string\n",
+                    f"    push {val}\n",
+                    f"    push {val}\n",
+                    "    call string_length\n",
+                    f"    push {val}\n"
+                ]
+            else:
+                return [
+                    "    ;; Push const string onto stack without length\n",
+                    f"    push {val}\n"
+                ]
         if "string" in val and not is_const:
-            return [
-                "    ;; Calculate string length and push onto stack with string\n",
-                f"    push qword [{val}]\n",
-                f"    push qword [{val}]\n",
-                "    call string_length\n",
-                f"    push qword [{val}]\n"
-            ]
+            if need_str_len:
+                return [
+                    "    ;; Calculate variable string length and push onto stack with string\n",
+                    f"    push qword [{val}]\n",
+                    f"    push qword [{val}]\n",
+                    "    call string_length\n",
+                    f"    push qword [{val}]\n"
+                ]
+            else:
+                return [
+                    "    ;; Push variable string onto stack without length\n",
+                    f"    push qword [{val}]\n"
+                ]
         elif "char" in val:
             return [
                 "    ;; Push char var onto stack\n",
@@ -2474,6 +2509,12 @@ class Compiler:
         return [
             "    ;; Keyword Func\n",
             "    call char_at\n"
+        ]
+
+    def get_update_char_asm(self):
+        return [
+            "    ;; Keyword Func\n",
+            "    call update_char\n"
         ]
 
     def get_push_loop_start_val_asm(self, loop_start):

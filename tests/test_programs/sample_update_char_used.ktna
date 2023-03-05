@@ -1,0 +1,4 @@
+main() {
+    string x = "Hello";
+    updateChar(x, 0, 'Q');
+}
