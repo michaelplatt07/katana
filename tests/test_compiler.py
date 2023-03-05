@@ -443,7 +443,7 @@ class TestCompilerString:
                 "    mov byte [rax+14], 0\n",
             ]
             assert assembly == [
-                "    ;; Calculate string length and push onto stack with string\n",
+                "    ;; Calculate variable string length and push onto stack with string\n",
                 "    push qword [string_1]\n",
                 "    push qword [string_1]\n",
                 "    call string_length\n",
@@ -715,6 +715,7 @@ class TestCompilerUpdateChar:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
             assert assembly == [
+                "    ;; Push variable string onto stack without length\n",
                 "    push qword [string_1]\n",
                 "    ;; Push number onto stack\n",
                 "    push 0\n",
