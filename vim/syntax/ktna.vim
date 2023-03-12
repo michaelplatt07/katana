@@ -21,7 +21,7 @@ syn keyword katanaVarKeyword int16 bool char const string
 highlight link katanaVarKeyword KatanaVarDecKeyword
 
 " Builtin function keywords
-syn keyword katanaBuiltinFuncKeyword charAt print printl
+syn keyword katanaBuiltinFuncKeyword charAt print printl copyStr
 highlight link katanaBuiltinFuncKeyword KatanaBuiltinMethods
 
 " Builtin constant var values

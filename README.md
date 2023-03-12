@@ -31,6 +31,21 @@ main() {
 }
 ```
 
+## Keywords and Types
+Katana is a strongly typed language where all variables must be declared with a type for it to be used. An example of declaring a variable would look like:
+```
+const string x = "Hello, Katana!";
+```
+Note that in the example above the keyword `const` is prepended to the variable declaration. This implies that the string `x` cannot be modified anywhere in the code. If you wanted to use a string that could be modified you would exclude the const like so:
+```
+string x = "Hello, Katana!";
+```
+Below is an exhaustive list of the types in Katana:
+* int_16
+* string
+* bool
+* char
+
 ## Basic Arithmetic
 Katana supports all the usual mathematic operations.
 
@@ -121,6 +136,21 @@ Katana can access characters of a string by index:
 ```
 char x = charAt("Hello, Katana!", 3); // x will be 'l'
 ```
+
+### copyStr
+Katana provides a method to copy the contents of one string to another. Simply doing the following:
+```
+string x = "Hello";
+string y = "olleH";
+x = y;
+```
+will result in the pointer to the string `x` being updated to the pointer for string `y`. Instead, use `copyStr` to copy the contents of a string like so:
+```
+string x = "Hello";
+string y = "olleH";
+copyStr(y, x);
+```
+This will copy the individual bytes while still maintaining the pointer to `y` and `x` separately.
 
 ## Keywords
 ### if/else
