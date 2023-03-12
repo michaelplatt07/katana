@@ -1820,6 +1820,10 @@ class Compiler:
                 keyword_call_asm = self.get_char_at_keyword_asm()
             elif node.value == "updateChar":
                 keyword_call_asm = self.get_update_char_asm()
+            elif node.value == "copyStr":
+                # NOTE(map) This will not work with strings with different lengths.
+                # Need to implement memory management for this to work.
+                keyword_call_asm = self.get_copy_str_asm(self.variables[node.arg_nodes[0].value]["var_len"])
             else:
                 # We don't know how to parse this keyword.
                 assert False, f"Unable to parse Function Keyword Node {node}"
@@ -2548,6 +2552,18 @@ class Compiler:
             "    call update_char\n"
         ]
 
+    def get_copy_str_asm(self, var_len):
+        asm = [
+            "    pop rax\n",
+            "    pop rbx\n",
+        ]
+        for i in range(var_len):
+            asm.extend([
+                f"    mov byte cl, [rbx+{i}]\n",
+                f"    mov byte [rax+{i}], cl\n"
+            ])
+        return asm
+
     def get_push_loop_start_val_asm(self, loop_start):
         return [
             "    ;; Push loop start and end on stack\n",
@@ -2802,7 +2818,7 @@ class Compiler:
     def get_initialize_var_asm(self, var_name, var_len, var_val):
         asm = [
            f"    push {var_name}\n",
-           f"    push {var_len}\n",
+           f"    push {var_len+1}\n",
            "    call allocate_memory\n",
            f"    mov rax, qword [{var_name}]\n",
         ]
