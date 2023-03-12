@@ -100,6 +100,7 @@ VARIABLE_KEYWORDS = ("const", "int16", "string", "bool", "char")
 # Method Signatures
 ###################
 CHAR_AT_SIGNATURE = "charAt(STRING, INDEX): extracts the character at INDEX from the STRING"
+COPY_STR_SIGNATURE = "copyStr(STRING_1, STRING_2): copies the contents of STRING_1 into STRING_2"
 UPDATE_CHAR_SIGNATURE = "udpateChar(STRING, INDEX, NEW_CHAR);: update the character of the STRING at INDEX to the NEW_CHAR"
 MAIN_SIGNATURE = "main() { BODY; };: Executes the BODY of code within the main method."
 PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
@@ -1386,6 +1387,7 @@ class Parser:
             "printl": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
             "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
             "updateChar": (self.handle_update_char_keyword, FunctionKeywordNode, "arg_nodes"),
+            "copyStr": (self.handle_copy_str_keyword, FunctionKeywordNode, "arg_nodes"),
             "if": (self.handle_parenthesis, LogicKeywordNode, "child_node"),
             "loopUp": (self.handle_parenthesis, LoopUpKeywordNode, "child_node"),
             "loopDown": (self.handle_parenthesis, LoopDownKeywordNode, "child_node"),
@@ -1529,6 +1531,35 @@ class Parser:
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
             raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+
+        # Parse the inner parts of the print function
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+        return arg_list
+
+    def handle_copy_str_keyword(self, keyword_token):
+        """Sigautre is `copyStr(STRING, STRING)`"""
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, COPY_STR_SIGNATURE)
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Case where `copyStr` was called with no parameters.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, COPY_STR_SIGNATURE)
 
         # Parse the inner parts of the print function
         arg_list = []

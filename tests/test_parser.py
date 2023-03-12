@@ -897,6 +897,88 @@ class TestUpdateChar:
             parser.parse()
 
 
+class TestParserCopyString:
+    """
+    All tests related to the `copyStr` function.
+    """
+
+    def test_copy_str(self):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            string y = "Katana";
+            copyStr(x, y);
+        }
+        Expected to return an AST like:
+        (main[(string(x="Hello")), (string(y="Katana")), (copyStr(x,y)])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "Hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 2, "y", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 2, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 2, "Katana", LOW),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "copyStr", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 7, 3, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 8, 3, "x", LOW),
+            Token(COMMA_TOKEN_TYPE, 9, 3, ",", LOW),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 11, 3, "y", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 3, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        hello_node = StringNode(token_list[7], "Hello")
+        x_node = VariableNode(token_list[5], "x")
+        x_assign_node = AssignmentNode(token_list[6], "=", x_node, hello_node)
+        hello_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        katana_node = StringNode(token_list[12], "Katana")
+        y_node = VariableNode(token_list[10], "y")
+        y_assign_node = AssignmentNode(token_list[11], "=", y_node, katana_node)
+        katana_declare_node = VariableKeywordNode(token_list[9], "string", y_assign_node)
+        x_ref_node = VariableReferenceNode(token_list[16], "x")
+        y_ref_node = VariableReferenceNode(token_list[18], "y")
+        copy_str_node = FunctionKeywordNode(token_list[14], "copyStr", [x_ref_node, y_ref_node])
+        ast = StartNode(token_list[0], "main", [hello_declare_node, katana_declare_node, copy_str_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_copy_str_function_invalid_syntax(self):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            copyStr();
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "copyStr", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 7, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 3, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'copyStr' at 4:0 in program. \n   Sample Usage: copyStr(STRING_1, STRING_2): copies the contents of STRING_1 into STRING_2")):
+            parser.parse()
+
+
 class TestParserString:
     """
     All tests related to the string keyword
