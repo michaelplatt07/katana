@@ -423,7 +423,7 @@ class TestCompilerString:
             }
             assert compiler.initialize_vars_asm == [
                 "    push string_1\n",
-                "    push 14\n",
+                "    push 15\n",
                 "    call allocate_memory\n",
                 "    mov rax, qword [string_1]\n",
                 "    mov byte [rax+0], 'H'\n",
@@ -724,6 +724,60 @@ class TestCompilerUpdateChar:
                 "    push bx\n",
                 "    ;; Keyword Func\n",
                 "    call update_char\n",
+            ]
+
+
+class TestCompilerCopyStr:
+    """
+    All tests related to the copyStr function.
+    """
+
+    def test_copy_str_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_copy_str_used.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section":  "var_1",
+                    "var_name": "string_1",
+                    "var_type": "string",
+                    "var_len": 5,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    string_1 dq 0\n"
+                    ]
+                },
+                "y": {
+                    "section":  "var_2",
+                    "var_name": "string_2",
+                    "var_type": "string",
+                    "var_len": 5,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_2 write\n",
+                        "    string_2 dq 0\n"
+                    ]
+                }
+            }
+            assert assembly == [
+                "    ;; Push variable string onto stack without length\n",
+                "    push qword [string_2]\n",
+                "    ;; Push variable string onto stack without length\n",
+                "    push qword [string_1]\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    mov byte cl, [rbx+0]\n",
+                "    mov byte [rax+0], cl\n",
+                "    mov byte cl, [rbx+1]\n",
+                "    mov byte [rax+1], cl\n",
+                "    mov byte cl, [rbx+2]\n",
+                "    mov byte [rax+2], cl\n",
+                "    mov byte cl, [rbx+3]\n",
+                "    mov byte [rax+3], cl\n",
+                "    mov byte cl, [rbx+4]\n",
+                "    mov byte [rax+4], cl\n",
             ]
 
 

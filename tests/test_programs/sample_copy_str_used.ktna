@@ -1,0 +1,5 @@
+main() {
+    string x = "Hello";
+    string y = "olleH";
+    copyStr(y, x);
+}
