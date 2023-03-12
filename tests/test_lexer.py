@@ -1080,6 +1080,38 @@ class TestLexerUpdateCharKeyword:
         assert token_list == lexer.lex()
 
 
+class TestCopyString:
+    """
+    All tests related to using the copyStr method.
+    """
+
+    def test_keyword_str_copy(self):
+        program = Program(["main() {\n", "string x = \"Hello\";\n", "string y = \"Katana\";\n", "copyStr(x, y);\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 1, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 1, "Hello", LOW),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "string", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 7, 2, "y", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 9, 2, "=", HIGH),
+            Token(STRING_TOKEN_TYPE, 11, 2, "Katana", LOW),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "copyStr", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 7, 3, "(", VERY_HIGH),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 8, 3, "x", LOW),
+            Token(COMMA_TOKEN_TYPE, 9, 3, ",", LOW),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 11, 3, "y", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 3, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+
 class TestLexerStringConcatenation:
     """
     All tests related to conatenating strings.
