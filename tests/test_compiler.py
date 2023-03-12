@@ -443,7 +443,7 @@ class TestCompilerString:
                 "    mov byte [rax+14], 0\n",
             ]
             assert assembly == [
-                "    ;; Calculate string length and push onto stack with string\n",
+                "    ;; Calculate variable string length and push onto stack with string\n",
                 "    push qword [string_1]\n",
                 "    push qword [string_1]\n",
                 "    call string_length\n",
@@ -701,6 +701,29 @@ class TestCompilerChar:
                 "    not_equal_1:\n",
                 "    ;; End if/else block\n",
                 "    end_1:\n",
+            ]
+
+
+class TestCompilerUpdateChar:
+    """
+    All tests related to the updateChar function.
+    """
+
+    def test_update_char_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_update_char_used.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push variable string onto stack without length\n",
+                "    push qword [string_1]\n",
+                "    ;; Push number onto stack\n",
+                "    push 0\n",
+                "    ;; Push a raw char onto the stack\n",
+                "    mov bl, [raw_char_1]\n",
+                "    push bx\n",
+                "    ;; Keyword Func\n",
+                "    call update_char\n",
             ]
 
 

@@ -817,6 +817,85 @@ class TestParserCharAt:
             parser.parse()
 
 
+class TestUpdateChar:
+    """
+    All tests related to the udpateChar method
+    """
+
+    def test_update_char_function(self):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            updateChar(x, 0, 'Q');
+        }
+        Expected to return an AST like:
+        (main[(string(x="Hello, Katana!")), (updateChar(x,0,'Q'))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "updateChar", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 15, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 16, ",", 0),
+            Token(NUM_TOKEN_TYPE, 2, 18, "0", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 19, ",", 0),
+            Token(CHARACTER_TOKEN_TYPE, 2, 22, "Q", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 24, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 25, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+        ]
+        string_node = StringNode(token_list[7], "Hello")
+        x_node = VariableNode(token_list[5], "x")
+        x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
+        string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        zero_node = NumberNode(token_list[13], "0")
+        q_char_node = CharNode(token_list[15], "Q")
+        update_char_node = FunctionKeywordNode(token_list[9], "updateChar", [x_ref_node, zero_node, q_char_node])
+        ast = StartNode(token_list[0], "main", [string_declare_node, update_char_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_update_char_function_invalid_syntax(self):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            updateChar();
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "updateChar", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 15, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 16, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'updateChar' at 5:2 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+            parser.parse()
+
 
 class TestParserString:
     """
