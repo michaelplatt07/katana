@@ -28,7 +28,7 @@ jobs:
           pytest tests
       - name: Integration tests
         run: |
-          echo "TEST_RESULTS=python tests/test_programs.py" >> $GITHUB_OUTPUT
+          echo "TEST_RESULTS=$(python tests/test_programs.py)" >> $GITHUB_OUTPUT
         id: integration_tests
       - name: Check integration results
         # if: ${{ steps.integration_tests.outputs.TEST_RESULTS }} != ''
