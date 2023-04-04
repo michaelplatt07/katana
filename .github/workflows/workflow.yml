@@ -27,5 +27,11 @@ jobs:
         run: |
           pytest tests
       - name: Integration tests
+        id: integration_tests
         run: |
           python tests/test_programs.py
+      - name: Check integration results
+        if: ${{ integration_test }} != ''
+        run: |
+          echo "${{integration_tests}}"
+          exit 1
