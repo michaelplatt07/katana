@@ -27,11 +27,11 @@ jobs:
         run: |
           pytest tests
       - name: Integration tests
+        run: |
+          python tests/test_programs.py >> $GITHUB_OUTPUT
         id: integration_tests
-        run: |
-          python tests/test_programs.py
       - name: Check integration results
-        if: ${{ integration_test }} != ''
+        if: ${{ steps.integration_tests.outputs.* }} != ''
         run: |
-          echo "${{integration_tests}}"
+          echo "${{ steps.integration_tests.outputs.* }}"
           exit 1
