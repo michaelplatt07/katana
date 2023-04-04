@@ -1,1 +1,3 @@
-print("Hello, Katana!"); // Will print "Hello, Katana!" to the console.
+main() {
+    print("Hello, Katana!");
+}

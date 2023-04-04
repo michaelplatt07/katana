@@ -1596,6 +1596,7 @@ class Parser:
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
         assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
+        # TODO(map) Need to handle assignment of mathematical experssions.
         if keyword_token.value == "int16" and not child_node.right_side.value.isnumeric():
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
         elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
@@ -1802,6 +1803,7 @@ class Compiler:
                         keyword_call_asm = self.get_print_char_keyword_asm()
                     elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
                         keyword_call_asm = self.get_print_num_keyword_asm()
+                # TODO(map) Be able to print a function here.
             elif node.value == "printl":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_printl_string_keyword_asm()
@@ -2742,7 +2744,6 @@ class Compiler:
             f"    len_{string_count} equ $ - string_{string_count}\n"
         ]
 
-    # TODO(map) Probably need to pass the is_const for the raw string here too.
     def get_push_string_asm(self, string_count, string_length):
         return [
             "    ;; Push a raw string and length onto stack\n",
