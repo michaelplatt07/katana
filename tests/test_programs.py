@@ -57,6 +57,7 @@ if __name__ == "__main__":
             build_expected_outputs("./sample_programs")
         compare_expected_output_to_program_output(
             "./expected_outputs", "./sample_programs")
+        print("Passed")
     except Exception as ex:
         print(ex)
     finally:
