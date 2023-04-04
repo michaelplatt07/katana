@@ -25,3 +25,6 @@ jobs:
       - name: Test with pytest
         run: |
           pytest tests
+      - name: Integration tests
+        run: |
+          python tests/test_programs.py
