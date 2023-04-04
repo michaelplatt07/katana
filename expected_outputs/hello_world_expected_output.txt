@@ -1,1 +1,1 @@
-1Hello, Katana!
+Hello, Katana!
