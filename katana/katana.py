@@ -1596,8 +1596,7 @@ class Parser:
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
         assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
-        # TODO(map) Need to handle assignment of mathematical experssions.
-        if keyword_token.value == "int16" and not child_node.right_side.value.isnumeric():
+        if keyword_token.value == "int16" and not (child_node.right_side.value.isnumeric() or type(child_node.right_side) == PlusMinusNode):
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
         elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
@@ -1796,6 +1795,9 @@ class Compiler:
                     keyword_call_asm = self.get_print_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_print_char_keyword_asm()
+                elif type(node.arg_nodes[0]) == PlusMinusNode:
+                    # TODO(map) https://trello.com/c/wRuStWqL/11-update-the-print-node-logic-for-the-plusminusnode-to-handle-addition-of-things-other-than-strings
+                    keyword_call_asm = self.get_print_num_keyword_asm()
                 elif self.variables[node.arg_nodes[0].value]:
                     if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
                         keyword_call_asm = self.get_print_string_keyword_asm()
@@ -1803,7 +1805,8 @@ class Compiler:
                         keyword_call_asm = self.get_print_char_keyword_asm()
                     elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
                         keyword_call_asm = self.get_print_num_keyword_asm()
-                # TODO(map) Be able to print a function here.
+                else:
+                    assert False, f"Unsure how to handle the arg {node.arg_nodes[0].value}"
             elif node.value == "printl":
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_printl_string_keyword_asm()
@@ -1881,35 +1884,52 @@ class Compiler:
                 var_name = f"string_{self.string_count}"
                 var_type = "string"
                 type_count = self.string_count
+                var_val = value_node.value
             elif type(value_node) == CharNode:
                 self.char_count += 1
                 var_name = f"char_{self.char_count}"
                 var_type = "char"
                 type_count = self.char_count
+                var_val = value_node.value
             elif type(value_node) == NumberNode:
                 self.num_count += 1
                 var_name = f"number_{self.num_count}"
                 var_type = "num"
                 type_count = self.num_count
+                var_val = value_node.value
+            elif type(value_node) == PlusMinusNode:
+                # TODO(map) This does not currently support nested values
+                self.num_count += 1
+                var_name = f"number_{self.num_count}"
+                var_type = "num"
+                type_count = self.num_count
+                if value_node.value == "+":
+                    var_val = int(value_node.left_side.value) + int(value_node.right_side.value)
+                elif value_node.value == "-":
+                    var_val = int(value_node.left_side.value) - int(value_node.right_side.value)
+                else:
+                    assert False, f"Got a {type(value_node)} with value = {value_node.value}"
             elif type(value_node) == BooleanNode:
                 self.bool_count += 1
                 var_name = f"bool_{self.bool_count}"
                 var_type = "bool"
                 type_count = self.bool_count
+                var_val = value_node.value
             elif value_node.value == "charAt" and type(value_node) == FunctionKeywordNode:
                 self.char_count += 1
                 var_name = f"char_{self.char_count}"
                 type_count = self.char_count
                 var_type = "char"
+                var_val = value_node.value
                 self.initialize_vars_asm.extend(self.traverse_tree(value_node))
                 self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
             if node.parent_node.parent_node.parent_node.value == "const":
-                asm = self.get_const_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
+                asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node))
             else:
-                asm = self.get_var_creation_asm(self.var_count, type_count, value_node.value, type(value_node))
+                asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node))
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
@@ -2791,6 +2811,10 @@ class Compiler:
                 f"    char_{type_count} db '{value}', 0\n",
             ]
         elif var_type == NumberNode:
+            var_decl = [
+                f"    number_{type_count} dq {value}\n",
+            ]
+        elif var_type == PlusMinusNode:
             var_decl = [
                 f"    number_{type_count} dq {value}\n",
             ]

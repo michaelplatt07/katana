@@ -327,6 +327,44 @@ class TestCompilerInt:
                 }
             }
 
+    def test_int_decalred_from_expression_addition(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_int_from_expression_addition.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    number_1 dq 7\n"
+                    ]
+                }
+            }
+
+    def test_int_decalred_from_expression_subtraction(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_int_from_expression_subtraction.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "is_const": False,
+                    "asm": [
+                        "section .var_1 write\n",
+                        "    number_1 dq 2\n"
+                    ]
+                }
+            }
+
     def test_assign_new_value_int(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_assign_new_value_to_int.ktna") as f:

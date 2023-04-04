@@ -570,6 +570,40 @@ class TestParserInt:
     All tests related to the int keyword.
     """
 
+    def test_keyword_int_16_declaration_from_expression(self):
+        """
+        Given a program like:
+        main() {
+            int16 x = 3 + 4;
+        }
+        Expected to return an AST like:
+        (main[(int16((x=(3+4))))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 12, 1, "+", HIGH),
+            Token(NUM_TOKEN_TYPE, 14, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 15, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        three_node = NumberNode(token_list[7], "3")
+        four_node = NumberNode(token_list[9], "4")
+        plus_node = PlusMinusNode(token_list[8], "+", three_node, four_node)
+        x_node = VariableNode(token_list[5], "x")
+        assignment_node = AssignmentNode(token_list[6], "=", x_node, plus_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        ast = StartNode(token_list[0], "main", [keyword_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
     def test_keyword_int_16_declaration(self):
         """
         Given a program like:
