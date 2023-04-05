@@ -2107,7 +2107,7 @@ class Compiler:
                 compare_types = "int16"
             return self.get_conditional_equal_asm(self.conditional_count, compare_types)
         elif node.value == "=":
-            print(f"Should be assigning for node {node}")
+            print_verbose_message(f"Should be assigning for node {node}")
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
                 # If the right side of the assignment is an expression then we
@@ -2140,7 +2140,7 @@ class Compiler:
                     return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
-            print(f"Node not doing anything {node}")
+            print_verbose_message(f"Node not doing anything {node}")
             return []
         elif node.value == "..":
             # Don't need to get assembly here because the loop will handle it.
