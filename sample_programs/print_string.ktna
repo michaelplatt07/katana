@@ -1,0 +1,4 @@
+main() {
+    const string x = "Testing a constant.";
+    print(x);
+}

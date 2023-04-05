@@ -1,0 +1,6 @@
+main() {
+    string x = "Hello";
+    printl(x);
+    updateChar(x, 0, 'Q');
+    printl(x);
+}
