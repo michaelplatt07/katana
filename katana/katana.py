@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 # TODO(map) Move all the classes and enums outs so imports are nice
 #########
 # GLOBALS
@@ -175,6 +176,13 @@ class KeywordMisuseException(Exception):
 
     def __str__(self):
         return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. \n   Sample Usage: {self.usage}"
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num} == {other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num} == {other.col_num}"
+        assert self.keyword == other.keyword, f"{self.keyword} == {other.keyword}"
+        assert self.usage == other.usage, f"{self.usage} == {other.usage}"
+        return (self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.usage == other.usage)
 
 
 class UnclosedQuotationException(Exception):
@@ -1250,7 +1258,7 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
-            raise kme
+            sys.exit()
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
             raise itde
@@ -1523,14 +1531,14 @@ class Parser:
         """Signature is `updateChar(STRING, INDEX, NEW_CHAR)`"""
         # Confirm the left paren is right after print keyword
         if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
 
         # Move past the left paren.
         self.advance_token()
 
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
 
         # Parse the inner parts of the print function
         arg_list = []
