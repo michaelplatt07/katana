@@ -25,6 +25,7 @@ from katana.katana import (
     KeywordMisuseException,
     InvalidAssignmentException,
     InvalidConcatenationException,
+    InvalidTypeDeclarationException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
@@ -60,6 +61,7 @@ from katana.katana import (
     LOOP_DOWN_SIGNATURE,
     LOOP_FROM_SIGNATURE,
     LOOP_UP_SIGNATURE,
+    MAIN_SIGNATURE,
     PRINT_SIGNATURE,
     UPDATE_CHAR_SIGNATURE,
 )
@@ -545,6 +547,33 @@ class TestParserPrint:
             parser.parse()
         mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
 
+    @patch("katana.katana.print_exception_message")
+    def test_print_no_left_paren_raises_error(self, mock_print):
+        """
+        Given a progrma like:
+        main() {
+            print{1);
+        }
+        Expected KeywordMisuseException to be raised
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "print", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 9, 1, "{", 3),
+            Token(NUM_TOKEN_TYPE, 10, 1, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
+
 
 class TestParserMain:
     """
@@ -573,6 +602,102 @@ class TestParserMain:
         ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    @patch("katana.katana.print_exception_message")
+    def test_main_with_no_left_paren_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main{1) { 3; };
+        Expected to raise an error.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 0, "{", HIGH),
+            Token(NUM_TOKEN_TYPE, 5, 0, "1", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, 0, ")", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 8, 0, "{", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+
+    @patch("katana.katana.print_exception_message")
+    def test_main_with_method_params_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main(1) { 3; };
+        Expected to raise an error.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 5, 0, "1", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, 0, ")", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 8, 0, "{", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+
+    @patch("katana.katana.print_exception_message")
+    def test_main_with_no_right_paren_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main(1} { 3; };
+        Expected to raise an error.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 5, 0, "1", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 0, "}", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 8, 0, "{", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+
+    @patch("katana.katana.print_exception_message")
+    def test_main_with_no_left_curl_brace_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main(1) ( 3; };
+        Expected to raise an error.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 5, 0, "1", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, 0, ")", HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 8, 0, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
 
 
 class TestParserInt:
@@ -829,6 +954,36 @@ class TestParserCharAt:
             parser.parse()
         mock_print.assert_called_with('', 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
 
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_no_left_paren_raises_error(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            char x = charAt{);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 1, "charAt", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 19, 1, "{", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 20, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 21, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
+
+
     # TODO(map) Fix this test by doing type checking on params. Write tests for
     # all the other methods as well.
     @pytest.mark.skip
@@ -944,6 +1099,39 @@ class TestUpdateChar:
             parser.parse()
         mock_print.assert_called_with('', 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
 
+    @patch("katana.katana.print_exception_message")
+    def test_update_char_function_no_left_paren_raises_error(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            updateChar{);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
+            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "updateChar", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 14, 2, "{", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
+
+
 
 class TestParserCopyString:
     """
@@ -1027,6 +1215,34 @@ class TestParserCopyString:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with('', 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+
+    @patch("katana.katana.print_exception_message")
+    def test_copy_str_function_no_left_paren_raises_error(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello";
+            copyStr{);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "copyStr", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "{", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 1, 13, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+
 
 
 class TestParserString:
@@ -2067,3 +2283,89 @@ class TestConcatenation:
         parser = Parser(token_list)
         with pytest.raises(InvalidConcatenationException, match="3:8 Cannot concatenate a string with a <class 'katana.katana.StringNode'>."):
             parser.parse()
+
+
+class TestParserTypeChecking:
+    """
+    All tests related to checking if a type is valid in the program.
+    """
+
+    @patch("katana.katana.print_exception_message")
+    def test_setting_int_to_bool_raises_exception(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+
+    @patch("katana.katana.print_exception_message")
+    def test_setting_string_to_bool_raises_exception(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+
+    @patch("katana.katana.print_exception_message")
+    def test_setting_bool_to_int_raises_exception(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "bool", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 1, "10", 0),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+
+    @patch("katana.katana.print_exception_message")
+    def test_setting_char_to_bool_raises_exception(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
