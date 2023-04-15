@@ -1,0 +1,5 @@
+main() {
+    loopUp(5) {
+        printl("looping up");
+    }
+}

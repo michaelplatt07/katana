@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 
 from katana.katana import (
@@ -36,6 +37,7 @@ from katana.katana import (
     BadFormattedLogicBlock,
     InvalidCharException,
     InvalidTokenException,
+    InvalidTypeDeclarationException,
     InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
@@ -321,18 +323,21 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_unclosed_paren_error(self):
+    @patch("katana.katana.print_exception_message")
+    def test_unclosed_paren_error(self, mock_print):
         program = Program(["1 + (2 + 3;\n"])
         lexer = Lexer(program)
-        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:4."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("1 + (2 + 3;\n", 4, UnclosedParenthesisError(0, 4))
 
-    def test_unclosed_paren_error_other_side(self):
+    @patch("katana.katana.print_exception_message")
+    def test_unclosed_paren_error_other_side(self, mock_print):
         program = Program(["1 + 2) + 3;\n"])
         lexer = Lexer(program)
-        with pytest.raises(UnclosedParenthesisError, match="Unclosed parenthesis at 1:5."):
+        with pytest.raises(SystemExit):
             lexer.lex()
-
+        mock_print.assert_called_with("1 + 2) + 3;\n", 5, UnclosedParenthesisError(0, 5))
 
 class TestLexerEndOfLineSemicolon:
     """
@@ -354,23 +359,27 @@ class TestLexerEndOfLineSemicolon:
     # TODO(map) Write some tests on the lexer for if statements and other
     # conditions where a line needn't end in a semicolon.
 
-    def test_error_if_line_ends_without_semicolon(self):
+    @patch("katana.katana.print_exception_message")
+    def test_error_if_line_ends_without_semicolon(self, mock_print):
         program = Program(["3 + 4\n"])
         lexer = Lexer(program)
-        with pytest.raises(NoTerminatorError, match="Line 1:5 must end with a semicolon."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("3 + 4\n", 5, NoTerminatorError(0, 5))
 
 
 class TestLexerInvalidTokenException:
 
-    def test_invalid_token_raises_exception(self):
+    @patch("katana.katana.print_exception_message")
+    def test_invalid_token_raises_exception(self, mock_print):
         """
         Ensures that if an unknown token shows up an exception is raised.
         """
         program = Program(["`;"])
         lexer = Lexer(program)
-        with pytest.raises(InvalidTokenException, match="Invalid token '`' at 1:0."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("`;", 0, InvalidTokenException(0, 0, "`"))
 
 
 class TestLexerInvalidKeyword:
@@ -378,14 +387,16 @@ class TestLexerInvalidKeyword:
     Tests to ensure that an invalid keyword gets flagged by the lexer.
     """
 
-    def test_invalid_keyword(self):
+    @patch("katana.katana.print_exception_message")
+    def test_invalid_keyword(self, mock_print):
         """
         Ensuring an error is raised if an unrecognized keyword is in program.
         """
         program = Program(["foo(3+4);\n"])
         lexer = Lexer(program)
-        with pytest.raises(UnknownKeywordError, match="Unknown keyword 'foo' at 1:0 in program."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("foo(3+4);\n", 2, UnknownKeywordError(0, 0, "foo"))
 
 
 class TestLexerPrintKeyword:
@@ -522,26 +533,31 @@ class TestLexerIntKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_invalid_int_16_variable_name_with_underscore(self):
+    @patch("katana.katana.print_exception_message")
+    def test_invalid_int_16_variable_name_with_underscore(self, mock_print):
         """
         Test to make sure if a variable is anything other than alpha numeric
         an error is raised.
         """
-        program = Program(["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"])
+        code = ["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(InvalidTokenException, match="Invalid token '_' at 2:9."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 9, InvalidTokenException(1, 9, "_"))
 
-    def test_invalid_int_16_variable_name_starts_with_number(self):
+    @patch("katana.katana.print_exception_message")
+    def test_invalid_int_16_variable_name_starts_with_number(self, mock_print):
         """
         Test to make sure that a variable name starting with a number raises
         an exception.
         """
-        program = Program(
-            ["main() {\n", "int16 1_var = 3;\n", "}\n"])
+        code = ["main() {\n", "int16 1_var = 3;\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(InvalidVariableNameError, match="Variable name at 2:6 cannot start with digit."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 6, InvalidVariableNameError(1, 6))
 
     def test_const_int_variable_delcaration(self):
         """
@@ -586,14 +602,17 @@ class TestLexerCharKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_invalid_character_variable_declaration_raises_exception(self):
+    @patch("katana.katana.print_exception_message")
+    def test_invalid_character_variable_declaration_raises_exception(self, mock_print):
         """
         Tests that anything other than a char in the format 'a' is not valid.
         """
-        program = Program(["main() {\n", "char x = 'hi';\n", "}\n"])
+        code = ["main() {\n", "char x = 'hi';\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(InvalidCharException, match="Invalid declaration of `char` at 2:11."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 11, InvalidCharException(1, 11))
 
     def test_char_variable_reference(self):
         """
@@ -788,42 +807,52 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_else_with_no_if_raises_error(self):
+    @patch("katana.katana.print_exception_message")
+    def test_else_with_no_if_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        program = Program(["main() {\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        code = ["main() {\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(UnpairedElseError, match="else at 2:0 does not have a matching if block."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 1, UnpairedElseError(1, 0))
 
-    def test_else_with_something_between_raises_error(self):
+    @patch("katana.katana.print_exception_message")
+    def test_else_with_something_between_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "print(\"really bad\");\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        code = ["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "print(\"really bad\");\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 6:0. Cannot have code between if/else block."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 5, BadFormattedLogicBlock(5, 0))
 
-    def test_else_with_something_between_same_line_raises_error(self):
+    @patch("katana.katana.print_exception_message")
+    def test_else_with_something_between_same_line_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n",  "print(\"really bad\");else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        code = ["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n",  "print(\"really bad\");else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 5:0. Cannot have code between if/else block."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 4, BadFormattedLogicBlock(4, 0))
 
-    def test_nested_if_else_with_bad_line(self):
+    @patch("katana.katana.print_exception_message")
+    def test_nested_if_else_with_bad_line(self, mock_print):
         """
         Ensures that the nested if/else block that are improperly formatted get
         flagged instead of outer blocks.
         """
-        program = Program([
+        code = [
             "main() {\n",
             "if (1 == 2) {\n",
             "print(\"first if\");\n",
@@ -839,17 +868,20 @@ class TestLexerIfElseKeyword:
             "}\n",
             "}\n",
             "}\n"
-        ])
+        ]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(BadFormattedLogicBlock, match="Incorrectly formatted else statement at 8:0. Cannot have code between if/else block."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 7, BadFormattedLogicBlock(7, 0))
 
-    def test_nested_else_without_if(self):
+    @patch("katana.katana.print_exception_message")
+    def test_nested_else_without_if(self, mock_print):
         """
         Ensures that the inner `else` without an if block gets flagged as the
         unpaired else instead of the outer else.
         """
-        program = Program([
+        code = [
             "main() {\n",
             "if (1 == 2) {\n",
             "print(\"first if\");\n",
@@ -860,10 +892,12 @@ class TestLexerIfElseKeyword:
             "print(\"first else\");\n",
             "}\n",
             "}\n"
-        ])
+        ]
+        program = Program(code)
         lexer = Lexer(program)
-        with pytest.raises(UnpairedElseError, match="else at 4:0 does not have a matching if block."):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("".join(code), 3, UnpairedElseError(3, 0))
 
     def test_if_else_success(self):
         """
@@ -1039,17 +1073,21 @@ class TestLexerQuotationCharacter:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_exception_raised_with_no_closing_quote_eol(self):
+    @patch("katana.katana.print_exception_message")
+    def test_exception_raised_with_no_closing_quote_eol(self, mock_print):
         program = Program(["\"test string;\n"])
         lexer = Lexer(program)
-        with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("\"test string;\n", 12, UnclosedQuotationException(0, 12, "test string"))
 
-    def test_exception_raised_with_no_closing_quote_new_line(self):
+    @patch("katana.katana.print_exception_message")
+    def test_exception_raised_with_no_closing_quote_new_line(self, mock_print):
         program = Program(["\"test string\n"])
         lexer = Lexer(program)
-        with pytest.raises(UnclosedQuotationException, match="Unclosed quotation mark for 'test string' at 1:12"):
+        with pytest.raises(SystemExit):
             lexer.lex()
+        mock_print.assert_called_with("\"test string\n", 12, UnclosedQuotationException(0, 12, "test string"))
 
 
 class TestLexerUpdateCharKeyword:
@@ -1136,3 +1174,18 @@ class TestLexerStringConcatenation:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+
+class TestLexerDotOperator:
+    """
+    All tests related to using the dot operator in the program.
+    """
+
+    @patch("katana.katana.print_exception_message")
+    def test_single_dot_raises_error(self, mock_print):
+        code = ["main() {\n", "1.2\n", "}\n"]
+        program = Program(code)
+        lexer = Lexer(program)
+        with pytest.raises(SystemExit):
+            lexer.lex()
+        mock_print.assert_called_with("".join(code), 1, InvalidTokenException(1, 1, "."))

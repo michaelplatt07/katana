@@ -1,0 +1,5 @@
+main() {
+    loopDown(3) {
+        printl("looping down");
+    }
+}

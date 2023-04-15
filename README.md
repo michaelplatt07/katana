@@ -11,6 +11,9 @@ Katana is a language that was originally developed in Python and compiles straig
 ### Unit Tests
 Running `pytest tests/` will run the full suite of tests. To get a more verbose output you can run `pytest -vv tests/` to see a detailed output.
 
+### Integration tests
+There are a number of integration tests to make sure the code works as expected. By runing `python tests/test_programs.py` the integrations tests will be launched. Developers can also use `--display-compare` to see how the data looks and `--create-expected` to recreate the expected output results file. Note that this is very basic functionality and assumes that the results in the expected outputs is correct every time. This should, as it's currently implemented, only be used for regression tests.
+
 ### Coverage
 Katana uses `coverage` to determine which lines of code are not being tested. Specifically running `coverage run -m pytest tests` will create a coverage folder folder, then run `coverage html` to get a nice output view.
 
@@ -203,18 +206,18 @@ main() {
 - [x] Set up printing in assembly
 - [x] Handle string literals
 - [x] Change the program parsing to read line by line
-- [ ] Rule 110
+- [x] Rule 110
 - [x] * Conditional `==`
 - [x] * String variables
 - [x] * Boolean constants
 - [x] * Assignment operator like `x = y + 1`. Currently makes `((x=y)+1)`
 - [x] * Substring access? Maybe the char should just exist instead?
 - [x] * Conditionals with expressions on both sides like `if (x - 1 > 0)`
-- [ ] * Update strings
+- [ ] Update strings
 - [x] Implement a printl for print line that adds new line on to end
 - [x] Add conditionals
 - [ ] Chaining conditionals using `and` and `or` keywords
-- [ ] Add to current conditionals (only support `>` right now)
+- [x] Add to current conditionals (only support `>` right now)
 - [ ] Add loops
 - [ ] * loopUntil(==, >, <)
 - [x] * loopDown

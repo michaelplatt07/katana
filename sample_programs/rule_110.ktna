@@ -1,0 +1,115 @@
+main() {
+    const int16 rowCount = 79;
+    const int16 colCount = 80;
+
+    char leftCellVal = 'l';
+    char middleCellVal = 'm';
+    char rightCellVal = 'r';
+    
+    const string firstRow = "                                                                               *";
+
+    bool isAlive = false;
+    int16 loopCount = 0;
+    char currCellVal = 'c';
+
+    string prevRow = "                                                                               *";
+    string currRow = "                                                                                ";
+    printl(firstRow);
+    loopUp(rowCount) {
+        loopUp(colCount) {
+            // Reset the cell's aliveness each time we loop.
+            isAlive = false;
+
+            // The left index would be negative so we can assume dead
+            if (loopCount == 0) {
+                leftCellVal = ' ';
+            } else {
+                // Otherwise we set the left cell to the loop count minus one
+                currCellVal = charAt(prevRow, loopCount - 1);
+                if (currCellVal == ' ') {
+                    leftCellVal = ' ';
+                } else {
+                    leftCellVal = '*';
+                }
+            }
+ 
+            // Set the middle cell.
+            currCellVal = charAt(prevRow, loopCount);
+            if (currCellVal == ' ') {
+                middleCellVal = ' ';
+            } else {
+                middleCellVal = '*';
+            }
+
+            // The right index would be go beyond the length so cell is assumed dead
+            if (loopCount == rowCount) {
+                rightCellVal = '*';
+            } else {
+                // Otherwise we set the right cell to the loop count plus one
+                currCellVal = charAt(prevRow, loopCount + 1);
+                if (currCellVal == ' ') {
+                    rightCellVal = ' ';
+                } else {
+                    rightCellVal = '*';
+                }
+            }
+            
+            // "0,1,0": "1",
+            if (leftCellVal == ' ') {
+                if (middleCellVal == '*') {
+                    if (rightCellVal == ' ') {
+                        isAlive = true;
+                    }
+                }
+            }
+ 
+            // "0,0,1": "1",
+            if (leftCellVal == ' ') {
+                if (middleCellVal == ' ') {
+                    if (rightCellVal == '*') {
+                        isAlive = true;
+                    }
+                }
+            }
+            
+            // "1,1,0": "1",
+            if (leftCellVal == '*') {
+                if (middleCellVal == '*') {
+                    if (rightCellVal == ' ') {
+                        isAlive = true;
+                    }
+                }
+            }
+
+            // "1,0,1": "1",
+            if (leftCellVal == '*') {
+                if (middleCellVal == ' ') {
+                    if (rightCellVal == '*') {
+                        isAlive = true;
+                    }
+                }
+            }
+
+            // "0,1,1": "1",
+            if (leftCellVal == ' ') {
+                if (middleCellVal == '*') {
+                    if (rightCellVal == '*') {
+                        isAlive = true;
+                    }
+                }
+            }
+            
+            if (isAlive == true) {
+                updateChar(currRow, loopCount, '*');
+            } else {
+                updateChar(currRow, loopCount, ' ');
+            }
+
+            loopCount = loopCount + 1;
+        }
+    printl(currRow);
+    copyStr(currRow, prevRow);
+    // Reset the loop count
+    loopCount = 0;
+    }
+}

@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 # TODO(map) Move all the classes and enums outs so imports are nice
 #########
 # GLOBALS
@@ -121,6 +122,11 @@ class UnclosedParenthesisError(Exception):
     def __str__(self):
         return f"Unclosed parenthesis at {self.line_num}:{self.col_num}."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
 
 # TODO(map) Because the line_num in the program starts at 0 we add 1 for now.
 class InvalidTokenException(Exception):
@@ -133,6 +139,12 @@ class InvalidTokenException(Exception):
     def __str__(self):
         return f"Invalid token '{self.character}' at {self.line_num}:{self.col_num}."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.character == other.character, f"{self.character, other.character}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.character == other.character
+
 
 class NoTerminatorError(Exception):
     def __init__(self, line_num, col_num):
@@ -142,6 +154,11 @@ class NoTerminatorError(Exception):
 
     def __str__(self):
         return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
 
 
 class UnknownKeywordError(Exception):
@@ -154,6 +171,12 @@ class UnknownKeywordError(Exception):
     def __str__(self):
         return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.keyword == other.keyword, f"{self.keyword, other.keyword}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword
+
 
 class InvalidVariableNameError(Exception):
     def __init__(self, line_num, col_num):
@@ -163,6 +186,12 @@ class InvalidVariableNameError(Exception):
 
     def __str__(self):
         return f"Variable name at {self.line_num}:{self.col_num} cannot start with digit."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
 
 
 class KeywordMisuseException(Exception):
@@ -176,6 +205,13 @@ class KeywordMisuseException(Exception):
     def __str__(self):
         return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. \n   Sample Usage: {self.usage}"
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num} == {other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num} == {other.col_num}"
+        assert self.keyword == other.keyword, f"{self.keyword} == {other.keyword}"
+        assert self.usage == other.usage, f"{self.usage} == {other.usage}"
+        return (self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.usage == other.usage)
+
 
 class UnclosedQuotationException(Exception):
     def __init__(self, line_num, col_num, string):
@@ -187,6 +223,12 @@ class UnclosedQuotationException(Exception):
     def __str__(self):
         return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.string == other.string, f"{self.string, other.string}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.string == other.string
+
 
 class InvalidCharException(Exception):
     def __init__(self, line_num, col_num):
@@ -196,6 +238,11 @@ class InvalidCharException(Exception):
 
     def __str__(self):
         return f"Invalid declaration of `char` at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
 
 
 class BadFormattedLogicBlock(Exception):
@@ -207,6 +254,11 @@ class BadFormattedLogicBlock(Exception):
     def __str__(self):
         return f"Incorrectly formatted else statement at {self.line_num}:{self.col_num}. Cannot have code between if/else block."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
 
 class UnpairedElseError(Exception):
     def __init__(self, line_num, col_num):
@@ -217,6 +269,11 @@ class UnpairedElseError(Exception):
     def __str__(self):
         return f"else at {self.line_num}:{self.col_num} does not have a matching if block."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
 
 class InvalidTypeDeclarationException(Exception):
     def __init__(self, line_num, col_num):
@@ -226,6 +283,11 @@ class InvalidTypeDeclarationException(Exception):
 
     def __str__(self):
         return f"Invalid type at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
 
 
 class InvalidAssignmentException(Exception):
@@ -844,9 +906,6 @@ class Program:
     def get_curr_line(self):
         return self.lines[self.curr_line]
 
-    def get_next_line(self):
-        return self.lines[self.curr_line + 1]
-
     def has_next_line(self):
         return self.curr_line + 1 < self.line_count + 1
 
@@ -994,33 +1053,23 @@ class Lexer:
             else:
                 raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
         except InvalidVariableNameError as ivne:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(ivne)
-            raise ivne
+            print_exception_message("".join(self.program.lines), self.program.curr_col, ivne)
+            sys.exit()
         except NoTerminatorError as nte:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(nte)
-            raise nte
+            print_exception_message("".join(self.program.lines), self.program.curr_col, nte)
+            sys.exit()
         except InvalidTokenException as ite:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(ite)
-            raise ite
+            print_exception_message("".join(self.program.lines), self.program.curr_col, ite)
+            sys.exit()
         except UnknownKeywordError as uke:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(uke)
-            raise uke
+            print_exception_message("".join(self.program.lines), self.program.curr_col, uke)
+            sys.exit()
         except UnclosedQuotationException as uqe:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(uqe)
-            raise uqe
+            print_exception_message("".join(self.program.lines), self.program.curr_col, uqe)
+            sys.exit()
         except InvalidCharException as ice:
-            self.print_invalid_character_error(self.program, self.program.curr_col, self.program.curr_line)
-            print(ice)
-            raise ice
-
-    def print_invalid_character_error(self, program, col, row):
-        print(program.lines[row])
-        print(" "*col + "^")
+            print_exception_message("".join(self.program.lines), self.program.curr_col, ice)
+            sys.exit()
 
     def check_for_valid_termination(self, value):
         if value == "\n":
@@ -1109,7 +1158,8 @@ class Lexer:
             dot_operator += self.program.get_curr_char()
             return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
         else:
-            raise InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator)
+            print_exception_message("".join(self.program.lines), self.program.curr_col, InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator))
+            sys.exit()
 
     def handle_equal_operator(self):
         equal_idx = self.program.curr_col
@@ -1133,9 +1183,8 @@ class Lexer:
 
         if self.unpaired_parens != 0:
             upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-            self.print_invalid_character_error(self.program, paren_error_col, paren_error_row)
-            print(upe)
-            raise upe
+            print_exception_message("".join(self.program.lines), paren_error_col, upe)
+            sys.exit()
 
     def check_if_else_blocks(self):
         # Confirm there is at least one `else` present, otherwise no need to
@@ -1156,18 +1205,22 @@ class Lexer:
                             pass
                     if brace_count != 0:
                         err_token = self.token_list[self.else_idx_list[idx]]
-                        raise UnpairedElseError(err_token.row, err_token.col)
+                        print_exception_message("".join(self.program.lines), err_token.row, UnpairedElseError(err_token.row, err_token.col))
+                        sys.exit()
+                        # raise UnpairedElseError(err_token.row, err_token.col)
                 # All other if/else pairs matched so the final else must be
                 # the problem
                 err_token = self.token_list[self.else_idx_list[-1]]
-                raise UnpairedElseError(err_token.row, err_token.col)
+                print_exception_message("".join(self.program.lines), err_token.row, UnpairedElseError(err_token.row, err_token.col))
+                sys.exit()
 
         # If/else blocks all match, make sure there is nothing between the end
         # of an `if` block and the start of an `else` block
         filtered_token_list = list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
         for idx, token in enumerate(filtered_token_list):
             if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                raise BadFormattedLogicBlock(token.row, 0)
+                print_exception_message("".join(self.program.lines), token.row, BadFormattedLogicBlock(token.row, 0))
+                sys.exit()
 
 
 ########
@@ -1250,10 +1303,10 @@ class Parser:
             return node
         except KeywordMisuseException as kme:
             print_exception_message(("\n").join(program_lines), kme.col_num, kme)
-            raise kme
+            sys.exit()
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
-            raise itde
+            sys.exit()
 
     def parse_literal(self):
         """
@@ -1523,14 +1576,14 @@ class Parser:
         """Signature is `updateChar(STRING, INDEX, NEW_CHAR)`"""
         # Confirm the left paren is right after print keyword
         if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
 
         # Move past the left paren.
         self.advance_token()
 
         # Case where `print` was called with nothing to print.
         if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
+            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
 
         # Parse the inner parts of the print function
         arg_list = []
@@ -2107,7 +2160,7 @@ class Compiler:
                 compare_types = "int16"
             return self.get_conditional_equal_asm(self.conditional_count, compare_types)
         elif node.value == "=":
-            print(f"Should be assigning for node {node}")
+            print_verbose_message(f"Should be assigning for node {node}")
             # This is an assignment of a new value to the variable.
             if type(node.parent_node) != VariableKeywordNode:
                 # If the right side of the assignment is an expression then we
@@ -2140,7 +2193,7 @@ class Compiler:
                     return self.get_assign_new_value_to_var_asm(self.variables[node.left_side.value]["var_name"], node.right_side.value)
             # Don't do anything if the parent is an AssignmentNode because the
             # parent_node will handle that assembly.
-            print(f"Node not doing anything {node}")
+            print_verbose_message(f"Node not doing anything {node}")
             return []
         elif node.value == "..":
             # Don't need to get assembly here because the loop will handle it.

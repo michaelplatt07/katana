@@ -1,0 +1,8 @@
+main() {
+    loopFrom(1..5) {
+        printl("loop from inc");
+    }
+    loopFrom(9..7) {
+        printl("loop from dec");
+    }
+}
