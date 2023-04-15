@@ -1,0 +1,19 @@
+main() {
+    int16 x = 4;
+    // loopUp with var
+    loopUp(x) {
+        printl("loopUp");
+    }
+    // loopDown with var
+    loopDown(x) {
+        printl("loopDown");
+    }
+    // loopFrom with var at beginning
+    loopFrom(x..0) {
+        printl("loopFrom B");
+    }
+    // loopFrom with var at end
+    loopFrom(0..x) {
+        printl("loopFrom E");
+    }
+}

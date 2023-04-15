@@ -1988,6 +1988,7 @@ class Compiler:
                 "var_name": var_name,
                 "var_type": var_type,
                 "var_len": len(value_node.value),
+                "var_val": var_val,
                 "is_const": True,
                 "asm": asm
             }
@@ -2058,7 +2059,10 @@ class Compiler:
                 return []
             elif type(node) == LoopFromKeywordNode:
                 node.visited = True
-                if node.child_node.left_side.value < node.child_node.right_side.value:
+                # NOTE(map) This assumes that either side of the loopFrom values are a variable or a number.
+                first_loop_value = int(node.child_node.left_side.value) if type(node.child_node.left_side) == NumberNode else int(self.variables.get(node.child_node.left_side.value)["var_val"])
+                second_loop_value = int(node.child_node.right_side.value) if type(node.child_node.right_side) == NumberNode else int(self.variables.get(node.child_node.right_side.value)["var_val"])
+                if first_loop_value < second_loop_value:
                     if not node.child_node.visited:
                         return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
                     if not node.loop_body[0].visited:

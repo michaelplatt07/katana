@@ -249,6 +249,7 @@ class TestCompilerPrint:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": "3",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -298,6 +299,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": "3",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -319,6 +321,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": "0",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -338,6 +341,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": 7,
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -357,6 +361,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": 2,
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -376,6 +381,7 @@ class TestCompilerInt:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": "0",
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -431,6 +437,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "var_val": "hello",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -452,6 +459,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 14,
+                    "var_val": "Hello, Katana!",
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -502,6 +510,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 6,
+                    "var_val": "Hello",
                     "is_const": True,
                     "asm": [
                         "section .var_1 write\n",
@@ -546,6 +555,7 @@ class TestCompilerString:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "var_val": "Hello",
                     "is_const": True,
                     "asm": [
                         "section .var_1 write\n",
@@ -574,6 +584,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "var_val": "a",
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -609,6 +620,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "var_val": "h",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -647,6 +659,7 @@ class TestCompilerChar:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "var_val": "A",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -781,6 +794,7 @@ class TestCompilerCopyStr:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 5,
+                    "var_val": "Hello",
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -792,6 +806,7 @@ class TestCompilerCopyStr:
                     "var_name": "string_2",
                     "var_type": "string",
                     "var_len": 5,
+                    "var_val": "olleH",
                     "is_const": False,
                     "asm": [
                         "section .var_2 write\n",
@@ -835,6 +850,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 5,
+                    "var_val": "false",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -856,6 +872,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "var_val": "true",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -877,6 +894,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "var_val": "true",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -923,6 +941,7 @@ class TestCompilerBool:
                     "var_name": "bool_1",
                     "var_type": "bool",
                     "var_len": 4,
+                    "var_val": "true",
                     "is_const": False,
                     "asm": [
                         "section .var_1 write\n",
@@ -1182,6 +1201,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "number_1",
                     "var_type": "num",
                     "var_len": 1,
+                    "var_val": "1",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
@@ -1193,6 +1213,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "string_1",
                     "var_type": "string",
                     "var_len": 14,
+                    "var_val": "Hello, Katana!",
                     "is_const": True,
                     "asm": [
                         "section .var_2\n",
@@ -1204,6 +1225,7 @@ class TestCompilerMultipleVarDeclarations:
                     "var_name": "char_1",
                     "var_type": "char",
                     "var_len": 1,
+                    "var_val": "A",
                     "is_const": True,
                     "asm": [
                         "section .var_3\n",
