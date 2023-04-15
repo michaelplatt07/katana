@@ -2712,12 +2712,12 @@ class Compiler:
     def get_loop_from_descending_asm(self, loop_count):
         return [
             "    ;; Compare if counter is above loop end\n",
-            "    pop rbx\n",
             "    pop rcx\n",
+            "    pop rbx\n",
             "    dec rcx\n",
             "    cmp rcx, rbx\n",
-            "    push rcx\n",
             "    push rbx\n",
+            "    push rcx\n",
             f"    jg loop_{loop_count}\n",
             "    ;; Clean up loop vars\n",
             "    pop rax\n",
