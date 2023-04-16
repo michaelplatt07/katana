@@ -97,6 +97,29 @@ def build_expected_outputs(sample_program_dir):
             f'python katana/katana.py --program "{sample_program_dir}/{program}" --run >> {output_file_name}')
 
 
+def build_new_only(expected_results_dir, sample_program_dir):
+    # Build list of results that already exist
+    # breakpoint()
+    expected_results_file_list = set()
+    for program in os.listdir(expected_results_dir):
+        expected_results_file_list.add(program.split(
+            ".")[0].replace("_expected_output", ""))
+
+    # breakpoint()
+    # Build list of all files in the sample file dir.
+    sample_file_list = set()
+    for program in os.listdir(sample_program_dir):
+        sample_file_list.add(program.split(".")[0])
+
+    # breakpoint()
+    if results_to_make := sample_file_list - expected_results_file_list:
+        for program in results_to_make:
+            output_file_name = os.getcwd() + "/expected_outputs/" + \
+                program + "_expected_output.txt"
+            os.system(
+                f'python katana/katana.py --program "{sample_program_dir}/{program}.ktna" --run >> {output_file_name}')
+
+
 def clean_up_test():
     shutil.rmtree("results")
 
@@ -106,17 +129,22 @@ if __name__ == "__main__":
 
     arg_parser.add_argument("--display-compare", action="store_true",
                             help="Switch to display the results as they compared.")
-    arg_parser.add_argument("--create-expected", action="store_true",
-                            help="Switch to recreate the expected outputs.")
+    arg_parser.add_argument("--recreate-all", action="store_true",
+                            help="Switch to recreate all the expected outputs.")
+    arg_parser.add_argument("--create-new-only", action="store_true",
+                            help="Switch to only the results for newly added or missing tests.")
     args = arg_parser.parse_args()
 
-    create_expected_outputs = args.create_expected
+    new_only = args.create_new_only
+    recreate_expected_outputs = args.recreate_all
     display_compare = args.display_compare
 
     try:
-        if create_expected_outputs:
+        if recreate_expected_outputs:
             clean_previous_outputs("./expected_outputs")
             build_expected_outputs("./sample_programs")
+        if new_only:
+            build_new_only("./expected_outputs", "./sample_programs")
         compare_expected_output_to_program_output(
             "./expected_outputs", "./sample_programs")
         print("Passed")
