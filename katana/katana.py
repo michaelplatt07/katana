@@ -193,7 +193,6 @@ class InvalidVariableNameError(Exception):
         return self.line_num == other.line_num and self.col_num == other.col_num
 
 
-
 class KeywordMisuseException(Exception):
     def __init__(self, line_num, col_num, keyword, usage):
         super().__init__("Improper use of keyword.")
@@ -211,6 +210,40 @@ class KeywordMisuseException(Exception):
         assert self.keyword == other.keyword, f"{self.keyword} == {other.keyword}"
         assert self.usage == other.usage, f"{self.usage} == {other.usage}"
         return (self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.usage == other.usage)
+
+
+class TooManyArgsException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Too many args")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Too many args for keyword at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
+class InvalidArgsException(Exception):
+    def __init__(self, line_num, col_num, keyword, arg_type):
+        super().__init__("Invalid args")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.keyword = keyword
+        self.arg_type = arg_type
+
+    def __str__(self):
+        return f"Keyword '{self.keyword}' does not support '{self.arg_type}' at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.keyword == other.keyword, f"{self.keyword, other.keyword}"
+        assert self.arg_type == other.arg_type, f"{self.arg_type, other.arg_type}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.arg_type == other.arg_type
 
 
 class UnclosedQuotationException(Exception):
@@ -1091,6 +1124,8 @@ class Lexer:
                 token = self.token_list[self.left_paren_idx_list[-1] - 1]
                 left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
                 if not terminator_present and not left_paren_first and not left_paren_has_keyword:
+                    # TODO(map) Write test for this exception being raised.
+                    assert False, "raised exception"
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
@@ -1307,6 +1342,13 @@ class Parser:
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
             sys.exit()
+        except TooManyArgsException as tmae:
+            print_exception_message(("\n").join(program_lines), tmae.col_num, tmae)
+            sys.exit()
+        except InvalidArgsException as iae:
+            print_exception_message(("\n").join(program_lines), iae.col_num, iae)
+            sys.exit()
+
 
     def parse_literal(self):
         """
@@ -1455,15 +1497,7 @@ class Parser:
         elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
             # Need to get contents of the loop.
             contents = contents_function()
-            # TODO(map) The loop methods should have their own methods that
-            # raise these exceptions.
-            if not contents:
-                if node_class == LoopUpKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_UP_SIGNATURE)
-                if node_class == LoopDownKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_DOWN_SIGNATURE)
-                if node_class == LoopFromKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_FROM_SIGNATURE)
+            self.validate_function_args(contents, node_class, keyword_token, node_value)
             loop_body = self.get_loop_body(node_value)
         else:
             contents = contents_function(keyword_token)
@@ -1628,6 +1662,8 @@ class Parser:
             self.advance_token()
         # Add the final calculated node to the list
         arg_list.append(root_node)
+
+        self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
         return arg_list
 
     def handle_const_keyword(self, keyword_token):
@@ -1659,6 +1695,22 @@ class Parser:
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
         else:
             return child_node
+
+    def validate_function_args(self, function_args, function_keyword, token, node_value):
+        if not function_args:
+            if function_keyword == LoopUpKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_UP_SIGNATURE)
+            if function_keyword == LoopDownKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_DOWN_SIGNATURE)
+            if function_keyword == LoopFromKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_FROM_SIGNATURE)
+        else:
+            if function_keyword in [LoopUpKeywordNode, LoopDownKeywordNode]:
+                if type(function_args) == list and len(function_args) > 1:
+                    raise TooManyArgsException(token.row, token.col)
+                elif type(function_args) != NumberNode:
+                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+
 
     def get_truth_side(self):
         truth_body = None

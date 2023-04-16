@@ -23,9 +23,11 @@ from katana.katana import (
     VariableKeywordNode,
     VariableReferenceNode,
     KeywordMisuseException,
+    InvalidArgsException,
     InvalidAssignmentException,
     InvalidConcatenationException,
     InvalidTypeDeclarationException,
+    TooManyArgsException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
@@ -1841,6 +1843,240 @@ class TestParserLoopKeyword:
         assert ast == parser.parse()
 
     @patch("katana.katana.print_exception_message")
+    def test_loop_up_with_string_in_params_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopUp("hello") {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(STRING_TOKEN_TYPE, 11, 1, "hello", ""),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 18, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopUp", StringNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_loop_down_with_string_in_params_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopDown("hello") {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(STRING_TOKEN_TYPE, 11, 1, "hello", ""),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 18, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopDown", StringNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_loop_up_with_dot_operator_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopUp(0..5) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 11, 1, "0", ""),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 12, 1, "..", ""),
+            Token(NUM_TOKEN_TYPE, 14, 1, "5", ""),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 17, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopUp", RangeNode))
+
+    @pytest.mark.skip("TODO(map) Need to break out the logic for handling parens for functions to its own method.")
+    @patch("katana.katana.print_exception_message")
+    def test_loop_up_with_multiple_args_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopUp(0,5) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 11, 1, "0", 0),
+            Token(COMMA_TOKEN_TYPE, 12, 1, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 13, 1, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 14, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 16, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, TooManyArgsException(1, 4))
+
+    @pytest.mark.skip("TODO(map) Need to break out the logic for handling parens for functions to its own method.")
+    @patch("katana.katana.print_exception_message")
+    def test_loop_down_with_multiple_args_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopDown(0,5) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 11, 1, "0", 0),
+            Token(COMMA_TOKEN_TYPE, 12, 1, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 13, 1, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 14, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 16, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, TooManyArgsException(1, 4))
+
+
+    @patch("katana.katana.print_exception_message")
+    def test_loop_down_with_dot_operator_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopDown(0..5) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 11, 1, "0", ""),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 12, 1, "..", ""),
+            Token(NUM_TOKEN_TYPE, 14, 1, "5", ""),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 17, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "Hi", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopDown", RangeNode))
+
+
+    @patch("katana.katana.print_exception_message")
     def test_basic_loop_up_invalid_syntax(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1864,6 +2100,7 @@ class TestParserLoopKeyword:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE))
+
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_down_invalid_syntax(self, mock_print):
