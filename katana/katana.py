@@ -1708,7 +1708,7 @@ class Parser:
             if function_keyword in [LoopUpKeywordNode, LoopDownKeywordNode]:
                 if type(function_args) == list and len(function_args) > 1:
                     raise TooManyArgsException(token.row, token.col)
-                elif type(function_args) != NumberNode:
+                elif type(function_args) != NumberNode and (type(function_args) != VariableReferenceNode and self.variable_to_type_map.get(function_args.value, None) != "int16"):
                     raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
 
 

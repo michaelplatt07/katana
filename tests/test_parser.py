@@ -1758,6 +1758,56 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    def test_loop_up_with_variable_reference(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            int16 x = 5;
+            loopUp(x) {
+                print("looping");
+            }
+        }
+        ```
+        (main[(int16(x=5))(loopUp((0<x), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "5", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 10, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 14, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        string_node = StringNode(token_list[16], "looping")
+        print_node = FunctionKeywordNode(token_list[14], "print", [string_node])
+        five_node = NumberNode(token_list[7], "5")
+        x_node = VariableNode(token_list[5], "x")
+        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, five_node)
+        x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        loop_node = LoopUpKeywordNode(token_list[9], "loopUp", x_ref_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
     def test_loop_down_keyword(self):
         """
         Given a program like:
@@ -1795,6 +1845,56 @@ class TestParserLoopKeyword:
         three_node = NumberNode(token_list[6], "3")
         loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        assert ast == parser.parse()
+
+    def test_loop_down_with_variable_reference(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            int16 x = 7;
+            loopDown(x) {
+                print("looping");
+            }
+        }
+        ```
+        (main[(int16(x=7))(loopDown((x>0), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "7", 0),
+            Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 10, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 14, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        string_node = StringNode(token_list[16], "looping")
+        print_node = FunctionKeywordNode(token_list[14], "print", [string_node])
+        seven_node = NumberNode(token_list[7], "7")
+        x_node = VariableNode(token_list[5], "x")
+        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, seven_node)
+        x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        loop_node = LoopDownKeywordNode(token_list[9], "loopDown", x_ref_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
 
@@ -2074,7 +2174,6 @@ class TestParserLoopKeyword:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopDown", RangeNode))
-
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_up_invalid_syntax(self, mock_print):
