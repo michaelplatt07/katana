@@ -2029,6 +2029,43 @@ class TestParserLoopKeyword:
         assert ast == parser.parse()
 
     @patch("katana.katana.print_exception_message")
+    def test_loop_from_keyword_without_dot_operator_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopFrom(0) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 12, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 13, 1, "0", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 14, 1, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 16, 1, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 14, 2, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 23, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 24, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopFrom", NumberNode))
+
+    @patch("katana.katana.print_exception_message")
     def test_loop_up_with_string_in_params_raises_error(self, mock_print):
         """
         Given a program like:

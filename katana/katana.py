@@ -1721,6 +1721,13 @@ class Parser:
                     # It's a var but not a number type var
                     elif args_is_var_type and not args_is_var_int:
                         raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+            if function_keyword == LoopFromKeywordNode:
+                args_is_list = type(function_args) == list and len(function_args) > 1
+                # LoopFrom doesn't support a list of args
+                if args_is_list:
+                    raise TooManyArgsException(token.row, token.col)
+                elif not type(function_args) == RangeNode:
+                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
 
     def get_truth_side(self):
         truth_body = None
