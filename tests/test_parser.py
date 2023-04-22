@@ -2178,7 +2178,6 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopUp", RangeNode))
 
-    @pytest.mark.skip("TODO(map) Need to break out the logic for handling parens for functions to its own method.")
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_multiple_args_raises_error(self, mock_print):
         """
@@ -2218,7 +2217,6 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with('', 4, TooManyArgsException(1, 4))
 
-    @pytest.mark.skip("TODO(map) Need to break out the logic for handling parens for functions to its own method.")
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_multiple_args_raises_error(self, mock_print):
         """

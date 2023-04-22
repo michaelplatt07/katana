@@ -1438,6 +1438,38 @@ class Parser:
             if left_side_type == "char" and not right_side_char and not right_side_char_at:
                 raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
 
+    # TODO(map) Do we really want to have multiple return types here? Maybe
+    # it's better to determine if the keyword supports a list here and if not
+    # we error out. Then this becomes a check that the number of params match
+    # while the validate_function_args holds the type checking.
+    def handle_keyword_args(self):
+        """
+        Method that will parse the tokens within the parenthesis when they are
+        used to wrap function or keyword arguments. Differs from
+        handle_parenthesis because this can return a list or a single node.
+        """
+        root_node = None
+
+        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
+        # Advance once to get past the paren token.
+        self.advance_token()
+
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+
+        return arg_list if len(arg_list) > 1 else root_node
+
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
@@ -1483,10 +1515,10 @@ class Parser:
             "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
             "updateChar": (self.handle_update_char_keyword, FunctionKeywordNode, "arg_nodes"),
             "copyStr": (self.handle_copy_str_keyword, FunctionKeywordNode, "arg_nodes"),
-            "if": (self.handle_parenthesis, LogicKeywordNode, "child_node"),
-            "loopUp": (self.handle_parenthesis, LoopUpKeywordNode, "child_node"),
-            "loopDown": (self.handle_parenthesis, LoopDownKeywordNode, "child_node"),
-            "loopFrom": (self.handle_parenthesis, LoopFromKeywordNode, "child_node"),
+            "if": (self.handle_keyword_args, LogicKeywordNode, "child_node"),
+            "loopUp": (self.handle_keyword_args, LoopUpKeywordNode, "child_node"),
+            "loopDown": (self.handle_keyword_args, LoopDownKeywordNode, "child_node"),
+            "loopFrom": (self.handle_keyword_args, LoopFromKeywordNode, "child_node"),
         }
         contents_function, node_class, node_args = func_map.get(node_value)
         if node_class == LogicKeywordNode:
@@ -1706,15 +1738,14 @@ class Parser:
                 raise KeywordMisuseException(token.row, token.col, token.value, LOOP_FROM_SIGNATURE)
         else:
             if function_keyword in [LoopUpKeywordNode, LoopDownKeywordNode]:
-                args_is_list = type(function_args) == list and len(function_args) > 1
+                # LoopUp/Down doesn't support a list of args
+                if type(function_args) == list and len(function_args) > 1:
+                    raise TooManyArgsException(token.row, token.col)
                 args_is_num = type(function_args) == NumberNode
                 args_is_var_type = type(function_args) == VariableReferenceNode
                 args_is_var_int = self.variable_to_type_map.get(function_args.value, None) == "int16"
-                # LoopUp/Down doesn't support a list of args
-                if args_is_list:
-                    raise TooManyArgsException(token.row, token.col)
                 # If not a num (expected), need to run other checks.
-                elif not args_is_num:
+                if not args_is_num:
                     # It's not a number and it's not a var, we don't support it
                     if not args_is_var_type:
                         raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
@@ -1722,9 +1753,8 @@ class Parser:
                     elif args_is_var_type and not args_is_var_int:
                         raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
             if function_keyword == LoopFromKeywordNode:
-                args_is_list = type(function_args) == list and len(function_args) > 1
                 # LoopFrom doesn't support a list of args
-                if args_is_list:
+                if type(function_args) == list and len(function_args) > 1:
                     raise TooManyArgsException(token.row, token.col)
                 elif not type(function_args) == RangeNode:
                     raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
