@@ -1849,7 +1849,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopUp", VariableReferenceNode))
+        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopUp", "string"))
 
     def test_loop_down_keyword(self):
         """
@@ -1982,7 +1982,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopDown", VariableReferenceNode))
+        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopDown", "string"))
 
     def test_loop_from_keyword(self):
         """

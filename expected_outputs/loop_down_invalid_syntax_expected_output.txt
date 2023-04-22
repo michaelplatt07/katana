@@ -11,4 +11,4 @@ main() {
 }
 
     ^
-Keyword 'loopDown' does not support '<class '__main__.VariableReferenceNode'>' at 3:4.
+Keyword 'loopDown' does not support 'string' at 3:4.

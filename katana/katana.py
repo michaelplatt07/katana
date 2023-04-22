@@ -1743,6 +1743,7 @@ class Parser:
                 args_is_num = type(function_args) == NumberNode
                 args_is_var_type = type(function_args) == VariableReferenceNode
                 args_is_var_int = self.variable_to_type_map.get(function_args.value, None) == "int16"
+                args_type = self.variable_to_type_map.get(function_args.value, type(function_args))
                 # If not a num (expected), need to run other checks.
                 if not args_is_num:
                     # It's not a number and it's not a var, we don't support it
@@ -1750,7 +1751,7 @@ class Parser:
                         raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
                     # It's a var but not a number type var
                     elif args_is_var_type and not args_is_var_int:
-                        raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+                        raise InvalidArgsException(token.row, token.col, node_value, args_type)
             if function_keyword == LoopFromKeywordNode:
                 # LoopFrom doesn't support a list of args
                 if type(function_args) == list and len(function_args) > 1:
