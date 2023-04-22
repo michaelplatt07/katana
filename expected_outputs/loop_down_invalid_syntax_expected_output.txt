@@ -1,0 +1,14 @@
+main() {
+
+    string x = "hello";
+
+    loopDown(x) {
+
+        print("goodbye");
+
+    }
+
+}
+
+    ^
+Keyword 'loopDown' does not support '<class '__main__.VariableReferenceNode'>' at 3:4.

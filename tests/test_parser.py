@@ -1808,6 +1808,49 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         assert ast == parser.parse()
 
+    @patch("katana.katana.print_exception_message")
+    def test_loop_up_with_variable_wrong_type_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            string x = "hello";
+            loopUp(x) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 10, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 14, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopUp", VariableReferenceNode))
+
     def test_loop_down_keyword(self):
         """
         Given a program like:
@@ -1897,6 +1940,49 @@ class TestParserLoopKeyword:
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
         assert ast == parser.parse()
+
+    @patch("katana.katana.print_exception_message")
+    def test_loop_down_with_variable_wrong_type_raises_error(self, mock_print):
+        """
+        Given a program like:
+        ```
+        main() {
+            string x = "hello";
+            loopDown(x) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to raise InvalidArgsException.
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 10, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 14, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 3, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopDown", VariableReferenceNode))
 
     def test_loop_from_keyword(self):
         """
