@@ -1124,8 +1124,7 @@ class Lexer:
                 token = self.token_list[self.left_paren_idx_list[-1] - 1]
                 left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
                 if not terminator_present and not left_paren_first and not left_paren_has_keyword:
-                    # TODO(map) Write test for this exception being raised.
-                    assert False, "raised exception"
+                    assert False, "Ran into issue in check_for_valid_termination. Write test when this happens."
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
