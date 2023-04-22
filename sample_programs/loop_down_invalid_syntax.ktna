@@ -1,0 +1,6 @@
+main() {
+    string x = "hello";
+    loopDown(x) {
+        print("goodbye");
+    }
+}

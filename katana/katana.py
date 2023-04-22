@@ -193,7 +193,6 @@ class InvalidVariableNameError(Exception):
         return self.line_num == other.line_num and self.col_num == other.col_num
 
 
-
 class KeywordMisuseException(Exception):
     def __init__(self, line_num, col_num, keyword, usage):
         super().__init__("Improper use of keyword.")
@@ -211,6 +210,40 @@ class KeywordMisuseException(Exception):
         assert self.keyword == other.keyword, f"{self.keyword} == {other.keyword}"
         assert self.usage == other.usage, f"{self.usage} == {other.usage}"
         return (self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.usage == other.usage)
+
+
+class TooManyArgsException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Too many args")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Too many args for keyword at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
+class InvalidArgsException(Exception):
+    def __init__(self, line_num, col_num, keyword, arg_type):
+        super().__init__("Invalid args")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+        self.keyword = keyword
+        self.arg_type = arg_type
+
+    def __str__(self):
+        return f"Keyword '{self.keyword}' does not support '{self.arg_type}' at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.keyword == other.keyword, f"{self.keyword, other.keyword}"
+        assert self.arg_type == other.arg_type, f"{self.arg_type, other.arg_type}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.keyword == other.keyword and self.arg_type == other.arg_type
 
 
 class UnclosedQuotationException(Exception):
@@ -1091,6 +1124,7 @@ class Lexer:
                 token = self.token_list[self.left_paren_idx_list[-1] - 1]
                 left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
                 if not terminator_present and not left_paren_first and not left_paren_has_keyword:
+                    assert False, "Ran into issue in check_for_valid_termination. Write test when this happens."
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
@@ -1307,6 +1341,13 @@ class Parser:
         except InvalidTypeDeclarationException as itde:
             print_exception_message(("\n").join(program_lines), itde.col_num, itde)
             sys.exit()
+        except TooManyArgsException as tmae:
+            print_exception_message(("\n").join(program_lines), tmae.col_num, tmae)
+            sys.exit()
+        except InvalidArgsException as iae:
+            print_exception_message(("\n").join(program_lines), iae.col_num, iae)
+            sys.exit()
+
 
     def parse_literal(self):
         """
@@ -1396,6 +1437,38 @@ class Parser:
             if left_side_type == "char" and not right_side_char and not right_side_char_at:
                 raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
 
+    # TODO(map) Do we really want to have multiple return types here? Maybe
+    # it's better to determine if the keyword supports a list here and if not
+    # we error out. Then this becomes a check that the number of params match
+    # while the validate_function_args holds the type checking.
+    def handle_keyword_args(self):
+        """
+        Method that will parse the tokens within the parenthesis when they are
+        used to wrap function or keyword arguments. Differs from
+        handle_parenthesis because this can return a list or a single node.
+        """
+        root_node = None
+
+        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
+        # Advance once to get past the paren token.
+        self.advance_token()
+
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+
+        return arg_list if len(arg_list) > 1 else root_node
+
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
         # updated to handle those situations.
@@ -1441,10 +1514,10 @@ class Parser:
             "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
             "updateChar": (self.handle_update_char_keyword, FunctionKeywordNode, "arg_nodes"),
             "copyStr": (self.handle_copy_str_keyword, FunctionKeywordNode, "arg_nodes"),
-            "if": (self.handle_parenthesis, LogicKeywordNode, "child_node"),
-            "loopUp": (self.handle_parenthesis, LoopUpKeywordNode, "child_node"),
-            "loopDown": (self.handle_parenthesis, LoopDownKeywordNode, "child_node"),
-            "loopFrom": (self.handle_parenthesis, LoopFromKeywordNode, "child_node"),
+            "if": (self.handle_keyword_args, LogicKeywordNode, "child_node"),
+            "loopUp": (self.handle_keyword_args, LoopUpKeywordNode, "child_node"),
+            "loopDown": (self.handle_keyword_args, LoopDownKeywordNode, "child_node"),
+            "loopFrom": (self.handle_keyword_args, LoopFromKeywordNode, "child_node"),
         }
         contents_function, node_class, node_args = func_map.get(node_value)
         if node_class == LogicKeywordNode:
@@ -1455,15 +1528,7 @@ class Parser:
         elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
             # Need to get contents of the loop.
             contents = contents_function()
-            # TODO(map) The loop methods should have their own methods that
-            # raise these exceptions.
-            if not contents:
-                if node_class == LoopUpKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_UP_SIGNATURE)
-                if node_class == LoopDownKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_DOWN_SIGNATURE)
-                if node_class == LoopFromKeywordNode:
-                    raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, LOOP_FROM_SIGNATURE)
+            self.validate_function_args(contents, node_class, keyword_token, node_value)
             loop_body = self.get_loop_body(node_value)
         else:
             contents = contents_function(keyword_token)
@@ -1628,6 +1693,8 @@ class Parser:
             self.advance_token()
         # Add the final calculated node to the list
         arg_list.append(root_node)
+
+        self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
         return arg_list
 
     def handle_const_keyword(self, keyword_token):
@@ -1659,6 +1726,38 @@ class Parser:
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
         else:
             return child_node
+
+    def validate_function_args(self, function_args, function_keyword, token, node_value):
+        if not function_args:
+            if function_keyword == LoopUpKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_UP_SIGNATURE)
+            if function_keyword == LoopDownKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_DOWN_SIGNATURE)
+            if function_keyword == LoopFromKeywordNode:
+                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_FROM_SIGNATURE)
+        else:
+            if function_keyword in [LoopUpKeywordNode, LoopDownKeywordNode]:
+                # LoopUp/Down doesn't support a list of args
+                if type(function_args) == list and len(function_args) > 1:
+                    raise TooManyArgsException(token.row, token.col)
+                args_is_num = type(function_args) == NumberNode
+                args_is_var_type = type(function_args) == VariableReferenceNode
+                args_is_var_int = self.variable_to_type_map.get(function_args.value, None) == "int16"
+                args_type = self.variable_to_type_map.get(function_args.value, type(function_args))
+                # If not a num (expected), need to run other checks.
+                if not args_is_num:
+                    # It's not a number and it's not a var, we don't support it
+                    if not args_is_var_type:
+                        raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+                    # It's a var but not a number type var
+                    elif args_is_var_type and not args_is_var_int:
+                        raise InvalidArgsException(token.row, token.col, node_value, args_type)
+            if function_keyword == LoopFromKeywordNode:
+                # LoopFrom doesn't support a list of args
+                if type(function_args) == list and len(function_args) > 1:
+                    raise TooManyArgsException(token.row, token.col)
+                elif not type(function_args) == RangeNode:
+                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
 
     def get_truth_side(self):
         truth_body = None
