@@ -864,10 +864,11 @@ class BooleanNode(Node):
 
 
 class VariableNode(Node):
-    def __init__(self, token, value, parent_node=None):
+    def __init__(self, token, value, is_const, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.parent_node = parent_node
+        self.is_const = is_const
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1322,7 +1323,8 @@ class Parser:
             elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
                 node = BooleanNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
-                node = VariableNode(self.curr_token, self.curr_token.value, None)
+                is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
+                node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
             elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
                 node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
             elif self.curr_token.ttype == COMMA_TOKEN_TYPE:
@@ -2078,7 +2080,7 @@ class Compiler:
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
-            if node.parent_node.parent_node.parent_node.value == "const":
+            if node.is_const:
                 asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node))
             else:
                 asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node))
@@ -2091,7 +2093,7 @@ class Compiler:
                 "is_const": True,
                 "asm": asm
             }
-            if value_node.parent_node.parent_node.parent_node.value != "const":
+            if not node.is_const:
                 if type(value_node) == StringNode:
                     self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
                 self.variables[node.value]["is_const"] = False
