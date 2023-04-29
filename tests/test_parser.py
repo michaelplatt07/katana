@@ -72,18 +72,38 @@ from katana.katana import (
 class TestParserLiterals:
 
     def test_parser_single_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
-                      Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = NumberNode(token_list[0], "1")
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(NUM_TOKEN_TYPE, 1, 0, "1", LOW),
+            Token(EOL_TOKEN_TYPE, 2, 0, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+        ]
+        one_node = NumberNode(token_list[4], "1")
+        ast = StartNode(token_list[0], "main", [one_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_multi_digit_literal(self):
-        token_list = [Token(NUM_TOKEN_TYPE, 0, 1, "123", LOW),
-                      Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW)]
-        ast = NumberNode(token_list[0], "123")
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(NUM_TOKEN_TYPE, 0, 1, "123", LOW),
+            Token(EOL_TOKEN_TYPE, 3, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        num_node = NumberNode(token_list[4], "123")
+        ast = StartNode(token_list[0], "main", [num_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserAddition:
@@ -94,47 +114,65 @@ class TestParserAddition:
     def test_parser_adding_two_numbers(self):
         """
         Given the simple program:
-        1 + 2
+        main() {
+            1 + 2;
+        }
         Epxected to return an AST like:
         (1+2)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        left_node = NumberNode(token_list[0], "1")
-        right_node = NumberNode(token_list[2], "2")
-        ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
-        left_node.parent_node = ast
-        right_node.parent_node = ast
+        left_node = NumberNode(token_list[4], "1")
+        right_node = NumberNode(token_list[6], "2")
+        plus_minus_node = PlusMinusNode(token_list[5], "+", left_node, right_node)
+        ast = StartNode(token_list[0], "main", [plus_minus_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_adding_three_numbers(self):
         """
         Given the simple program:
-        1 + 2 + 3
+        main() {
+            1 + 2 + 3;
+        }
         Expected to return an AST like:
         ((1+2)+3)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
             Token(PLUS_TOKEN_TYPE, 6, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 9, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        left_node_1 = NumberNode(token_list[0], "1")
-        right_node_1 = NumberNode(token_list[2], "2")
+        left_node_1 = NumberNode(token_list[4], "1")
+        right_node_1 = NumberNode(token_list[6], "2")
         first_plus = PlusMinusNode(
-            token_list[1], "+", left_node_1, right_node_1)
-        right_node_2 = NumberNode(token_list[4], "3")
-        ast = PlusMinusNode(token_list[3], "+", first_plus, right_node_2)
+            token_list[5], "+", left_node_1, right_node_1)
+        right_node_2 = NumberNode(token_list[8], "3")
+        second_plus = PlusMinusNode(token_list[7], "+", first_plus, right_node_2)
+        ast = StartNode(token_list[0], "main", [second_plus])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserSubtraction:
@@ -145,45 +183,65 @@ class TestParserSubtraction:
     def test_parser_two_subtracting_numbers(self):
         """
         Given the simple program:
-        1 - 2
+        main() {
+            1 - 2;
+        }
         Epxected to return an AST like:
         (1-2)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(MINUS_TOKEN_TYPE, 2, 1, "-", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "2", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        left_node = NumberNode(token_list[0], "1")
-        right_node = NumberNode(token_list[2], "2")
-        ast = PlusMinusNode(token_list[1], "-", left_node, right_node)
+        left_node = NumberNode(token_list[4], "1")
+        right_node = NumberNode(token_list[6], "2")
+        plus_minus_node = PlusMinusNode(token_list[5], "-", left_node, right_node)
+        ast = StartNode(token_list[0], "main", [plus_minus_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_subtracting_three_numbers(self):
         """
         Given the simple program:
-        1 - 2 - 3
+        main() {
+            1 - 2 - 3;
+        }
         Expected to return an AST like:
         ((1-2)-3)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(MINUS_TOKEN_TYPE, 2, 1, "-", MEDIUM),
             Token(NUM_TOKEN_TYPE, 5, 1, "2", LOW),
             Token(MINUS_TOKEN_TYPE, 6, 1, "-", MEDIUM),
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 9, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node_1 = NumberNode(token_list[0], "1")
-        right_node_1 = NumberNode(token_list[2], "2")
-        first_plus = PlusMinusNode(
-            token_list[1], "-", left_node_1, right_node_1)
-        right_node_2 = NumberNode(token_list[4], "3")
-        ast = PlusMinusNode(token_list[3], "-", first_plus, right_node_2)
+        left_node_1 = NumberNode(token_list[4], "1")
+        right_node_1 = NumberNode(token_list[6], "2")
+        first_minus = PlusMinusNode(
+            token_list[5], "-", left_node_1, right_node_1)
+        right_node_2 = NumberNode(token_list[8], "3")
+        second_minus = PlusMinusNode(token_list[7], "-", first_minus, right_node_2)
+        ast = StartNode(token_list[0], "main", [second_minus])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestMultiply:
@@ -194,21 +252,31 @@ class TestMultiply:
     def test_parser_multiply_two_numbers(self):
         """
         Given a simple program like:
-        3 * 4
+        main() {
+            3 * 4
+        }
         Expected to return an AST like:
         (3*4)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "3", LOW),
             Token(MULTIPLY_TOKEN_TYPE, 2, 1, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        left_node = NumberNode(token_list[0], "3")
-        right_node = NumberNode(token_list[2], "4")
-        ast = MultiplyDivideNode(token_list[1], "*", left_node, right_node)
+        left_node = NumberNode(token_list[4], "3")
+        right_node = NumberNode(token_list[6], "4")
+        mult_div_node = MultiplyDivideNode(token_list[5], "*", left_node, right_node)
+        ast = StartNode(token_list[0], "main", [mult_div_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestDivide:
@@ -219,21 +287,31 @@ class TestDivide:
     def test_parser_divide_two_numbers(self):
         """
         Given a simple program like:
-        3 / 4
+        main() {
+            3 / 4
+        }
         Expected to return an AST like:
         (3/4)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "3", LOW),
             Token(DIVIDE_TOKEN_TYPE, 2, 1, "/", HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = NumberNode(token_list[0], "3")
-        right_node = NumberNode(token_list[2], "4")
-        ast = MultiplyDivideNode(token_list[1], "/", left_node, right_node)
+        left_node = NumberNode(token_list[4], "3")
+        right_node = NumberNode(token_list[6], "4")
+        mult_div_node = MultiplyDivideNode(token_list[5], "/", left_node, right_node)
+        ast = StartNode(token_list[0], "main", [mult_div_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestComments:
@@ -244,22 +322,32 @@ class TestComments:
     def test_parser_simple_add_with_comment(self):
         """
         Given a simple program like:
-        3 + 4 // Add numbers
+        main() {
+            3 + 4; // Add numbers
+        }
         Expected to return an AST like:
         (3+4)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "3", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
             Token(COMMENT_TOKEN_TYPE, 8, 1, "// Add numbers", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        left_node = NumberNode(token_list[0], "3")
-        right_node = NumberNode(token_list[2], "4")
-        ast = PlusMinusNode(token_list[1], "+", left_node, right_node)
+        left_node = NumberNode(token_list[4], "3")
+        right_node = NumberNode(token_list[6], "4")
+        plus_minus_node = PlusMinusNode(token_list[5], "+", left_node, right_node)
+        ast = StartNode(token_list[0], "main", [plus_minus_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestArithmetic:
@@ -270,37 +358,52 @@ class TestArithmetic:
     def test_parser_add_and_multiply(self):
         """
         Given a program like:
-        2 + 3 * 4
+        main() {
+            2 + 3 * 4
+        }
         Expected to return an AST like:
         (2+(3*4))
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "2", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "3", LOW),
             Token(MULTIPLY_TOKEN_TYPE, 6, 1, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 9, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        left_node_add = NumberNode(token_list[0], "2")
-        left_node_multiply = NumberNode(token_list[2], "3")
-        right_node_multiply = NumberNode(token_list[4], "4")
+        left_node_add = NumberNode(token_list[4], "2")
+        left_node_multiply = NumberNode(token_list[6], "3")
+        right_node_multiply = NumberNode(token_list[8], "4")
         multiply_node = MultiplyDivideNode(
-            token_list[3], "*", left_node_multiply, right_node_multiply)
+            token_list[7], "*", left_node_multiply, right_node_multiply)
         add_node = PlusMinusNode(
-            token_list[1], "+", left_node_add, multiply_node)
-        ast = add_node
+            token_list[5], "+", left_node_add, multiply_node)
+        ast = StartNode(token_list[0], "main", [add_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_multiply_sub_add_more_complex(self):
         """
         Given a program like:
-        2 * 3 - 4 + 5
+        main() {
+            2 * 3 - 4 + 5;
+        }
         Expected to return an AST like:
         (((2*3)-4)+5)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "2", LOW),
             Token(MULTIPLY_TOKEN_TYPE, 2, 1, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "3", LOW),
@@ -308,28 +411,37 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
             Token(PLUS_TOKEN_TYPE, 10, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW),
         ]
-        two_node = NumberNode(token_list[0], "2")
-        three_node = NumberNode(token_list[2], "3")
-        four_node = NumberNode(token_list[4], "4")
-        five_node = NumberNode(token_list[6], "5")
+        two_node = NumberNode(token_list[4], "2")
+        three_node = NumberNode(token_list[6], "3")
+        four_node = NumberNode(token_list[8], "4")
+        five_node = NumberNode(token_list[10], "5")
         multiply_node = MultiplyDivideNode(
-            token_list[1], "*", two_node, three_node)
-        sub_node = PlusMinusNode(token_list[3], "-", multiply_node, four_node)
-        plus_node = PlusMinusNode(token_list[5], "+", sub_node, five_node)
-        ast = plus_node
+            token_list[5], "*", two_node, three_node)
+        sub_node = PlusMinusNode(token_list[7], "-", multiply_node, four_node)
+        plus_node = PlusMinusNode(token_list[9], "+", sub_node, five_node)
+        ast = StartNode(token_list[0], "main", [plus_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_add_sub_and_multiply_more_complex(self):
         """
         Given a program like:
-        2 + 3 - 4 * 5
+        main() {
+            2 + 3 - 4 * 5
+        }
         Expected to return an AST like:
         ((2+3)-(4*5))
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "2", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "3", LOW),
@@ -337,28 +449,37 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
             Token(MULTIPLY_TOKEN_TYPE, 10, 1, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
-        two_node = NumberNode(token_list[0], "2")
-        three_node = NumberNode(token_list[2], "3")
-        four_node = NumberNode(token_list[4], "4")
-        five_node = NumberNode(token_list[6], "5")
+        two_node = NumberNode(token_list[4], "2")
+        three_node = NumberNode(token_list[6], "3")
+        four_node = NumberNode(token_list[8], "4")
+        five_node = NumberNode(token_list[10], "5")
         multiply_node = MultiplyDivideNode(
-            token_list[5], "*", four_node, five_node)
-        plus_node = PlusMinusNode(token_list[1], "+", two_node, three_node)
-        sub_node = PlusMinusNode(token_list[3], "-", plus_node, multiply_node)
-        ast = sub_node
+            token_list[9], "*", four_node, five_node)
+        plus_node = PlusMinusNode(token_list[5], "+", two_node, three_node)
+        sub_node = PlusMinusNode(token_list[7], "-", plus_node, multiply_node)
+        ast = StartNode(token_list[0], "main", [sub_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_add_multiply_sub_more_complex(self):
         """
         Given a program like:
-        2 + 3 * 4 - 5
+        main() {
+            2 + 3 * 4 - 5
+        }
         Expected to return an AST like:
         ((2+(3*4))-5)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "2", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 4, 1, "3", LOW),
@@ -366,50 +487,63 @@ class TestArithmetic:
             Token(NUM_TOKEN_TYPE, 8, 1, "4", LOW),
             Token(MINUS_TOKEN_TYPE, 10, 1, "-", MEDIUM),
             Token(NUM_TOKEN_TYPE, 12, 1, "5", LOW),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        two_node = NumberNode(token_list[0], "2")
-        three_node = NumberNode(token_list[2], "3")
-        four_node = NumberNode(token_list[4], "4")
-        five_node = NumberNode(token_list[6], "5")
+        two_node = NumberNode(token_list[4], "2")
+        three_node = NumberNode(token_list[6], "3")
+        four_node = NumberNode(token_list[8], "4")
+        five_node = NumberNode(token_list[10], "5")
         multiply_node = MultiplyDivideNode(
-            token_list[3], "*", three_node, four_node)
-        plus_node = PlusMinusNode(token_list[1], "+", two_node, multiply_node)
-        sub_node = PlusMinusNode(token_list[5], "-", plus_node, five_node)
-        ast = sub_node
+            token_list[7], "*", three_node, four_node)
+        plus_node = PlusMinusNode(token_list[5], "+", two_node, multiply_node)
+        sub_node = PlusMinusNode(token_list[9], "-", plus_node, five_node)
+        ast = StartNode(token_list[0], "main", [sub_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_parser_div_add_mul_more_complex(self):
         """
         Given a program like:
-        8 / 8 + 3 * 2
+        main() {
+            8 / 8 + 3 * 2
+        }
         Expected to return an AST like:
         ((8*8)+(3*2))
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "8", LOW),
             Token(DIVIDE_TOKEN_TYPE, 2, 1, "/", HIGH),
             Token(NUM_TOKEN_TYPE, 4, 1, "8", LOW),
             Token(PLUS_TOKEN_TYPE, 6, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
             Token(MULTIPLY_TOKEN_TYPE, 10, 1, "*", HIGH),
-            Token(NUM_TOKEN_TYPE, 12, 1, "2", LOW),
+            Token(NUM_TOKEN_TYPE, 12, 2, "2", LOW),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        first_eight_node = NumberNode(token_list[0], "8")
-        second_eight_node = NumberNode(token_list[2], "8")
-        three_node = NumberNode(token_list[4], "3")
-        two_node = NumberNode(token_list[6], "2")
+        first_eight_node = NumberNode(token_list[4], "8")
+        second_eight_node = NumberNode(token_list[6], "8")
+        three_node = NumberNode(token_list[8], "3")
+        two_node = NumberNode(token_list[10], "2")
         divide_node = MultiplyDivideNode(
-            token_list[1], "/", first_eight_node, second_eight_node)
+            token_list[5], "/", first_eight_node, second_eight_node)
         multiply_node = MultiplyDivideNode(
-            token_list[5], "*", three_node, two_node)
+            token_list[9], "*", three_node, two_node)
         add_node = PlusMinusNode(
-            token_list[3], "+", divide_node, multiply_node)
-        ast = add_node
+            token_list[7], "+", divide_node, multiply_node)
+        ast = StartNode(token_list[0], "main", [add_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserParenthesis:
@@ -420,11 +554,17 @@ class TestParserParenthesis:
     def test_simple_add_with_paren(self):
         """
         Given a program like:
-        1 + (2 + 3)
+        main(){
+            1 + (2 + 3);
+        }
         Expected to return an AST like:
         (1+(2+3))
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 1, "(", VERY_HIGH),
@@ -432,25 +572,35 @@ class TestParserParenthesis:
             Token(PLUS_TOKEN_TYPE, 7, 1, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 9, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = NumberNode(token_list[0], "1")
-        two_node = NumberNode(token_list[3], "2")
-        three_node = NumberNode(token_list[5], "3")
+        one_node = NumberNode(token_list[4], "1")
+        two_node = NumberNode(token_list[7], "2")
+        three_node = NumberNode(token_list[9], "3")
         first_plus = PlusMinusNode(
-            token_list[4], "+", two_node, three_node)
-        ast = PlusMinusNode(token_list[1], "+", one_node, first_plus)
+            token_list[8], "+", two_node, three_node)
+        other_plus = PlusMinusNode(token_list[5], "+", one_node, first_plus)
+        ast = StartNode(token_list[0], "main", [other_plus])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_add_higher_prio_than_mult_with_paren(self):
         """
         Given a program like:
-        (1 + 2) * 3)
+        main() {
+            (1 + 2) * 3)
+        }
         Expected to return an AST like:
         ((1+2)*3)
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 1, "(", VERY_HIGH),
             Token(NUM_TOKEN_TYPE, 1, 1, "1", LOW),
             Token(PLUS_TOKEN_TYPE, 3, 1, "+", MEDIUM),
@@ -458,16 +608,20 @@ class TestParserParenthesis:
             Token(RIGHT_PAREN_TOKEN_TYPE, 6, 1, ")", VERY_HIGH),
             Token(MULTIPLY_TOKEN_TYPE, 8, 1, "*", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        one_node = NumberNode(token_list[1], "1")
-        two_node = NumberNode(token_list[3], "2")
-        three_node = NumberNode(token_list[6], "3")
+        one_node = NumberNode(token_list[5], "1")
+        two_node = NumberNode(token_list[7], "2")
+        three_node = NumberNode(token_list[10], "3")
         first_plus = PlusMinusNode(
-            token_list[2], "+", one_node, two_node)
-        ast = MultiplyDivideNode(token_list[5], "*", first_plus, three_node)
+            token_list[6], "+", one_node, two_node)
+        mult_node = MultiplyDivideNode(token_list[9], "*", first_plus, three_node)
+        ast = StartNode(token_list[0], "main", [mult_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserPrint:
@@ -478,22 +632,31 @@ class TestParserPrint:
     def test_keyword_print_with_literal(self):
         """
         Given a program like:
-        print(3)
+        main() {
+            print(3);
+        }
         Expected to return an AST like:
         (print(3))
         """
         token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 1, "(", HIGH),
             Token(NUM_TOKEN_TYPE, 6, 1, "3", LOW),
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 1, ")", HIGH),
             Token(EOL_TOKEN_TYPE, 8, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        three_node = NumberNode(token_list[2], "3")
-        ast = FunctionKeywordNode(token_list[0], "print", [three_node])
+        three_node = NumberNode(token_list[6], "3")
+        print_node = FunctionKeywordNode(token_list[4], "print", [three_node])
+        ast = StartNode(token_list[0], "main", [print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_keyword_printl(self):
         """
@@ -521,7 +684,8 @@ class TestParserPrint:
         printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
         ast = StartNode(token_list[0], "main", [printl_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_print_use_invalid(self, mock_print):
@@ -603,7 +767,8 @@ class TestParserMain:
         three_node = NumberNode(token_list[4], "3")
         ast = StartNode(token_list[0], "main", [three_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_no_left_paren_raises_exception(self, mock_print):
@@ -734,12 +899,13 @@ class TestParserInt:
         three_node = NumberNode(token_list[7], "3")
         four_node = NumberNode(token_list[9], "4")
         plus_node = PlusMinusNode(token_list[8], "+", three_node, four_node)
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, plus_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_keyword_int_16_declaration(self):
         """
@@ -764,12 +930,13 @@ class TestParserInt:
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         three_node = NumberNode(token_list[7], "3")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_keyword_const_with_int(self):
         """
@@ -794,13 +961,14 @@ class TestParserInt:
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
         three_node = NumberNode(token_list[8], "3")
-        x_node = VariableNode(token_list[6], "x")
+        x_node = VariableNode(token_list[6], "x", True)
         assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
         variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
         const_node = VariableKeywordNode(token_list[4], "const", variable_dec_node)
         ast = StartNode(token_list[0], "main", [const_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_keyword_int_16_reference(self):
         """
@@ -831,14 +999,15 @@ class TestParserInt:
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
         three_node = NumberNode(token_list[7], "3")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
         variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserCharAt:
@@ -906,13 +1075,13 @@ class TestParserCharAt:
             Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
         ]
         string_node = StringNode(token_list[7], "Hello, Katana!")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
         string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
         two_node = NumberNode(token_list[16], "2")
         x_ref_node = VariableReferenceNode(token_list[14], "x")
         char_at_node = FunctionKeywordNode(token_list[12], "charAt", [x_ref_node, two_node])
-        y_node = VariableNode(token_list[10], "y")
+        y_node = VariableNode(token_list[10], "y", False)
         y_assign_node = AssignmentNode(token_list[11], "=", y_node, char_at_node)
         char_declare_node = VariableKeywordNode(token_list[9], "char", y_assign_node)
         char_l_node = CharNode(token_list[23], "l")
@@ -925,7 +1094,8 @@ class TestParserCharAt:
         conditional_node = LogicKeywordNode(token_list[19], "if", compare_node, true_side=[print_equal_node], false_side=[print_unequal_node])
         ast = StartNode(token_list[0], "main", [string_declare_node, char_declare_node, conditional_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_syntax(self, mock_print):
@@ -1058,7 +1228,7 @@ class TestUpdateChar:
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
         string_node = StringNode(token_list[7], "Hello")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
         string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
@@ -1067,7 +1237,8 @@ class TestUpdateChar:
         update_char_node = FunctionKeywordNode(token_list[9], "updateChar", [x_ref_node, zero_node, q_char_node])
         ast = StartNode(token_list[0], "main", [string_declare_node, update_char_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_update_char_function_invalid_syntax(self, mock_print):
@@ -1177,11 +1348,11 @@ class TestParserCopyString:
             Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
         ]
         hello_node = StringNode(token_list[7], "Hello")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, hello_node)
         hello_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
         katana_node = StringNode(token_list[12], "Katana")
-        y_node = VariableNode(token_list[10], "y")
+        y_node = VariableNode(token_list[10], "y", False)
         y_assign_node = AssignmentNode(token_list[11], "=", y_node, katana_node)
         katana_declare_node = VariableKeywordNode(token_list[9], "string", y_assign_node)
         x_ref_node = VariableReferenceNode(token_list[16], "x")
@@ -1189,7 +1360,8 @@ class TestParserCopyString:
         copy_str_node = FunctionKeywordNode(token_list[14], "copyStr", [x_ref_node, y_ref_node])
         ast = StartNode(token_list[0], "main", [hello_declare_node, katana_declare_node, copy_str_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_function_invalid_syntax(self, mock_print):
@@ -1275,12 +1447,13 @@ class TestParserString:
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         string_node = StringNode(token_list[7], "hello")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, string_node)
         keyword_node = VariableKeywordNode(token_list[4], "string", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_keyword_string_reference(self):
         """
@@ -1311,14 +1484,15 @@ class TestParserString:
             Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
         ]
         string_node = StringNode(token_list[7], "hello")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, string_node)
         variable_dec_node = VariableKeywordNode(token_list[4], "string", assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserChar:
@@ -1349,12 +1523,13 @@ class TestParserChar:
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         char_node = CharNode(token_list[7], "h")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", True)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, char_node)
         keyword_node = VariableKeywordNode(token_list[4], "char", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_update_char_with_invalid_type_fails(self):
         """
@@ -1421,12 +1596,13 @@ class TestParserBool:
             Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
         ]
         boolean_node = BooleanNode(token_list[7], "false")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, boolean_node)
         keyword_node = VariableKeywordNode(token_list[4], "bool", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserIfElse:
@@ -1482,7 +1658,8 @@ class TestParserIfElse:
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_keyword_reversed_compare(self):
         """
@@ -1532,7 +1709,8 @@ class TestParserIfElse:
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], [])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_else(self):
         """
@@ -1594,7 +1772,8 @@ class TestParserIfElse:
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [if_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_keyword_less_than_operator(self):
         """
@@ -1652,7 +1831,8 @@ class TestParserIfElse:
         if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_keyword_equal_operator(self):
         """
@@ -1710,7 +1890,8 @@ class TestParserIfElse:
         if_node = LogicKeywordNode(token_list[4], "if", equal_node, None, [first_print_node, second_first_print_node])
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestParserLoopKeyword:
@@ -1756,7 +1937,8 @@ class TestParserLoopKeyword:
         loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_loop_up_with_variable_reference(self):
         """
@@ -1799,14 +1981,15 @@ class TestParserLoopKeyword:
         string_node = StringNode(token_list[16], "looping")
         print_node = FunctionKeywordNode(token_list[14], "print", [string_node])
         five_node = NumberNode(token_list[7], "5")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, five_node)
         x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         loop_node = LoopUpKeywordNode(token_list[9], "loopUp", x_ref_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_variable_wrong_type_raises_error(self, mock_print):
@@ -1889,7 +2072,8 @@ class TestParserLoopKeyword:
         loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_loop_down_with_variable_reference(self):
         """
@@ -1932,14 +2116,15 @@ class TestParserLoopKeyword:
         string_node = StringNode(token_list[16], "looping")
         print_node = FunctionKeywordNode(token_list[14], "print", [string_node])
         seven_node = NumberNode(token_list[7], "7")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, seven_node)
         x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         loop_node = LoopDownKeywordNode(token_list[9], "loopDown", x_ref_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_variable_wrong_type_raises_error(self, mock_print):
@@ -2026,7 +2211,8 @@ class TestParserLoopKeyword:
         loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     @patch("katana.katana.print_exception_message")
     def test_loop_from_keyword_without_dot_operator_raises_error(self, mock_print):
@@ -2430,7 +2616,7 @@ class TestKeywordAdvanced:
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
         one_node = NumberNode(token_list[7], "1")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
@@ -2441,7 +2627,8 @@ class TestKeywordAdvanced:
         if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_keyword_with_var_reference_in_conditional_right_side(self):
         """
@@ -2498,7 +2685,7 @@ class TestKeywordAdvanced:
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
         one_node = NumberNode(token_list[7], "1")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[13], "x")
@@ -2509,7 +2696,8 @@ class TestKeywordAdvanced:
         if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_if_keyword_with_var_reference_in_conditional_both_sides(self):
         """
@@ -2574,11 +2762,11 @@ class TestKeywordAdvanced:
         greater_string_node = StringNode(token_list[27], "true")
         first_print_node = FunctionKeywordNode(token_list[25], "print", [greater_string_node])
         one_node = NumberNode(token_list[7], "1")
-        x_node = VariableNode(token_list[5], "x")
+        x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
         keyword_node_x = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
         two_node = NumberNode(token_list[12], "2")
-        y_node = VariableNode(token_list[10], "y")
+        y_node = VariableNode(token_list[10], "y", False)
         y_assignment_node = AssignmentNode(token_list[11], "=", y_node, two_node)
         keyword_node_y = VariableKeywordNode(token_list[9], "int16", y_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[20], "x")
@@ -2591,7 +2779,8 @@ class TestKeywordAdvanced:
         if_node = LogicKeywordNode(token_list[14], "if", compare_node, None, [first_print_node], [second_print_node])
         ast = StartNode(token_list[0], "main", [keyword_node_x, keyword_node_y, if_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_update_var_with_expression(self):
         """
@@ -2623,7 +2812,7 @@ class TestKeywordAdvanced:
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
         one_node = NumberNode(token_list[7], "1")
-        x_var_node = VariableNode(token_list[5], "x")
+        x_var_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_var_node, one_node)
         int_keyword_node = VariableKeywordNode(token_list[4], "int16", x_assign_node)
         three_node = NumberNode(token_list[13], "3")
@@ -2633,29 +2822,8 @@ class TestKeywordAdvanced:
         reassign_node = AssignmentNode(token_list[10], "=", x_left_assignmet_ref_node, plus_node)
         ast = StartNode(token_list[0], "main", [int_keyword_node, reassign_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
-
-
-class TestParserQuote:
-    """
-    All tests related to quotation mark.
-    """
-
-    def test_quotation(self):
-        """
-        Given a program like:
-        ""Hello, World!""
-        Expected to return an AST like:
-        ("Hello, World!")
-        """
-        token_list = [
-            Token(STRING_TOKEN_TYPE, 0, 1, "Hello, World!", 0),
-            Token(EOL_TOKEN_TYPE, 14, 1, ";", 0),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", 0)
-        ]
-        ast = StringNode(token_list[0], "Hello, World!")
-        parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestConcatenation:
@@ -2695,7 +2863,7 @@ class TestConcatenation:
             Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
         ]
         string_node = StringNode(token_list[7], "Hello")
-        x_dec_node = VariableNode(token_list[5], "x")
+        x_dec_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_dec_node, string_node)
         keyword_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
         char_node = CharNode(token_list[13], "!")
@@ -2705,7 +2873,8 @@ class TestConcatenation:
         x_reassign_val_node = AssignmentNode(token_list[10], "=", x_reassign_ref, plus_node)
         ast = StartNode(token_list[0], "main", [keyword_node, x_reassign_val_node])
         parser = Parser(token_list)
-        assert ast == parser.parse()
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
     def test_concatenate_other_to_string_raises_exception(self):
         """
@@ -2826,3 +2995,50 @@ class TestParserTypeChecking:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+
+
+class TestParserVariablesOutsideMain:
+    """
+    All tests for declaring variables outside of the main method. This serves
+    a dual purpose of testing to ensure that `main` not being the first node
+    correcly generates a list of ASTs.
+    """
+
+    def test_int_before_main(self):
+        """
+        Given a program like:
+        int16 x = 3;
+        main() {
+            print(x);
+        }
+        Expected to return node list like:
+        [(int16(x=3)), (main[(print[x,])])]
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 6, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 8, "=", 2),
+            Token(NUM_TOKEN_TYPE, 0, 10, "3", 0),
+            Token(EOL_TOKEN_TYPE, 0, 11, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 2, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 9, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 10, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 11, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 12, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        three_node = NumberNode(token_list[3], "3")
+        x_node = VariableNode(token_list[1], "x", False)
+        assignment_node = AssignmentNode(token_list[2], "=", x_node, three_node)
+        keyword_node = VariableKeywordNode(token_list[0], "int16", assignment_node)
+        x_ref_node = VariableReferenceNode(token_list[11], "x")
+        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
+        start_node = StartNode(token_list[5], "main", [print_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [keyword_node, start_node] == parser.get_nodes()

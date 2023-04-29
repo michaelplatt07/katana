@@ -13,8 +13,9 @@ def get_compiler_class(lines):
     lexer = Lexer(program)
     token_list = lexer.lex()
     parser = Parser(token_list)
-    ast = parser.parse()
-    return Compiler(ast)
+    parser.parse()
+    nodes = parser.get_nodes()
+    return Compiler(nodes)
 
 
 def get_assembly_for_program(lines):

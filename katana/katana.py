@@ -1266,8 +1266,16 @@ class Parser:
         self.token_list = token_list
         self.has_next_token = True
         self.curr_token_pos = -1
-        self.root_node = None
+        self.main_node = None
         self.variable_to_type_map = {}
+        self.node_list = []
+
+    def get_nodes(self):
+        ret_nodes = []
+        ret_nodes.extend(self.node_list)
+        if self.main_node:
+            ret_nodes.append(self.main_node)
+        return ret_nodes
 
     def parse(self):
         root_node = None
@@ -1276,7 +1284,17 @@ class Parser:
             node = self.process_token(root_node)
             if node and type(node) != NoOpNode:
                 root_node = node
-        return root_node
+            if type(root_node) == StartNode:
+                self.main_node = root_node
+            elif root_node and type(node) == NoOpNode:
+                self.node_list.append(root_node)
+                root_node = None
+            elif not root_node.parent_node:
+                self.node_list.append(root_node)
+                root_node = None
+            else:
+                # Haven't reached the end of a logical unit of work as a node.
+                continue
 
     def advance_token(self):
         self.curr_token_pos += 1
@@ -1847,8 +1865,8 @@ class Parser:
 ##########
 class Compiler:
 
-    def __init__(self, ast):
-        self.ast = ast
+    def __init__(self, node_list):
+        self.node_list = node_list
         self.output_path = os.getcwd() + "/out.asm"
         self.string_count = 0
         self.char_count = 0
@@ -1886,8 +1904,12 @@ class Compiler:
 
     def get_assembly(self):
         asm = []
-        for node in self.ast.children_nodes:
-            asm.extend(self.traverse_tree(node))
+        for single_node in self.node_list:
+            if type(single_node) == StartNode:
+                for node in single_node.children_nodes:
+                    asm.extend(self.traverse_tree(node))
+            else:
+                asm.extend(self.traverse_tree(single_node))
         return asm
 
     def write_assembly(self):
@@ -3111,10 +3133,10 @@ if __name__ == "__main__":
             print_verbose_message(token_list)
         if args.parse or args.compile or args.run:
             parser = Parser(token_list)
-            ast = parser.parse()
-            print_verbose_message(ast)
+            parser.parse()
+            print_verbose_message(parser.get_nodes())
         if args.compile or args.run:
-            compiler = Compiler(ast)
+            compiler = Compiler(parser.get_nodes())
             compiler.compile()
         if args.run:
             run_program()
