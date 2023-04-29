@@ -356,9 +356,6 @@ class TestLexerEndOfLineSemicolon:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    # TODO(map) Write some tests on the lexer for if statements and other
-    # conditions where a line needn't end in a semicolon.
-
     @patch("katana.katana.print_exception_message")
     def test_error_if_line_ends_without_semicolon(self, mock_print):
         program = Program(["3 + 4\n"])

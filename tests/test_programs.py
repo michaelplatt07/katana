@@ -15,6 +15,8 @@ def compare_expected_output_to_program_output(expected_results_dir, input_file_d
     for program in os.listdir(input_file_dir):
         output_file_name = os.getcwd() + "/results/" + \
             program.split('.')[0] + "_res.txt"
+        if display_compare:
+            print(f"Compiling {program}")
         os.system(
             f'python katana/katana.py --program "{input_file_dir}/{program}" --run >> {output_file_name}')
 
