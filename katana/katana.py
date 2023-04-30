@@ -1819,6 +1819,14 @@ class Parser:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
                 elif set(self.get_function_args_set(function_args[1])) - {"int16", NumberNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
+            if function_keyword == FunctionKeywordNode and node_value == "copyStr":
+                # charAt must have two arguments
+                if type(function_args) != list or len(function_args) != 2:
+                    raise NotEnoughArgsException(token.row, token.col)
+                elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
+                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
+                elif set(self.get_function_args_set(function_args[1])) - {"string", StringNode}:
+                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
 
     def get_function_args_set(self, node):
         # Helper method to get a set of the distinct primitive function arg types.

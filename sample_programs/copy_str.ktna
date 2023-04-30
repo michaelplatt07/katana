@@ -1,0 +1,7 @@
+main() {
+    string x = "Hello";
+    string y = "olleH";
+    printl(x);
+    copyStr(y, x);
+    printl(y);
+}
