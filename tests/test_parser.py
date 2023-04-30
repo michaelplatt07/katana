@@ -1554,6 +1554,120 @@ class TestParserCopyString:
             parser.parse()
         mock_print.assert_called_with('', 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
 
+    @patch("katana.katana.print_exception_message")
+    def test_copy_str_first_arg_not_string(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            copyStr(3, "elloH");
+        }
+        Expected to get an InvalidArgsException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 11, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 12, 1, "3", 0),
+            Token(COMMA_TOKEN_TYPE, 13, 1, ",", 0),
+            Token(STRING_TOKEN_TYPE, 16, 1, "elloH", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 23, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_copy_str_second_arg_not_string(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 11, 1, "(", 3),
+            Token(STRING_TOKEN_TYPE, 12, 1, "Hello", 0),
+            Token(COMMA_TOKEN_TYPE, 19, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 21, 1, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 22, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 23, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_copy_str_first_arg_var_not_string(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
+            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
+            Token(EOL_TOKEN_TYPE, 15, 2, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 3, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 11, 3, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 12, 3, "y", 0),
+            Token(COMMA_TOKEN_TYPE, 13, 3, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 15, 3, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
+            Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
+                ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int16"))
+
+    @patch("katana.katana.print_exception_message")
+    def test_copy_str_second_arg_var_not_string(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
+            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
+            Token(EOL_TOKEN_TYPE, 15, 2, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 3, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 11, 3, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 12, 3, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 13, 3, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 15, 3, "y", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
+            Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
+                ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int16"))
 
 
 class TestParserString:
