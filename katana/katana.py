@@ -227,6 +227,21 @@ class TooManyArgsException(Exception):
         return self.line_num == other.line_num and self.col_num == other.col_num
 
 
+class NotEnoughArgsException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Not enough args")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Not enough args for keyword at {self.line_num}:{self.col_num}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
 class InvalidArgsException(Exception):
     def __init__(self, line_num, col_num, keyword, arg_type):
         super().__init__("Invalid args")
@@ -649,6 +664,8 @@ class StringNode(Node):
     def __repr__(self):
         return f"'{self.value}'"
 
+    def get_children_nodes(self):
+        return None
 
 class CharNode(Node):
     """
@@ -665,6 +682,9 @@ class CharNode(Node):
 
     def __repr__(self):
         return f"'{self.value}'"
+
+    def get_children_nodes(self):
+        return None
 
 
 class ExpressionNode(Node):
@@ -757,6 +777,15 @@ class PlusMinusNode(ExpressionNode):
         return (types_equal and
                 super().__eq__(other))
 
+    def get_children_nodes(self):
+        if not self.left_side and not self.right_side:
+            return None
+        elif not self.left_side and self.right_side:
+            return [self.right_side]
+        elif not self.right_side and self.left_side:
+            return [self.left_side]
+        else:
+            return [self.left_side, self.right_side]
 
 class MultiplyDivideNode(ExpressionNode):
     """
@@ -821,6 +850,9 @@ class RangeNode(ExpressionNode):
     def __hash__(self):
         return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
+    def get_children_nodes(self):
+        return [self.left_side, self.right_side]
+
 
 class NumberNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -840,6 +872,8 @@ class NumberNode(Node):
     def __repr__(self):
         return f"{self.value}"
 
+    def get_children_nodes(self):
+        return None
 
 class BooleanNode(Node):
     def __init__(self, token, value, parent_node=None):
@@ -901,6 +935,8 @@ class VariableReferenceNode(Node):
     def __repr__(self):
         return f"{self.value}"
 
+    def get_children_nodes(self):
+        return None
 
 #########
 # PROGRAM
@@ -1364,6 +1400,9 @@ class Parser:
         except TooManyArgsException as tmae:
             print_exception_message(("\n").join(program_lines), tmae.col_num, tmae)
             sys.exit()
+        except NotEnoughArgsException as neae:
+            print_exception_message(("\n").join(program_lines), neae.col_num, neae)
+            sys.exit()
         except InvalidArgsException as iae:
             print_exception_message(("\n").join(program_lines), iae.col_num, iae)
             sys.exit()
@@ -1655,6 +1694,8 @@ class Parser:
             self.advance_token()
         # Add the final calculated node to the list
         arg_list.append(root_node)
+
+        self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
         return arg_list
 
     def handle_update_char_keyword(self, keyword_token):
@@ -1760,24 +1801,36 @@ class Parser:
                 # LoopUp/Down doesn't support a list of args
                 if type(function_args) == list and len(function_args) > 1:
                     raise TooManyArgsException(token.row, token.col)
-                args_is_num = type(function_args) == NumberNode
-                args_is_var_type = type(function_args) == VariableReferenceNode
-                args_is_var_int = self.variable_to_type_map.get(function_args.value, None) == "int16"
-                args_type = self.variable_to_type_map.get(function_args.value, type(function_args))
-                # If not a num (expected), need to run other checks.
-                if not args_is_num:
-                    # It's not a number and it's not a var, we don't support it
-                    if not args_is_var_type:
-                        raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
-                    # It's a var but not a number type var
-                    elif args_is_var_type and not args_is_var_int:
-                        raise InvalidArgsException(token.row, token.col, node_value, args_type)
+                elif type(function_args) == RangeNode:
+                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+                elif set(self.get_function_args_set(function_args)) - {"int16", NumberNode}:
+                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args.value, type(function_args)))
             if function_keyword == LoopFromKeywordNode:
                 # LoopFrom doesn't support a list of args
                 if type(function_args) == list and len(function_args) > 1:
                     raise TooManyArgsException(token.row, token.col)
                 elif not type(function_args) == RangeNode:
                     raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
+            if function_keyword == FunctionKeywordNode and node_value == "charAt":
+                # charAt must have two arguments
+                if type(function_args) != list or len(function_args) != 2:
+                    raise NotEnoughArgsException(token.row, token.col)
+                elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
+                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
+                elif set(self.get_function_args_set(function_args[1])) - {"int16", NumberNode}:
+                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
+
+    def get_function_args_set(self, node):
+        # Helper method to get a set of the distinct primitive function arg types.
+        # No more children_nodes
+        if not node.get_children_nodes():
+            return [self.variable_to_type_map.get(node.value, type(node))]
+            # return [node.value]
+        # We have children and need to get their types
+        children = []
+        for child_node in node.get_children_nodes():
+            children.extend(self.get_function_args_set(child_node))
+        return children
 
     def get_truth_side(self):
         truth_body = None

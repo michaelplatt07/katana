@@ -1,0 +1,7 @@
+main() {
+    x = charAt("Hello", 0);
+    printl(x); // Will print the first char in the string.
+}
+
+    ^
+Unknown keyword 'x' at 2:4 in program.

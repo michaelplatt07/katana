@@ -27,6 +27,7 @@ from katana.katana import (
     InvalidAssignmentException,
     InvalidConcatenationException,
     InvalidTypeDeclarationException,
+    NotEnoughArgsException,
     TooManyArgsException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
@@ -1155,11 +1156,38 @@ class TestParserCharAt:
             parser.parse()
         mock_print.assert_called_with('', 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
 
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_not_enough_params_raises_error(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            char x = charAt(3);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 1, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 19, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 20, 1, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 21, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 13, NotEnoughArgsException(1, 13))
 
-    # TODO(map) Fix this test by doing type checking on params. Write tests for
-    # all the other methods as well.
-    @pytest.mark.skip
-    def test_char_at_invalid_type_first_param(self):
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_invalid_type_first_param(self, mock_print):
         """
         Given a program like:
         main() {
@@ -1169,25 +1197,134 @@ class TestParserCharAt:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
-            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
-            Token(NUM_TOKEN_TYPE, 1, 20, "12", 0),
-            Token(COMMA_TOKEN_TYPE, 1, 22, ",", 0),
-            Token(NUM_TOKEN_TYPE, 1, 24, "2", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
-            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0)
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 1, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 19, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 20, 1, "12", 0),
+            Token(COMMA_TOKEN_TYPE, 22, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 24, 1, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 25, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 26, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
         ]
         parser = Parser(token_list)
-        with pytest.raises(KeywordMisuseException, match=re.escape("Improper use of 'charAt' at 14:1 in program. \n   Sample Usage: charAt(STRING, INDEX): extracts the character at INDEX from the STRING")):
+        with pytest.raises(SystemExit):
             parser.parse()
+        mock_print.assert_called_with('', 13, InvalidArgsException(1, 13, "charAt", NumberNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_invalid_type_second_param(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            char x = charAt("hello", 'x');
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 1, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 19, 1, "(", 3),
+            Token(STRING_TOKEN_TYPE, 21, 1, "hello", 0),
+            Token(COMMA_TOKEN_TYPE, 27, 1, ",", 0),
+            Token(CHARACTER_TOKEN_TYPE, 30, 1, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 32, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 33, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 13, InvalidArgsException(1, 13, "charAt", CharNode))
+
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_invalid_type_first_param_as_var(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            int16 y = 12;
+            char x = charAt(y, 2);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 1, "12", 0),
+            Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 2, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 2, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 2, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 19, 2, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 20, 2, "y", 0),
+            Token(COMMA_TOKEN_TYPE, 21, 2, ",", 0),
+            Token(NUM_TOKEN_TYPE, 23, 2, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 24, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 25, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "int16"))
+
+    @patch("katana.katana.print_exception_message")
+    def test_char_at_invalid_type_second_param_as_var(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            char y = 'z';
+            char x = charAt("hello", y);
+        }
+        Expected to get a KeywordMisuseException
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(CHARACTER_TOKEN_TYPE, 15, 1, "z", 0),
+            Token(EOL_TOKEN_TYPE, 17, 1, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 2, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 2, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 13, 2, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 19, 2, "(", 3),
+            Token(STRING_TOKEN_TYPE, 21, 2, "hello", 0),
+            Token(COMMA_TOKEN_TYPE, 27, 2, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 29, 2, "y", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 30, 2, ")", 3),
+            Token(EOL_TOKEN_TYPE, 31, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "char"))
 
 
 class TestUpdateChar:
