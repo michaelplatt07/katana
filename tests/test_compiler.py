@@ -331,7 +331,7 @@ class TestCompilerInt:
                 }
             }
 
-    def test_int_decalred_from_expression_addition(self):
+    def test_int_declared_from_expression_addition(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_int_from_expression_addition.ktna") as f:
             compiler = get_compiler_class(f.readlines())
@@ -351,7 +351,7 @@ class TestCompilerInt:
                 }
             }
 
-    def test_int_decalred_from_expression_subtraction(self):
+    def test_int_declared_from_expression_subtraction(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_int_from_expression_subtraction.ktna") as f:
             compiler = get_compiler_class(f.readlines())

@@ -17,7 +17,7 @@ syn keyword katanaKeyword main
 highlight link katanaKeyword KatanaMain
 
 " Variable declaration keywords
-syn keyword katanaVarKeyword int16 bool char const string
+syn keyword katanaVarKeyword int64 bool char const string
 highlight link katanaVarKeyword KatanaVarDecKeyword
 
 " Builtin function keywords
