@@ -1,6 +1,6 @@
 main() {
-    const int16 rowCount = 79;
-    const int16 colCount = 80;
+    const int64 rowCount = 79;
+    const int64 colCount = 80;
 
     char leftCellVal = 'l';
     char middleCellVal = 'm';
@@ -9,7 +9,7 @@ main() {
     const string firstRow = "                                                                               *";
 
     bool isAlive = false;
-    int16 loopCount = 0;
+    int64 loopCount = 0;
     char currCellVal = 'c';
 
     string prevRow = "                                                                               *";

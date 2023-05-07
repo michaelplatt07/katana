@@ -1,4 +1,4 @@
 main() {
-    int16 x = 5 + 1;
+    int64 x = 5 + 1;
     print(x);
 }

@@ -491,12 +491,12 @@ class TestLexerIntKeyword:
     """
     def test_int_16_variable_declaration(self):
         """
-        Tests that declaring an int16 variable correctly declares the
+        Tests that declaring an int64 variable correctly declares the
         appropriate tokens to be parsed.
         """
-        program = Program(["main() {\n", "int16 x = 3;\n", "}\n"])
+        program = Program(["main() {\n", "int64 x = 3;\n", "}\n"])
         token_list = get_main_tokens() + [
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
@@ -509,12 +509,12 @@ class TestLexerIntKeyword:
 
     def test_int_16_variable_referenced(self):
         """
-        Tests that declaring and using an int16 variable correctly lexes to the
+        Tests that declaring and using an int64 variable correctly lexes to the
         appropriate tokens.
         """
-        program = Program(["main() {\n", "int16 x = 3;\n", "print(x);\n", "}\n"])
+        program = Program(["main() {\n", "int64 x = 3;\n", "print(x);\n", "}\n"])
         token_list = get_main_tokens() + [
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
@@ -536,7 +536,7 @@ class TestLexerIntKeyword:
         Test to make sure if a variable is anything other than alpha numeric
         an error is raised.
         """
-        code = ["main() {\n", "int16 var_with_underscore = 3;\n", "}\n"]
+        code = ["main() {\n", "int64 var_with_underscore = 3;\n", "}\n"]
         program = Program(code)
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
@@ -549,7 +549,7 @@ class TestLexerIntKeyword:
         Test to make sure that a variable name starting with a number raises
         an exception.
         """
-        code = ["main() {\n", "int16 1_var = 3;\n", "}\n"]
+        code = ["main() {\n", "int64 1_var = 3;\n", "}\n"]
         program = Program(code)
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
@@ -561,10 +561,10 @@ class TestLexerIntKeyword:
         Test to make sure that if `const` is used in the variable declaration
         we can lex it correctly.
         """
-        program = Program(["main() {\n", "const int16 x = 0;\n", "}\n"])
+        program = Program(["main() {\n", "const int64 x = 0;\n", "}\n"])
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "const", ULTRA_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 6, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 6, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 12, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 14, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 16, 1, "0", LOW),

@@ -94,7 +94,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar", "copyStr")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("const", "int16", "string", "bool", "char")
+VARIABLE_KEYWORDS = ("const", "int64", "string", "bool", "char")
 
 
 ###################
@@ -1564,7 +1564,7 @@ class Parser:
         func_map = {
             "main": (self.handle_main_keyword, StartNode, "children_nodes"),
             "const": (self.handle_const_keyword, VariableKeywordNode, "child_node"),
-            "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "int64": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "bool": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
@@ -1777,7 +1777,7 @@ class Parser:
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
         assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
-        if keyword_token.value == "int16" and not (child_node.right_side.value.isnumeric() or type(child_node.right_side) == PlusMinusNode):
+        if keyword_token.value == "int64" and not (child_node.right_side.value.isnumeric() or type(child_node.right_side) == PlusMinusNode):
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
         elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
             raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
@@ -1803,7 +1803,7 @@ class Parser:
                     raise TooManyArgsException(token.row, token.col)
                 elif type(function_args) == RangeNode:
                     raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
-                elif set(self.get_function_args_set(function_args)) - {"int16", NumberNode}:
+                elif set(self.get_function_args_set(function_args)) - {"int64", NumberNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args.value, type(function_args)))
             if function_keyword == LoopFromKeywordNode:
                 # LoopFrom doesn't support a list of args
@@ -1817,7 +1817,7 @@ class Parser:
                     raise NotEnoughArgsException(token.row, token.col)
                 elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
-                elif set(self.get_function_args_set(function_args[1])) - {"int16", NumberNode}:
+                elif set(self.get_function_args_set(function_args[1])) - {"int64", NumberNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
             if function_keyword == FunctionKeywordNode and node_value == "copyStr":
                 # charAt must have two arguments
@@ -2345,7 +2345,7 @@ class Compiler:
             if type(node.left_side) == CharNode or type(node.right_side) == CharNode:
                 compare_types = "char"
             else:
-                compare_types = "int16"
+                compare_types = "int64"
             return self.get_conditional_equal_asm(self.conditional_count, compare_types)
         elif node.value == "=":
             print_verbose_message(f"Should be assigning for node {node}")

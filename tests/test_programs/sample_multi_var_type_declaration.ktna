@@ -1,5 +1,5 @@
 main() {
-    const int16 x = 1;
+    const int64 x = 1;
     const string y = "Hello, Katana!";
     const char z = 'A';
 }

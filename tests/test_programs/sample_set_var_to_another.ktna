@@ -1,5 +1,5 @@
 main() {
-    int16 x = 1;
-    int16 y = 2;
+    int64 x = 1;
+    int64 y = 2;
     x = y;
 }

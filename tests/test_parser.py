@@ -877,17 +877,17 @@ class TestParserInt:
         """
         Given a program like:
         main() {
-            int16 x = 3 + 4;
+            int64 x = 3 + 4;
         }
         Expected to return an AST like:
-        (main[(int16((x=(3+4))))])
+        (main[(int64((x=(3+4))))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
@@ -902,7 +902,7 @@ class TestParserInt:
         plus_node = PlusMinusNode(token_list[8], "+", three_node, four_node)
         x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, plus_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int64", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         parser.parse()
@@ -912,17 +912,17 @@ class TestParserInt:
         """
         Given a program like:
         main() {
-            int16 x = 3;
+            int64 x = 3;
         }
         Expected to return an AST like:
-        (main[(int16((x=3)))])
+        (main[(int64((x=3)))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
@@ -933,7 +933,7 @@ class TestParserInt:
         three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int64", assignment_node)
         ast = StartNode(token_list[0], "main", [keyword_node])
         parser = Parser(token_list)
         parser.parse()
@@ -942,10 +942,10 @@ class TestParserInt:
     def test_keyword_const_with_int(self):
         """
         main() {
-            const int16 x = 3;
+            const int64 x = 3;
         }
         Expected to return an AST like:
-        (main[(const(int16((x=3))))])
+        (main[(const(int64((x=3))))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
@@ -953,7 +953,7 @@ class TestParserInt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "const", ULTRA_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 0, 6, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 6, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 12, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 14, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
@@ -964,7 +964,7 @@ class TestParserInt:
         three_node = NumberNode(token_list[8], "3")
         x_node = VariableNode(token_list[6], "x", True)
         assignment_node = AssignmentNode(token_list[7], "=", x_node, three_node)
-        variable_dec_node = VariableKeywordNode(token_list[5], "int16", assignment_node)
+        variable_dec_node = VariableKeywordNode(token_list[5], "int64", assignment_node)
         const_node = VariableKeywordNode(token_list[4], "const", variable_dec_node)
         ast = StartNode(token_list[0], "main", [const_node])
         parser = Parser(token_list)
@@ -975,18 +975,18 @@ class TestParserInt:
         """
         Given a program like:
         main() {
-            int16 x = 3;
+            int64 x = 3;
             print(x);
         }
         Expected to return an AST like:
-        (main[(int16((x=3))), (print(x))])
+        (main[(int64((x=3))), (print(x))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", VERY_HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", VERY_HIGH),
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int64", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
             Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
@@ -1002,7 +1002,7 @@ class TestParserInt:
         three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
-        variable_dec_node = VariableKeywordNode(token_list[4], "int16", assignment_node)
+        variable_dec_node = VariableKeywordNode(token_list[4], "int64", assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
@@ -1255,7 +1255,7 @@ class TestParserCharAt:
         """
         Given a program like:
         main() {
-            int16 y = 12;
+            int64 y = 12;
             char x = charAt(y, 2);
         }
         Expected to get a KeywordMisuseException
@@ -1265,7 +1265,7 @@ class TestParserCharAt:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
             Token(NUM_TOKEN_TYPE, 14, 1, "12", 0),
@@ -1286,7 +1286,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "int16"))
+        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "int64"))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_second_param_as_var(self, mock_print):
@@ -1617,7 +1617,7 @@ class TestParserCopyString:
             Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
             Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
             Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
             Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
@@ -1635,7 +1635,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int16"))
+        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int64"))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_second_arg_var_not_string(self, mock_print):
@@ -1649,7 +1649,7 @@ class TestParserCopyString:
             Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
             Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
             Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
             Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
@@ -1667,7 +1667,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int16"))
+        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int64"))
 
 
 class TestParserString:
@@ -1682,7 +1682,7 @@ class TestParserString:
             string x = "hello";
         }
         Expected to return an AST like:
-        (main[(int16((x="hello")))])
+        (main[(int64((x="hello")))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
@@ -2196,20 +2196,20 @@ class TestParserLoopKeyword:
         Given a program like:
         ```
         main() {
-            int16 x = 5;
+            int64 x = 5;
             loopUp(x) {
                 print("looping");
             }
         }
         ```
-        (main[(int16(x=5))(loopUp((0<x), [(print("looping"))]))])
+        (main[(int64(x=5))(loopUp((0<x), [(print("looping"))]))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "5", 0),
@@ -2234,7 +2234,7 @@ class TestParserLoopKeyword:
         five_node = NumberNode(token_list[7], "5")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, five_node)
-        x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_int_dec_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         loop_node = LoopUpKeywordNode(token_list[9], "loopUp", x_ref_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
@@ -2331,20 +2331,20 @@ class TestParserLoopKeyword:
         Given a program like:
         ```
         main() {
-            int16 x = 7;
+            int64 x = 7;
             loopDown(x) {
                 print("looping");
             }
         }
         ```
-        (main[(int16(x=7))(loopDown((x>0), [(print("looping"))]))])
+        (main[(int64(x=7))(loopDown((x>0), [(print("looping"))]))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "7", 0),
@@ -2369,7 +2369,7 @@ class TestParserLoopKeyword:
         seven_node = NumberNode(token_list[7], "7")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, seven_node)
-        x_int_dec_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        x_int_dec_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         loop_node = LoopDownKeywordNode(token_list[9], "loopDown", x_ref_node, loop_body=[print_node])
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
@@ -2816,7 +2816,7 @@ class TestKeywordAdvanced:
         """
         Given a program like:
         main() {
-            int16 x = 1;
+            int64 x = 1;
             if (x - 1 > 0) {
                 print("true");
             } else {
@@ -2824,14 +2824,14 @@ class TestKeywordAdvanced:
             }
         }
         Expected to return an AST like:
-        (main[(int16(x=1)), (if((x-1)>0, print("greater"), None)), (print("lower"))])
+        (main[(int64(x=1)), (if((x-1)>0, print("greater"), None)), (print("lower"))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
@@ -2869,7 +2869,7 @@ class TestKeywordAdvanced:
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         one_minus_node = NumberNode(token_list[13], "1")
         subtract_node = PlusMinusNode(token_list[12], "-", x_ref_node, one_minus_node)
@@ -2885,7 +2885,7 @@ class TestKeywordAdvanced:
         """
         Given a program like:
         main() {
-            int16 x = 1;
+            int64 x = 1;
             if (0 > x - 1) {
                 print("true");
             } else {
@@ -2893,14 +2893,14 @@ class TestKeywordAdvanced:
             }
         }
         Expected to return an AST like:
-        (main[(int16(x=1)), (if(0>(x-1), print("greater"), None)), (print("lower"))])
+        (main[(int64(x=1)), (if(0>(x-1), print("greater"), None)), (print("lower"))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
@@ -2938,7 +2938,7 @@ class TestKeywordAdvanced:
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        keyword_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[13], "x")
         one_minus_node = NumberNode(token_list[15], "1")
         subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
@@ -2954,8 +2954,8 @@ class TestKeywordAdvanced:
         """
         Given a program like:
         main() {
-            int16 x = 1;
-            int16 y = 2;
+            int64 x = 1;
+            int64 y = 2;
             if (y - 2 > x - 1) {
                 print("true");
             } else {
@@ -2963,19 +2963,19 @@ class TestKeywordAdvanced:
             }
         }
         Expected to return an AST like:
-        (main[(int16(x=1)), (int16(y=2)), (if((y-2)>(x-1), [print("greater")], [(print("lower"))]))])
+        (main[(int64(x=1)), (int64(y=2)), (if((y-2)>(x-1), [print("greater")], [(print("lower"))]))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 2, 14, "1", 0),
             Token(EOL_TOKEN_TYPE, 1, 15, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 2, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 2, 10, "y", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 2, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 2, 14, "2", 0),
@@ -3015,11 +3015,11 @@ class TestKeywordAdvanced:
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node_x = VariableKeywordNode(token_list[4], "int16", x_assignment_node)
+        keyword_node_x = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         two_node = NumberNode(token_list[12], "2")
         y_node = VariableNode(token_list[10], "y", False)
         y_assignment_node = AssignmentNode(token_list[11], "=", y_node, two_node)
-        keyword_node_y = VariableKeywordNode(token_list[9], "int16", y_assignment_node)
+        keyword_node_y = VariableKeywordNode(token_list[9], "int64", y_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[20], "x")
         one_minus_node = NumberNode(token_list[22], "1")
         subtract_node = PlusMinusNode(token_list[21], "-", x_ref_node, one_minus_node)
@@ -3037,18 +3037,18 @@ class TestKeywordAdvanced:
         """
         Given a program like:
         main() {
-            int16 x = 1;
+            int64 x = 1;
             x = x + 3;
         }
         Expected to return an AST like:
-        (main[(int16(x=1)), (x=(x+3))])
+        (main[(int64(x=1)), (x=(x+3))])
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
             Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
             Token(NUM_TOKEN_TYPE, 1, 14, "1", 0),
@@ -3065,7 +3065,7 @@ class TestKeywordAdvanced:
         one_node = NumberNode(token_list[7], "1")
         x_var_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_var_node, one_node)
-        int_keyword_node = VariableKeywordNode(token_list[4], "int16", x_assign_node)
+        int_keyword_node = VariableKeywordNode(token_list[4], "int64", x_assign_node)
         three_node = NumberNode(token_list[13], "3")
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, three_node)
@@ -3174,7 +3174,7 @@ class TestParserTypeChecking:
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
             Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
@@ -3258,15 +3258,15 @@ class TestParserVariablesOutsideMain:
     def test_int_before_main(self):
         """
         Given a program like:
-        int16 x = 3;
+        int64 x = 3;
         main() {
             print(x);
         }
         Expected to return node list like:
-        [(int16(x=3)), (main[(print[x,])])]
+        [(int64(x=3)), (main[(print[x,])])]
         """
         token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int16", 4),
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int64", 4),
             Token(VARIABLE_NAME_TOKEN_TYPE, 0, 6, "x", 0),
             Token(ASSIGNMENT_TOKEN_TYPE, 0, 8, "=", 2),
             Token(NUM_TOKEN_TYPE, 0, 10, "3", 0),
@@ -3286,7 +3286,7 @@ class TestParserVariablesOutsideMain:
         three_node = NumberNode(token_list[3], "3")
         x_node = VariableNode(token_list[1], "x", False)
         assignment_node = AssignmentNode(token_list[2], "=", x_node, three_node)
-        keyword_node = VariableKeywordNode(token_list[0], "int16", assignment_node)
+        keyword_node = VariableKeywordNode(token_list[0], "int64", assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         start_node = StartNode(token_list[5], "main", [print_node])
