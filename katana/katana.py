@@ -338,6 +338,21 @@ class InvalidTypeDeclarationException(Exception):
         return self.line_num == other.line_num and self.col_num == other.col_num
 
 
+class BufferOverflowException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Buffer overflow")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"Buffer overflow at {self.line_num}:{self.col_num}. Value too large."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
 class InvalidAssignmentException(Exception):
     def __init__(self, line_num, col_num, base_type, assignment_type):
         super().__init__("Invalid assignment")
@@ -1405,7 +1420,9 @@ class Parser:
         except InvalidArgsException as iae:
             print_exception_message(("\n").join(program_lines), iae.col_num, iae)
             sys.exit()
-
+        except BufferOverflowException as boe:
+            print_exception_message(("\n").join(program_lines), boe.col_num, boe)
+            sys.exit()
 
     def parse_literal(self):
         """
@@ -1775,6 +1792,15 @@ class Parser:
         # Put the variable and type in the map to be able to check references
         # and uses later.
         self.variable_to_type_map[child_node.left_side.value] = keyword_token.value
+
+        # Check the integer value can fit in the integer type declaration
+        if keyword_token.value == "int8" and int(child_node.right_side.value) > 255:
+            raise BufferOverflowException(keyword_token.row, keyword_token.col)
+        if keyword_token.value == "int16" and int(child_node.right_side.value) > 65536:
+            raise BufferOverflowException(keyword_token.row, keyword_token.col)
+        if keyword_token.value == "int32" and int(child_node.right_side.value) > 4294967296:
+            raise BufferOverflowException(keyword_token.row, keyword_token.col)
+
 
         # Check to see if the `char` initial assignment is the result of
         # calling the `charAt` function since that's a fair initial declaration
