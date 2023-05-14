@@ -22,6 +22,7 @@ from katana.katana import (
     VariableNode,
     VariableKeywordNode,
     VariableReferenceNode,
+    BufferOverflowException,
     KeywordMisuseException,
     InvalidArgsException,
     InvalidAssignmentException,
@@ -873,7 +874,7 @@ class TestParserInt:
     All tests related to the int keyword.
     """
 
-    def test_keyword_int_16_declaration_from_expression(self):
+    def test_keyword_int_64_declaration_from_expression(self):
         """
         Given a program like:
         main() {
@@ -908,7 +909,7 @@ class TestParserInt:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    def test_keyword_int_16_declaration(self):
+    def test_keyword_int_64_declaration(self):
         """
         Given a program like:
         main() {
@@ -971,7 +972,7 @@ class TestParserInt:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    def test_keyword_int_16_reference(self):
+    def test_keyword_int_64_reference(self):
         """
         Given a program like:
         main() {
@@ -1009,6 +1010,67 @@ class TestParserInt:
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
+
+    @patch("katana.katana.print_exception_message")
+    def test_int_8_variable_declaration_overflow(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int8", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
+            Token(NUM_TOKEN_TYPE, 13, 1, "288", 0),
+            Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+
+    @patch("katana.katana.print_exception_message")
+    def test_int_16_variable_declaration_overflow(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 1, "65538", 0),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+
+    @patch("katana.katana.print_exception_message")
+    def test_int_32_variable_declaration_overflow(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int32", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
+            Token(NUM_TOKEN_TYPE, 14, 1, "4294967298", 0),
+            Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+
 
 
 class TestParserCharAt:

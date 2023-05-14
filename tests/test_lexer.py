@@ -37,7 +37,6 @@ from katana.katana import (
     BadFormattedLogicBlock,
     InvalidCharException,
     InvalidTokenException,
-    InvalidTypeDeclarationException,
     InvalidVariableNameError,
     NoTerminatorError,
     UnclosedParenthesisError,
@@ -364,6 +363,14 @@ class TestLexerEndOfLineSemicolon:
             lexer.lex()
         mock_print.assert_called_with("3 + 4\n", 5, NoTerminatorError(0, 5))
 
+    @patch("katana.katana.print_exception_message")
+    def test_error_if_later_line_ends_without_semicolon(self, mock_print):
+        code = ["main() {\n", "int16 x = 16;\n", "print(x)\n", "}\n"]
+        program = Program(code)
+        lexer = Lexer(program)
+        with pytest.raises(SystemExit):
+            lexer.lex()
+        mock_print.assert_called_with("".join(code), 7, NoTerminatorError(2, 8))
 
 class TestLexerInvalidTokenException:
 
@@ -489,7 +496,8 @@ class TestLexerIntKeyword:
     """
     All tests related to all the different type of int declarations.
     """
-    def test_int_16_variable_declaration(self):
+
+    def test_int_64_variable_declaration(self):
         """
         Tests that declaring an int64 variable correctly declares the
         appropriate tokens to be parsed.
@@ -507,7 +515,7 @@ class TestLexerIntKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    def test_int_16_variable_referenced(self):
+    def test_int_64_variable_referenced(self):
         """
         Tests that declaring and using an int64 variable correctly lexes to the
         appropriate tokens.
@@ -531,7 +539,7 @@ class TestLexerIntKeyword:
         assert token_list == lexer.lex()
 
     @patch("katana.katana.print_exception_message")
-    def test_invalid_int_16_variable_name_with_underscore(self, mock_print):
+    def test_invalid_int_64_variable_name_with_underscore(self, mock_print):
         """
         Test to make sure if a variable is anything other than alpha numeric
         an error is raised.
@@ -544,7 +552,7 @@ class TestLexerIntKeyword:
         mock_print.assert_called_with("".join(code), 9, InvalidTokenException(1, 9, "_"))
 
     @patch("katana.katana.print_exception_message")
-    def test_invalid_int_16_variable_name_starts_with_number(self, mock_print):
+    def test_invalid_int_64_variable_name_starts_with_number(self, mock_print):
         """
         Test to make sure that a variable name starting with a number raises
         an exception.
@@ -574,6 +582,48 @@ class TestLexerIntKeyword:
         ]
         lexer = Lexer(program)
         assert lexer.lex() == token_list
+
+    def test_int_8_variable_declaration(self):
+        program = Program(["main() {\n", "int8 x = 3;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int8", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 5, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 7, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 10, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_int_16_variable_declaration(self):
+        program = Program(["main() {\n", "int16 x = 3;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int16", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_int_32_variable_declaration(self):
+        program = Program(["main() {\n", "int32 x = 3;\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "int32", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 6, 1, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 8, 1, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestLexerCharKeyword:

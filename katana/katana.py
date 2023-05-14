@@ -94,7 +94,7 @@ IGNORE_OPS = (
 FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar", "copyStr")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 # TODO(map) Change this to int until we set up 32 bit mode.
-VARIABLE_KEYWORDS = ("const", "int64", "string", "bool", "char")
+VARIABLE_KEYWORDS = ("const", "int8", "int16", "int32", "int64", "string", "bool", "char")
 
 
 ###################
@@ -1161,7 +1161,6 @@ class Lexer:
                 token = self.token_list[self.left_paren_idx_list[-1] - 1]
                 left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
                 if not terminator_present and not left_paren_first and not left_paren_has_keyword:
-                    assert False, "Ran into issue in check_for_valid_termination. Write test when this happens."
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
             assert False, "Invalid scenario to check for termination."
@@ -1564,6 +1563,9 @@ class Parser:
         func_map = {
             "main": (self.handle_main_keyword, StartNode, "children_nodes"),
             "const": (self.handle_const_keyword, VariableKeywordNode, "child_node"),
+            "int8": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
+            "int32": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "int64": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
             "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
@@ -1803,7 +1805,7 @@ class Parser:
                     raise TooManyArgsException(token.row, token.col)
                 elif type(function_args) == RangeNode:
                     raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
-                elif set(self.get_function_args_set(function_args)) - {"int64", NumberNode}:
+                elif set(self.get_function_args_set(function_args)) - {"int8", "int16", "int32", "int64", NumberNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args.value, type(function_args)))
             if function_keyword == LoopFromKeywordNode:
                 # LoopFrom doesn't support a list of args
@@ -1817,7 +1819,7 @@ class Parser:
                     raise NotEnoughArgsException(token.row, token.col)
                 elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
-                elif set(self.get_function_args_set(function_args[1])) - {"int64", NumberNode}:
+                elif set(self.get_function_args_set(function_args[1])) - {"int8", "int16", "int32", "int64", NumberNode}:
                     raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
             if function_keyword == FunctionKeywordNode and node_value == "copyStr":
                 # charAt must have two arguments
@@ -2164,9 +2166,9 @@ class Compiler:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
             if node.is_const:
-                asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node))
+                asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
             else:
-                asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node))
+                asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
@@ -2176,6 +2178,10 @@ class Compiler:
                 "is_const": True,
                 "asm": asm
             }
+            # TODO(map) Add the other int types and make this better.
+            if node.parent_node.parent_node.value in ["int8", "int16", "int32", "int64"]:
+                self.variables[node.value].update({"int_type": node.parent_node.parent_node.value})
+
             if not node.is_const:
                 if type(value_node) == StringNode:
                     self.initialize_vars_asm.extend(self.get_initialize_var_asm(var_name, len(value_node.value), value_node.value))
@@ -2206,9 +2212,9 @@ class Compiler:
             is_const = self.variables[node.value]["is_const"]
             need_str_len = type(node.parent_node) == FunctionKeywordNode and node.parent_node.value in ["print", "printl"]
             if node.can_traverse_to_parent():
-                return self.get_push_var_onto_stack_asm(var_ref, is_const, need_str_len) + self.traverse_tree(node.parent_node)
+                return self.get_push_var_onto_stack_asm(node.value, var_ref, is_const, need_str_len) + self.traverse_tree(node.parent_node)
             else:
-                return self.get_push_var_onto_stack_asm(var_ref, is_const, need_str_len)
+                return self.get_push_var_onto_stack_asm(node.value, var_ref, is_const, need_str_len)
         elif isinstance(node, LogicKeywordNode):
             node.visited = True
             if not node.child_node.visited:
@@ -2362,7 +2368,7 @@ class Compiler:
                     else:
                         # Otherwise get the standard assignment asm for plus or
                         # minus token.
-                        return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
+                        return self.get_assign_new_int_to_var_from_expression(self.variables[node.left_side.value]["var_name"], self.variables[node.left_side.value]["int_type"])
                 elif type(node.right_side) == MultiplyDivideNode:
                     return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
                 elif node.right_side.value == "charAt":
@@ -2670,7 +2676,7 @@ class Compiler:
             f"    push {num}\n"
             ]
 
-    def get_push_var_onto_stack_asm(self, val, is_const, need_str_len):
+    def get_push_var_onto_stack_asm(self, node_value, val, is_const, need_str_len):
         if "string" in val and is_const:
             if need_str_len:
                 return [
@@ -2705,10 +2711,34 @@ class Compiler:
                 f"    mov bl, [{val}]\n",
                 f"    push bx\n"
             ]
-        return [
-            "    ;; Push var val onto stack\n",
-            f"    push qword [{val}]\n",
-        ]
+        if self.variables[node_value].get("int_type") == "int8":
+            return [
+                "    ;; Push var val onto stack\n",
+                f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
+                f"    mov al, [{val}]\n",
+                f"    movzx rbx, al\n",
+                f"    push rbx\n",
+            ]
+        elif self.variables[node_value].get("int_type") == "int16":
+            return [
+                "    ;; Push var val onto stack\n",
+                f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
+                f"    mov ax, [{val}]\n",
+                f"    movzx rbx, ax\n",
+                f"    push rbx\n",
+            ]
+        elif self.variables[node_value].get("int_type") == "int32":
+            return [
+                "    ;; Push var val onto stack\n",
+                f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
+                f"    mov eax, [{val}]\n",
+                f"    push rax\n",
+            ]
+        else:
+            return [
+                "    ;; Push var val onto stack\n",
+                f"    push qword [{val}]\n",
+            ]
 
     def get_push_boolean_onto_stack(self, node_value):
         if node_value == "true":
@@ -3019,16 +3049,16 @@ class Compiler:
             f"    push bx\n",
         ]
 
-    def get_const_creation_asm(self, var_count, type_count, value, var_type):
-        if var_type == StringNode:
+    def get_const_creation_asm(self, var_count, type_count, value, node_type, var_type):
+        if node_type == StringNode:
             var_decl = [
                 f"    string_{type_count} db '{value}', 0\n",
             ]
-        elif var_type == CharNode:
+        elif node_type == CharNode:
             var_decl = [
                 f"    char_{type_count} db '{value}', 0\n",
             ]
-        elif var_type == BooleanNode:
+        elif node_type == BooleanNode:
             var_decl = [
                 f"    bool_{type_count} dq 0\n",
                 ] if value == "false" else [
@@ -3041,25 +3071,45 @@ class Compiler:
                 f"    char_{type_count} db 0\n",
             ]
         else:
-            var_decl = [f"    number_{type_count} dq {value}\n"]
+            if var_type == "int8":
+                var_decl = [f"    number_{type_count} db {value}\n"]
+            if var_type == "int16":
+                var_decl = [f"    number_{type_count} dw {value}\n"]
+            if var_type == "int32":
+                var_decl = [f"    number_{type_count} dd {value}\n"]
+            if var_type == "int64":
+                var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
             f"section .var_{var_count}\n",
         ] + var_decl
 
-    def get_var_creation_asm(self, var_count, type_count, value, var_type):
-        if var_type == CharNode:
+    def get_var_creation_asm(self, var_count, type_count, value, node_type, var_type):
+        if node_type == CharNode:
             var_decl = [
                 f"    char_{type_count} db '{value}', 0\n",
             ]
-        elif var_type == NumberNode:
+        elif node_type == NumberNode:
+            if var_type == "int8":
+                var_decl = [
+                    f"    number_{type_count} db {value}\n",
+                ]
+            if var_type == "int16":
+                var_decl = [
+                    f"    number_{type_count} dw {value}\n",
+                ]
+            if var_type == "int32":
+                var_decl = [
+                    f"    number_{type_count} dd {value}\n",
+                ]
+            if var_type == "int64":
+                var_decl = [
+                    f"    number_{type_count} dq {value}\n",
+                ]
+        elif node_type == PlusMinusNode:
             var_decl = [
                 f"    number_{type_count} dq {value}\n",
             ]
-        elif var_type == PlusMinusNode:
-            var_decl = [
-                f"    number_{type_count} dq {value}\n",
-            ]
-        elif var_type == BooleanNode:
+        elif node_type == BooleanNode:
             var_decl = [
                 f"    bool_{type_count} dq 0\n",
             ] if value == "false" else [
@@ -3071,12 +3121,12 @@ class Compiler:
             var_decl = [
                 f"    char_{type_count} db -1\n",
             ]
-        elif var_type == StringNode:
+        elif node_type == StringNode:
             var_decl = [
                 f"    string_{type_count} dq 0\n",
             ]
         else:
-            assert False, f"Cannot declare var of type {var_type} that is mutable."
+            assert False, f"Cannot declare var of type {node_type} that is mutable."
         return [
             f"section .var_{var_count} write\n",
         ] + var_decl
@@ -3126,6 +3176,31 @@ class Compiler:
     def get_assign_new_value_from_var_to_var_asm(self, var_name):
         return [
             "    ;; Assign var value to new var\n",
+            f"    mov qword [{var_name}], rax\n",
+        ]
+
+    def get_assign_new_int_to_var_from_expression(self, var_name, int_type):
+        if int_type == "int8":
+            return [
+                "    ;; Assign expression value to new var\n",
+                "    pop rax\n",
+                f"    mov byte [{var_name}], al\n",
+            ]
+        elif int_type == "int16":
+            return [
+                "    ;; Assign expression value to new var\n",
+                "    pop rax\n",
+                f"    mov word [{var_name}], ax\n",
+            ]
+        elif int_type == "int32":
+            return [
+                "    ;; Assign expression value to new var\n",
+                "    pop rax\n",
+                f"    mov dword [{var_name}], eax\n",
+            ]
+        return [
+            "    ;; Assign expression value to new var\n",
+            "    pop rax\n",
             f"    mov qword [{var_name}], rax\n",
         ]
 
