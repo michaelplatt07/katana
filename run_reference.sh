@@ -1,4 +1,5 @@
 #!/bin/sh
-nasm -f elf64 sample_programs/reference.asm
-ld -o sample_programs/reference sample_programs/reference.o
-./sample_programs/reference
+nasm -f elf64 reference.asm
+ld -o reference reference.o
+./reference
+echo $?
