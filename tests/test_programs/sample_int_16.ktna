@@ -1,0 +1,3 @@
+main() {
+    const int16 x = 62535;
+}
