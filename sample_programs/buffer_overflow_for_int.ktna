@@ -1,0 +1,3 @@
+main() {
+    int8 x = 300; // The max value of an int8 is 255
+}
