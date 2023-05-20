@@ -2356,7 +2356,7 @@ class Compiler:
             if type(node.left_side) == VariableReferenceNode and self.variables[node.left_side.value]["var_type"] == "string":
                 return self.get_string_concat_asm(node.left_side.value, self.variables[node.left_side.value]["var_len"])
             else:
-                return self.get_add_asm()
+                return self.get_add_asm(self.variables.get(node.left_side.value, {}).get("int_type"))
         elif node.value == "-":
             return self.get_sub_asm()
         elif node.value == "*":
@@ -2428,10 +2428,23 @@ class Compiler:
         self.create_printl_string_function()
         self.create_printl_num_function()
         self.create_printl_char_function()
+        self.create_error_string_constants()
+        self.create_check_int_8_overflow_function()
+        self.create_check_int_16_overflow_function()
+        self.create_check_int_32_overflow_function()
+        self.create_check_int_64_overflow_function()
         self.create_char_at_function()
         self.create_update_char_function()
         self.create_string_length()
         self.allocate_memory()
+
+    def create_error_string_constants(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .error_strings\n")
+            compiled_program.write("    int_8_buffer_overflow_string db 'Buffer overflow on int8', 0\n")
+            compiled_program.write("    int_16_buffer_overflow_string db 'Buffer overflow on int16', 0\n")
+            compiled_program.write("    int_32_buffer_overflow_string db 'Buffer overflow on int32', 0\n")
+            compiled_program.write("    int_64_buffer_overflow_string db 'Buffer overflow on int64', 0\n")
 
     def create_print_string_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2598,6 +2611,102 @@ class Compiler:
             compiled_program.write("         ;; Push return address back.\n")
             compiled_program.write("         push rbx\n")
             compiled_program.write("         ret\n")
+
+    def create_check_int_8_overflow_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("   check_int_8_overflow:\n")
+            compiled_program.write("      pop rcx ;; Get return address\n")
+            compiled_program.write("      pop rdx ;; Get value to add\n")
+            compiled_program.write("      pop rbx ;; Get current value of variable\n")
+            compiled_program.write("      movzx rbx, al ;; Move 8 bits into the rax registery\n")
+            compiled_program.write("      add al, dl\n")
+            compiled_program.write("      jnc no_overflow_int_8\n")
+            compiled_program.write("      jc has_overflow_int_8\n")
+            compiled_program.write("      no_overflow_int_8:\n")
+            compiled_program.write("      push rcx\n")
+            compiled_program.write("      ret\n")
+            compiled_program.write("      has_overflow_int_8:\n")
+            compiled_program.write("      ;; Calculate const string length and push onto stack with string\n")
+            compiled_program.write("      push int_8_buffer_overflow_string\n")
+            compiled_program.write("      push int_8_buffer_overflow_string\n")
+            compiled_program.write("      call string_length\n")
+            compiled_program.write("      push int_8_buffer_overflow_string\n")
+            compiled_program.write("      ;; Keyword Func\n")
+            compiled_program.write("      call print_string\n")
+            compiled_program.write("      mov rax, 60\n")
+            compiled_program.write("      mov rdi, 8\n")
+            compiled_program.write("      syscall\n")
+
+    def create_check_int_16_overflow_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("   check_int_16_overflow:\n")
+            compiled_program.write("       pop rcx ;; Get return address\n")
+            compiled_program.write("       pop rdx ;; Get value to add\n")
+            compiled_program.write("       pop rbx ;; Get current value of variable\n")
+            compiled_program.write("       movzx rbx, ax ;; Move 16 bits into the rax registery\n")
+            compiled_program.write("       add dx, ax\n")
+            compiled_program.write("       jnc no_overflow_int_16\n")
+            compiled_program.write("       jc has_overflow_int_16\n")
+            compiled_program.write("       no_overflow_int_16:\n")
+            compiled_program.write("       push rcx\n")
+            compiled_program.write("       ret\n")
+            compiled_program.write("       has_overflow_int_16:\n")
+            compiled_program.write("       push int_16_buffer_overflow_string\n")
+            compiled_program.write("       push int_16_buffer_overflow_string\n")
+            compiled_program.write("       call string_length\n")
+            compiled_program.write("       push int_16_buffer_overflow_string\n")
+            compiled_program.write("       call print_string\n")
+            compiled_program.write("       mov rax, 60\n")
+            compiled_program.write("       mov rdi, 16 \n")
+            compiled_program.write("       syscall\n")
+
+    def create_check_int_32_overflow_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("   check_int_32_overflow:\n")
+            compiled_program.write("       pop rcx ;; Get return address\n")
+            compiled_program.write("       pop rdx ;; Get value to add\n")
+            compiled_program.write("       pop rbx ;; Get current value of variable\n")
+            compiled_program.write("       add ebx, edx\n")
+            compiled_program.write("       jnc no_overflow_int_32\n")
+            compiled_program.write("       jc has_overflow_int_32\n")
+            compiled_program.write("       no_overflow_int_32:\n")
+            compiled_program.write("       push rcx\n")
+            compiled_program.write("       ret\n")
+            compiled_program.write("       has_overflow_int_32:\n")
+            compiled_program.write("       push int_32_buffer_overflow_string\n")
+            compiled_program.write("       push int_32_buffer_overflow_string\n")
+            compiled_program.write("       call string_length\n")
+            compiled_program.write("       push int_32_buffer_overflow_string\n")
+            compiled_program.write("       call print_string\n")
+            compiled_program.write("       mov rax, 60\n")
+            compiled_program.write("       mov rdi, 32 \n")
+            compiled_program.write("       syscall\n")
+
+    def create_check_int_64_overflow_function(self):
+        with open(self.output_path, 'a') as compiled_program:
+            compiled_program.write("section .text\n")
+            compiled_program.write("   check_int_64_overflow:\n")
+            compiled_program.write("       pop rcx ;; Get return address\n")
+            compiled_program.write("       pop rdx ;; Get value to add\n")
+            compiled_program.write("       pop rbx ;; Get current value of variable\n")
+            compiled_program.write("       add rbx, rdx\n")
+            compiled_program.write("       jnc no_overflow_int_64\n")
+            compiled_program.write("       jc has_overflow_int_64\n")
+            compiled_program.write("       no_overflow_int_64:\n")
+            compiled_program.write("       push rcx\n")
+            compiled_program.write("       ret\n")
+            compiled_program.write("       has_overflow_int_64:\n")
+            compiled_program.write("       push int_64_buffer_overflow_string\n")
+            compiled_program.write("       push int_64_buffer_overflow_string\n")
+            compiled_program.write("       call string_length\n")
+            compiled_program.write("       push int_64_buffer_overflow_string\n")
+            compiled_program.write("       call print_string\n")
+            compiled_program.write("       mov rax, 60\n")
+            compiled_program.write("       mov rdi, 64 \n")
+            compiled_program.write("       syscall\n")
 
     def create_char_at_function(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -2778,8 +2887,28 @@ class Compiler:
                 "    push 0\n"
             ]
 
-    def get_add_asm(self):
-        return ["    ;; Add\n",
+    # TODO(map) Only the left side can be a variable right now. Write a test
+    # for the right side that will fail for now.
+    def get_add_asm(self, int_type=None):
+        asm = ["    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
+        ]
+        if int_type == "int8":
+            asm.extend("    call check_int_8_overflow\n")
+        elif int_type == "int16":
+            asm.extend("    call check_int_16_overflow\n")
+        elif int_type == "int32":
+            asm.extend("    call check_int_32_overflow\n")
+        elif int_type == "int64":
+            asm.extend("    call check_int_64_overflow\n")
+        return asm + [
+                "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
                 "    add rax, rbx\n",
