@@ -46,6 +46,14 @@ class TestCompilerMathematics:
                 "    push 1\n",
                 "    ;; Push number onto stack\n",
                 "    push 2\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
@@ -53,6 +61,15 @@ class TestCompilerMathematics:
                 "    push rax\n",
                 "    ;; Push number onto stack\n",
                 "    push 3\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and "
+                "then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
@@ -152,6 +169,14 @@ class TestCompilerMathematics:
                 "    pop rax\n",
                 "    div rbx\n",
                 "    push rax\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
@@ -171,6 +196,15 @@ class TestCompilerParenthesis:
                 "    push 1\n",
                 "    ;; Push number onto stack\n",
                 "    push 2\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and "
+                "then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
                 "    ;; Add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
@@ -249,6 +283,7 @@ class TestCompilerPrint:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": "3",
                     "is_const": True,
@@ -299,12 +334,82 @@ class TestCompilerInt:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": "3",
                     "is_const": True,
                     "asm": [
                         "section .var_1\n",
                         "    number_1 dq 3\n"
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_declare_int_8_const(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_int_8.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "int_type": "int8",
+                    "var_type": "num",
+                    "var_len": 1,
+                    "var_val": "3",
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 db 3\n"
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_declare_int_16_const(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_int_16.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "int_type": "int16",
+                    "var_len": 5,
+                    "var_val": "62535",
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dw 62535\n"
+                    ]
+                }
+            }
+            assert assembly == [
+            ]
+
+    def test_declare_int_32_const(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_int_32.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert compiler.variables == {
+                "x": {
+                    "section": "var_1",
+                    "var_name": "number_1",
+                    "var_type": "num",
+                    "int_type": "int32",
+                    "var_len": 10,
+                    "var_val": "4214967295",
+                    "is_const": True,
+                    "asm": [
+                        "section .var_1\n",
+                        "    number_1 dd 4214967295\n"
                     ]
                 }
             }
@@ -320,6 +425,7 @@ class TestCompilerInt:
                 "x": {
                     "section": "var_1",
                     "var_name": "number_1",
+                    "int_type": "int64",
                     "var_type": "num",
                     "var_len": 1,
                     "var_val": "0",
@@ -341,6 +447,7 @@ class TestCompilerInt:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": 7,
                     "is_const": False,
@@ -361,6 +468,7 @@ class TestCompilerInt:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": 2,
                     "is_const": False,
@@ -381,6 +489,7 @@ class TestCompilerInt:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": "0",
                     "is_const": False,
@@ -1201,6 +1310,7 @@ class TestCompilerMultipleVarDeclarations:
                     "section": "var_1",
                     "var_name": "number_1",
                     "var_type": "num",
+                    "int_type": "int64",
                     "var_len": 1,
                     "var_val": "1",
                     "is_const": True,
