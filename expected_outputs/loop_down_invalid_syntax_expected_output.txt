@@ -4,11 +4,5 @@ main() {
 
     loopDown(x) {
 
-        print("goodbye");
-
-    }
-
-}
-
     ^
 Keyword 'loopDown' does not support 'string' at 3:4.

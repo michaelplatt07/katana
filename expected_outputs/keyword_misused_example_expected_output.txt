@@ -2,8 +2,6 @@ main() {
 
     print();
 
-}
-
     ^
 Improper use of 'print' at 2:4 in program. 
    Sample Usage: print(VALUE);: prints the VALUE to the screen

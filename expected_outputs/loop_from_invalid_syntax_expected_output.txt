@@ -2,11 +2,5 @@ main() {
 
     loopFrom(0) {
 
-        print("looping");
-
-    }
-
-}
-
     ^
 Keyword 'loopFrom' does not support '<class '__main__.NumberNode'>' at 2:4.

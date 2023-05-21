@@ -328,7 +328,7 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("1 + (2 + 3;\n", 4, UnclosedParenthesisError(0, 4))
+        mock_print.assert_called_with(["1 + (2 + 3;\n"], 4, UnclosedParenthesisError(0, 4))
 
     @patch("katana.katana.print_exception_message")
     def test_unclosed_paren_error_other_side(self, mock_print):
@@ -336,7 +336,7 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("1 + 2) + 3;\n", 5, UnclosedParenthesisError(0, 5))
+        mock_print.assert_called_with(["1 + 2) + 3;\n"], 5, UnclosedParenthesisError(0, 5))
 
 class TestLexerEndOfLineSemicolon:
     """
@@ -361,7 +361,7 @@ class TestLexerEndOfLineSemicolon:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("3 + 4\n", 5, NoTerminatorError(0, 5))
+        mock_print.assert_called_with(["3 + 4\n"], 5, NoTerminatorError(0, 5))
 
     @patch("katana.katana.print_exception_message")
     def test_error_if_later_line_ends_without_semicolon(self, mock_print):
@@ -370,7 +370,7 @@ class TestLexerEndOfLineSemicolon:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 7, NoTerminatorError(2, 8))
+        mock_print.assert_called_with(code, 7, NoTerminatorError(2, 8))
 
 class TestLexerInvalidTokenException:
 
@@ -383,7 +383,7 @@ class TestLexerInvalidTokenException:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("`;", 0, InvalidTokenException(0, 0, "`"))
+        mock_print.assert_called_with(["`;"], 0, InvalidTokenException(0, 0, "`"))
 
 
 class TestLexerInvalidKeyword:
@@ -400,7 +400,7 @@ class TestLexerInvalidKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("foo(3+4);\n", 2, UnknownKeywordError(0, 0, "foo"))
+        mock_print.assert_called_with(["foo(3+4);\n"], 2, UnknownKeywordError(0, 0, "foo"))
 
 
 class TestLexerPrintKeyword:
@@ -549,7 +549,7 @@ class TestLexerIntKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 9, InvalidTokenException(1, 9, "_"))
+        mock_print.assert_called_with(code, 9, InvalidTokenException(1, 9, "_"))
 
     @patch("katana.katana.print_exception_message")
     def test_invalid_int_64_variable_name_starts_with_number(self, mock_print):
@@ -562,7 +562,7 @@ class TestLexerIntKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 6, InvalidVariableNameError(1, 6))
+        mock_print.assert_called_with(code, 6, InvalidVariableNameError(1, 6))
 
     def test_const_int_variable_delcaration(self):
         """
@@ -659,7 +659,7 @@ class TestLexerCharKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 11, InvalidCharException(1, 11))
+        mock_print.assert_called_with(code, 11, InvalidCharException(1, 11))
 
     def test_char_variable_reference(self):
         """
@@ -865,7 +865,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 1, UnpairedElseError(1, 0))
+        mock_print.assert_called_with(code, 1, UnpairedElseError(1, 0))
 
     @patch("katana.katana.print_exception_message")
     def test_else_with_something_between_raises_error(self, mock_print):
@@ -878,7 +878,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 5, BadFormattedLogicBlock(5, 0))
+        mock_print.assert_called_with(code, 5, BadFormattedLogicBlock(5, 0))
 
     @patch("katana.katana.print_exception_message")
     def test_else_with_something_between_same_line_raises_error(self, mock_print):
@@ -891,7 +891,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 4, BadFormattedLogicBlock(4, 0))
+        mock_print.assert_called_with(code, 4, BadFormattedLogicBlock(4, 0))
 
     @patch("katana.katana.print_exception_message")
     def test_nested_if_else_with_bad_line(self, mock_print):
@@ -920,7 +920,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 7, BadFormattedLogicBlock(7, 0))
+        mock_print.assert_called_with(code, 7, BadFormattedLogicBlock(7, 0))
 
     @patch("katana.katana.print_exception_message")
     def test_nested_else_without_if(self, mock_print):
@@ -944,7 +944,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 3, UnpairedElseError(3, 0))
+        mock_print.assert_called_with(code, 3, UnpairedElseError(3, 0))
 
     def test_if_else_success(self):
         """
@@ -1126,7 +1126,7 @@ class TestLexerQuotationCharacter:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("\"test string;\n", 12, UnclosedQuotationException(0, 12, "test string"))
+        mock_print.assert_called_with(["\"test string;\n"], 12, UnclosedQuotationException(0, 12, "test string"))
 
     @patch("katana.katana.print_exception_message")
     def test_exception_raised_with_no_closing_quote_new_line(self, mock_print):
@@ -1134,7 +1134,7 @@ class TestLexerQuotationCharacter:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("\"test string\n", 12, UnclosedQuotationException(0, 12, "test string"))
+        mock_print.assert_called_with(["\"test string\n"], 12, UnclosedQuotationException(0, 12, "test string"))
 
 
 class TestLexerUpdateCharKeyword:
@@ -1235,4 +1235,4 @@ class TestLexerDotOperator:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with("".join(code), 1, InvalidTokenException(1, 1, "."))
+        mock_print.assert_called_with(code, 1, InvalidTokenException(1, 1, "."))
