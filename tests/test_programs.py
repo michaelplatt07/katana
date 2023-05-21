@@ -15,7 +15,13 @@ def compare_expected_output_to_program_output(expected_results_dir, input_file_d
     for program in os.listdir(input_file_dir):
         output_file_name = os.getcwd() + "/results/" + \
             program.split('.')[0] + "_res.txt"
-        if display_compare:
+        if display_list == []:
+            should_display = True
+        elif program.split('.')[0] in display_list:
+            should_display = True
+        else:
+            should_display = False
+        if display_compare and should_display:
             print(f"Compiling {program}")
         os.system(
             f'python katana/katana.py --program "{input_file_dir}/{program}" --run >> {output_file_name}')
@@ -32,8 +38,14 @@ def compare_expected_output_to_program_output(expected_results_dir, input_file_d
             if key not in ignore_list:
                 expected_lines = expected_results.readlines()
                 compared_results.add(key)
+                if display_list == []:
+                    should_display = True
+                elif key in display_list:
+                    should_display = True
+                else:
+                    should_display = False
                 # Don't want to print the massive rule_110 results right now.
-                if display_compare and key != "rule_110":
+                if display_compare and key != "rule_110" and should_display:
                     build_output_table_row(
                         output_file_name.split("/")[-1], program.replace("_expected_output", "_res"), expected_lines, results[key])
                 assert results[
@@ -137,6 +149,8 @@ if __name__ == "__main__":
                             help="Switch to only the results for newly added or missing tests.")
     arg_parser.add_argument("--ignore", nargs="+",
                             help="List of tests to ignore.")
+    arg_parser.add_argument("--display-list", nargs="+",
+                            help="List of tests to display.")
 
     args = arg_parser.parse_args()
 
@@ -144,6 +158,7 @@ if __name__ == "__main__":
     recreate_expected_outputs = args.recreate_all
     display_compare = args.display_compare
     ignore_list = args.ignore or []
+    display_list = args.display_list or []
 
     try:
         if recreate_expected_outputs:
