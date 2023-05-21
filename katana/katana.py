@@ -1004,7 +1004,9 @@ def print_verbose_message(message):
 
 
 def print_exception_message(program, position, exception):
-    print(program)
+    start_line = exception.line_num - 3 if exception.line_num - 3 >= 0 else 0
+    for line in program[start_line:exception.line_num]:
+        print(line)
     print(" "*position + "^")
     print(exception)
 
@@ -1138,22 +1140,22 @@ class Lexer:
             else:
                 raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
         except InvalidVariableNameError as ivne:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, ivne)
+            print_exception_message(self.program.lines, self.program.curr_col, ivne)
             sys.exit()
         except NoTerminatorError as nte:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, nte)
+            print_exception_message(self.program.lines, self.program.curr_col, nte)
             sys.exit()
         except InvalidTokenException as ite:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, ite)
+            print_exception_message(self.program.lines, self.program.curr_col, ite)
             sys.exit()
         except UnknownKeywordError as uke:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, uke)
+            print_exception_message(self.program.lines, self.program.curr_col, uke)
             sys.exit()
         except UnclosedQuotationException as uqe:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, uqe)
+            print_exception_message(self.program.lines, self.program.curr_col, uqe)
             sys.exit()
         except InvalidCharException as ice:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, ice)
+            print_exception_message(self.program.lines, self.program.curr_col, ice)
             sys.exit()
 
     def check_for_valid_termination(self, value):
@@ -1243,7 +1245,7 @@ class Lexer:
             dot_operator += self.program.get_curr_char()
             return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
         else:
-            print_exception_message("".join(self.program.lines), self.program.curr_col, InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator))
+            print_exception_message(self.program.lines, self.program.curr_col, InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator))
             sys.exit()
 
     def handle_equal_operator(self):
@@ -1268,7 +1270,7 @@ class Lexer:
 
         if self.unpaired_parens != 0:
             upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-            print_exception_message("".join(self.program.lines), paren_error_col, upe)
+            print_exception_message(self.program.lines, paren_error_col, upe)
             sys.exit()
 
     def check_if_else_blocks(self):
@@ -1290,13 +1292,13 @@ class Lexer:
                             pass
                     if brace_count != 0:
                         err_token = self.token_list[self.else_idx_list[idx]]
-                        print_exception_message("".join(self.program.lines), err_token.row, UnpairedElseError(err_token.row, err_token.col))
+                        print_exception_message(self.program.lines, err_token.row, UnpairedElseError(err_token.row, err_token.col))
                         sys.exit()
                         # raise UnpairedElseError(err_token.row, err_token.col)
                 # All other if/else pairs matched so the final else must be
                 # the problem
                 err_token = self.token_list[self.else_idx_list[-1]]
-                print_exception_message("".join(self.program.lines), err_token.row, UnpairedElseError(err_token.row, err_token.col))
+                print_exception_message(self.program.lines, err_token.row, UnpairedElseError(err_token.row, err_token.col))
                 sys.exit()
 
         # If/else blocks all match, make sure there is nothing between the end
@@ -1304,7 +1306,7 @@ class Lexer:
         filtered_token_list = list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
         for idx, token in enumerate(filtered_token_list):
             if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                print_exception_message("".join(self.program.lines), token.row, BadFormattedLogicBlock(token.row, 0))
+                print_exception_message(self.program.lines, token.row, BadFormattedLogicBlock(token.row, 0))
                 sys.exit()
 
 
@@ -1406,22 +1408,22 @@ class Parser:
                 assert False, f"Unknown token type {self.curr_token.ttype}"
             return node
         except KeywordMisuseException as kme:
-            print_exception_message(("\n").join(program_lines), kme.col_num, kme)
+            print_exception_message(program_lines, kme.col_num, kme)
             sys.exit()
         except InvalidTypeDeclarationException as itde:
-            print_exception_message(("\n").join(program_lines), itde.col_num, itde)
+            print_exception_message(program_lines, itde.col_num, itde)
             sys.exit()
         except TooManyArgsException as tmae:
-            print_exception_message(("\n").join(program_lines), tmae.col_num, tmae)
+            print_exception_message(program_lines, tmae.col_num, tmae)
             sys.exit()
         except NotEnoughArgsException as neae:
-            print_exception_message(("\n").join(program_lines), neae.col_num, neae)
+            print_exception_message(program_lines, neae.col_num, neae)
             sys.exit()
         except InvalidArgsException as iae:
-            print_exception_message(("\n").join(program_lines), iae.col_num, iae)
+            print_exception_message(program_lines, iae.col_num, iae)
             sys.exit()
         except BufferOverflowException as boe:
-            print_exception_message(("\n").join(program_lines), boe.col_num, boe)
+            print_exception_message(program_lines, boe.col_num, boe)
             sys.exit()
 
     def parse_literal(self):

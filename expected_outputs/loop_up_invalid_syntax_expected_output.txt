@@ -2,11 +2,5 @@ main() {
 
     loopUp("hello") {
 
-        print("goodbye");
-
-    }
-
-}
-
     ^
 Keyword 'loopUp' does not support '<class '__main__.StringNode'>' at 2:4.

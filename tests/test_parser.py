@@ -713,7 +713,7 @@ class TestParserPrint:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_print_no_left_paren_raises_error(self, mock_print):
@@ -740,7 +740,7 @@ class TestParserPrint:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
 
 
 class TestParserMain:
@@ -794,7 +794,7 @@ class TestParserMain:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_method_params_raises_exception(self, mock_print):
@@ -818,7 +818,7 @@ class TestParserMain:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_no_right_paren_raises_exception(self, mock_print):
@@ -842,7 +842,7 @@ class TestParserMain:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_no_left_curl_brace_raises_exception(self, mock_print):
@@ -866,7 +866,7 @@ class TestParserMain:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
 
 
 class TestParserInt:
@@ -1029,7 +1029,7 @@ class TestParserInt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+        mock_print.assert_called_with([], 4, BufferOverflowException(1, 4))
 
     @patch("katana.katana.print_exception_message")
     def test_int_16_variable_declaration_overflow(self, mock_print):
@@ -1049,7 +1049,7 @@ class TestParserInt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+        mock_print.assert_called_with([], 4, BufferOverflowException(1, 4))
 
     @patch("katana.katana.print_exception_message")
     def test_int_32_variable_declaration_overflow(self, mock_print):
@@ -1069,7 +1069,7 @@ class TestParserInt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, BufferOverflowException(1, 4))
+        mock_print.assert_called_with([], 4, BufferOverflowException(1, 4))
 
 
 
@@ -1187,7 +1187,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
+        mock_print.assert_called_with([], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_no_left_paren_raises_error(self, mock_print):
@@ -1216,7 +1216,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
+        mock_print.assert_called_with([], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_not_enough_params_raises_error(self, mock_print):
@@ -1246,7 +1246,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, NotEnoughArgsException(1, 13))
+        mock_print.assert_called_with([], 13, NotEnoughArgsException(1, 13))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_first_param(self, mock_print):
@@ -1278,7 +1278,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, InvalidArgsException(1, 13, "charAt", NumberNode))
+        mock_print.assert_called_with([], 13, InvalidArgsException(1, 13, "charAt", NumberNode))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_second_param(self, mock_print):
@@ -1310,7 +1310,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, InvalidArgsException(1, 13, "charAt", CharNode))
+        mock_print.assert_called_with([], 13, InvalidArgsException(1, 13, "charAt", CharNode))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_first_param_as_var(self, mock_print):
@@ -1348,7 +1348,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "int64"))
+        mock_print.assert_called_with([], 13, InvalidArgsException(2, 13, "charAt", "int64"))
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_second_param_as_var(self, mock_print):
@@ -1386,7 +1386,7 @@ class TestParserCharAt:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 13, InvalidArgsException(2, 13, "charAt", "char"))
+        mock_print.assert_called_with([], 13, InvalidArgsException(2, 13, "charAt", "char"))
 
 
 class TestUpdateChar:
@@ -1469,7 +1469,7 @@ class TestUpdateChar:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_update_char_function_no_left_paren_raises_error(self, mock_print):
@@ -1501,7 +1501,7 @@ class TestUpdateChar:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
 
 
 
@@ -1587,7 +1587,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+        mock_print.assert_called_with([], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_function_no_left_paren_raises_error(self, mock_print):
@@ -1614,7 +1614,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+        mock_print.assert_called_with([], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_first_arg_not_string(self, mock_print):
@@ -1643,7 +1643,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_second_arg_not_string(self, mock_print):
@@ -1665,7 +1665,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_first_arg_var_not_string(self, mock_print):
@@ -1697,7 +1697,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int64"))
+        mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_second_arg_var_not_string(self, mock_print):
@@ -1729,7 +1729,7 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(3, 4, "copyStr", "int64"))
+        mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
 
 
 class TestParserString:
@@ -2345,7 +2345,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopUp", "string"))
+        mock_print.assert_called_with([], 2, InvalidArgsException(4, 2, "loopUp", "string"))
 
     def test_loop_down_keyword(self):
         """
@@ -2480,7 +2480,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 2, InvalidArgsException(4, 2, "loopDown", "string"))
+        mock_print.assert_called_with([], 2, InvalidArgsException(4, 2, "loopDown", "string"))
 
     def test_loop_from_keyword(self):
         """
@@ -2562,7 +2562,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopFrom", NumberNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopFrom", NumberNode))
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_string_in_params_raises_error(self, mock_print):
@@ -2599,7 +2599,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopUp", StringNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopUp", StringNode))
 
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_string_in_params_raises_error(self, mock_print):
@@ -2636,7 +2636,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopDown", StringNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopDown", StringNode))
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_dot_operator_raises_error(self, mock_print):
@@ -2675,7 +2675,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopUp", RangeNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopUp", RangeNode))
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_multiple_args_raises_error(self, mock_print):
@@ -2714,7 +2714,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, TooManyArgsException(1, 4))
+        mock_print.assert_called_with([], 4, TooManyArgsException(1, 4))
 
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_multiple_args_raises_error(self, mock_print):
@@ -2753,7 +2753,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, TooManyArgsException(1, 4))
+        mock_print.assert_called_with([], 4, TooManyArgsException(1, 4))
 
 
     @patch("katana.katana.print_exception_message")
@@ -2793,7 +2793,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, InvalidArgsException(1, 4, "loopDown", RangeNode))
+        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopDown", RangeNode))
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_up_invalid_syntax(self, mock_print):
@@ -2818,7 +2818,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE))
 
 
     @patch("katana.katana.print_exception_message")
@@ -2844,7 +2844,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, "loopDown", LOOP_DOWN_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopDown", LOOP_DOWN_SIGNATURE))
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_from_invalid_syntax(self, mock_print):
@@ -2869,7 +2869,7 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with('', 4, KeywordMisuseException(1, 4, "loopFrom", LOOP_FROM_SIGNATURE))
+        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopFrom", LOOP_FROM_SIGNATURE))
 
 
 class TestKeywordAdvanced:
@@ -3247,7 +3247,7 @@ class TestParserTypeChecking:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
 
     @patch("katana.katana.print_exception_message")
     def test_setting_string_to_bool_raises_exception(self, mock_print):
@@ -3267,7 +3267,7 @@ class TestParserTypeChecking:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
 
     @patch("katana.katana.print_exception_message")
     def test_setting_bool_to_int_raises_exception(self, mock_print):
@@ -3287,7 +3287,7 @@ class TestParserTypeChecking:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
 
     @patch("katana.katana.print_exception_message")
     def test_setting_char_to_bool_raises_exception(self, mock_print):
@@ -3307,7 +3307,7 @@ class TestParserTypeChecking:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with("", 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
 
 
 class TestParserVariablesOutsideMain:
