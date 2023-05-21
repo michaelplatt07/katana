@@ -46,6 +46,9 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+MACRO_KEYWORD_TOKEN_TYPE = "MACRO_KEYWORD"
+MACRO_NAME_TOKEN_TYPE = "MACRO_NAME"
+MACRO_REFERENCE_TOKEN_TYPE = "MACRO_REFERENCE"
 RANGE_INDICATION_TOKEN_TYPE = "RANGE"
 RIGHT_CURL_BRACE_TOKEN_TYPE = "RIGHT_CURL_BRACE"
 RIGHT_PAREN_TOKEN_TYPE = "RIGHT_PAREN"
@@ -1022,6 +1025,7 @@ class Lexer:
         self.right_paren_idx_list = []
         self.if_idx_list = []
         self.else_idx_list = []
+        self.macro_name_list = []
         self.variable_name_list = []
         self.unpaired_parens = 0
         self.misused_keywords = 0
@@ -1199,9 +1203,16 @@ class Lexer:
             elif keyword == "else":
                 self.else_idx_list.append(len(self.token_list))
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+        elif keyword == "MACRO":
+            return Token(MACRO_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
             self.variable_name_list.append(keyword)
             return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif len(self.token_list) > 0 and self.token_list[-1].value == "MACRO":
+            self.macro_name_list.append(keyword)
+            return Token(MACRO_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword in self.macro_name_list:
+            return Token(MACRO_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in self.variable_name_list:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in ["true", "false"]:
