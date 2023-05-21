@@ -1,0 +1,5 @@
+main() {
+    int8 x = 123;
+    print("x = ");
+    printl(x);
+}
