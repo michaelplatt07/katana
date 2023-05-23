@@ -96,7 +96,6 @@ IGNORE_OPS = (
 )
 FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar", "copyStr")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
-# TODO(map) Change this to int until we set up 32 bit mode.
 VARIABLE_KEYWORDS = ("const", "int8", "int16", "int32", "int64", "string", "bool", "char")
 
 
@@ -111,7 +110,7 @@ PRINT_SIGNATURE = "print(VALUE);: prints the VALUE to the screen"
 LOOP_UP_SIGNATURE = "loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BODY each time"
 LOOP_DOWN_SIGNATURE = "loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time"
 LOOP_FROM_SIGNATURE = "loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time"
-
+MACRO_SIGNATURE = "MACRO macroName { BODY }: Creates a Macro that substitues any references for the BODY"
 
 ############
 # Exceptions
@@ -378,6 +377,51 @@ class InvalidConcatenationException(Exception):
 
     def __str__(self):
         return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
+
+
+class InvalidMacroDeclaration(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid MACRO")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot declare MACRO inside `main` method."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
+class UnnamedMacroException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Unnamed MACRO")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot declare MACRO without a name."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
+class EmptyMacroException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Unnamed MACRO")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot declare an empty MACRO."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
 
 
 ########
@@ -685,6 +729,7 @@ class StringNode(Node):
     def get_children_nodes(self):
         return None
 
+
 class CharNode(Node):
     """
     Node for chars in the Katana language.
@@ -777,7 +822,6 @@ class AssignmentNode(ExpressionNode):
                 super().__eq__(other))
 
 
-
 class PlusMinusNode(ExpressionNode):
     """
     Node specific for plus minus. Doing this because of PEMDAS.
@@ -804,6 +848,7 @@ class PlusMinusNode(ExpressionNode):
             return [self.left_side]
         else:
             return [self.left_side, self.right_side]
+
 
 class MultiplyDivideNode(ExpressionNode):
     """
@@ -893,6 +938,7 @@ class NumberNode(Node):
     def get_children_nodes(self):
         return None
 
+
 class BooleanNode(Node):
     def __init__(self, token, value, parent_node=None):
         super().__init__(token, LOW, parent_node)
@@ -955,6 +1001,70 @@ class VariableReferenceNode(Node):
 
     def get_children_nodes(self):
         return None
+
+
+class MacroNode(Node):
+    def __init__(self, token, value, name_node, children_nodes, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.name_node = name_node
+        self.children_nodes = children_nodes
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        children_equal = self.children_nodes == other.children_nodes
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal and children_equal)
+
+    def __repr__(self):
+        return f"({self.value}, {self.name_node}, [{self.children_nodes}])"
+
+    def get_children_nodes(self):
+        return None
+
+
+class MacroNameNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class MacroReferenceNode(Node):
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
 
 #########
 # PROGRAM
@@ -1347,6 +1457,9 @@ class Parser:
             node = self.process_token(root_node)
             if node and type(node) != NoOpNode:
                 root_node = node
+            else:
+                # There was a NoOpNode meaning we can continue
+                continue
             if type(root_node) == StartNode:
                 self.main_node = root_node
             elif root_node and type(node) == NoOpNode:
@@ -1403,6 +1516,10 @@ class Parser:
                 node = CharNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
                 node = BooleanNode(self.curr_token, self.curr_token.value)
+            elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
+                node = self.parse_macro_node(self.curr_token)
+            elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                node = MacroReferenceNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
                 is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
                 node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
@@ -1435,6 +1552,15 @@ class Parser:
             sys.exit()
         except BufferOverflowException as boe:
             print_exception_message(program_lines, boe.col_num, boe)
+            sys.exit()
+        except InvalidMacroDeclaration as imd:
+            print_exception_message(program_lines, imd.col_num, imd)
+            sys.exit()
+        except UnnamedMacroException as ume:
+            print_exception_message(program_lines, ume.col_num, ume)
+            sys.exit()
+        except EmptyMacroException as eme:
+            print_exception_message(program_lines, eme.col_num, eme)
             sys.exit()
 
     def parse_literal(self):
@@ -1473,6 +1599,36 @@ class Parser:
             ret_node.right_side = node
             return ret_node
         return node
+
+    def parse_macro_node(self, token):
+        if self.peek_next_token().ttype != MACRO_NAME_TOKEN_TYPE:
+            raise UnnamedMacroException(token.row, token.col)
+        self.advance_token()
+        macro_name_node = MacroNameNode(self.curr_token, self.curr_token.value)
+
+        if self.peek_next_token().ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
+            raise KeywordMisuseException(token.row, token.col, token.value, MACRO_SIGNATURE)
+
+        # Go to left curly brace and then past it
+        self.advance_token()
+        self.advance_token()
+        children_nodes = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) == NoOpNode:
+                children_nodes.append(root_node)
+                self.advance_token()
+                root_node = None
+            else:
+                root_node = node
+                self.advance_token()
+
+        if len(children_nodes) < 1:
+            raise EmptyMacroException(token.row, token.col)
+
+        return MacroNode(token, token.value, macro_name_node, children_nodes)
+
 
     def parse_comparator(self, op_type, root_node):
         """
@@ -1676,6 +1832,9 @@ class Parser:
                 # of work not ended by a semicolon.
                 node_list.append(root_node)
                 root_node = None
+            elif isinstance(node, MacroNode):
+                # Cannot declare a MACRO inside the `main` node
+                raise InvalidMacroDeclaration(node.token.row, node.token.row)
             self.advance_token()
         return node_list
 
