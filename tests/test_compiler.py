@@ -4,17 +4,29 @@ from katana.katana import (
     Compiler,
     Lexer,
     Parser,
-    Program
+    Program,
+    MacroNode
 )
 
 
-def get_compiler_class(lines):
+def get_token_list(lines):
     program = Program(lines)
     lexer = Lexer(program)
-    token_list = lexer.lex()
+    return lexer.lex()
+
+
+def get_nodes(token_list):
     parser = Parser(token_list)
     parser.parse()
-    nodes = parser.get_nodes()
+    return parser.get_nodes()
+
+
+def get_compiler_class(lines=None, input_nodes=None):
+    if not input_nodes:
+        token_list = get_token_list(lines)
+        nodes = get_nodes(token_list)
+    else:
+        nodes = input_nodes
     return Compiler(nodes)
 
 
@@ -1344,3 +1356,76 @@ class TestCompilerMultipleVarDeclarations:
                     ]
                 }
             }
+
+
+class TestCompilerMacroKeyword:
+    """
+    Tests related to the macro keyword.
+    """
+
+    def test_macro_successfully_used(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_macro_replaces_successfully.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 17\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
+                "    ;; Push number onto stack\n",
+                "    push 3\n",
+                "    ;; Push number onto stack\n",
+                "    push 4\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "    ;; Keyword Func\n",
+                "    call print_num\n",
+            ]
+
+    def test_macro_successfully_used_more_than_once(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_macro_multiple_uses.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 17\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
+                "    ;; Push number onto stack\n",
+                "    push 3\n",
+                "    ;; Push number onto stack\n",
+                "    push 4\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "    ;; Keyword Func\n",
+                "    call print_num\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 17\n",
+                "    push raw_string_2\n",
+                "    ;; Keyword Func\n",
+                "    call print_string\n",
+            ]

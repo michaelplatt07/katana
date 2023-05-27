@@ -1,4 +1,5 @@
 import argparse
+import copy
 import os
 import sys
 # TODO(map) Move all the classes and enums outs so imports are nice
@@ -380,13 +381,15 @@ class InvalidConcatenationException(Exception):
 
 
 class InvalidMacroDeclaration(Exception):
-    def __init__(self, line_num, col_num):
+    def __init__(self, line_num, col_num, function_name, is_ref=False):
         super().__init__("Invalid MACRO")
         self.line_num = line_num + 1
         self.col_num = col_num
+        self.function_name = function_name
+        self.is_ref = is_ref
 
     def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot declare MACRO inside `main` method."
+        return f"{self.line_num}:{self.col_num} Cannot {'use' if self.is_ref else 'declare'} MACRO inside `{self.function_name}` method."
 
     def __eq__(self, other):
         assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
@@ -1025,7 +1028,7 @@ class MacroNode(Node):
         return f"({self.value}, {self.name_node}, [{self.children_nodes}])"
 
     def get_children_nodes(self):
-        return None
+        return self.children_nodes
 
 
 class MacroNameNode(Node):
@@ -1441,6 +1444,7 @@ class Parser:
         self.curr_token_pos = -1
         self.main_node = None
         self.variable_to_type_map = {}
+        self.macros = {}
         self.node_list = []
 
     def get_nodes(self):
@@ -1478,6 +1482,9 @@ class Parser:
 
     def peek_next_token(self):
         return self.token_list[self.curr_token_pos + 1]
+
+    def get_prev_token(self):
+        return self.token_list[self.curr_token_pos - 1]
 
     def process_token(self, root_node):
         try:
@@ -1519,7 +1526,9 @@ class Parser:
             elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
                 node = self.parse_macro_node(self.curr_token)
             elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                node = MacroReferenceNode(self.curr_token, self.curr_token.value)
+                # Make a copy of the node otherwise when the node is visited
+                # for the second time, it will already be marked as visited.
+                node = copy.deepcopy(self.macros[self.curr_token.value])
             elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
                 is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
                 node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
@@ -1627,6 +1636,7 @@ class Parser:
         if len(children_nodes) < 1:
             raise EmptyMacroException(token.row, token.col)
 
+        self.macros[macro_name_node.value] = children_nodes
         return MacroNode(token, token.value, macro_name_node, children_nodes)
 
 
@@ -1665,6 +1675,10 @@ class Parser:
             # Advance and process the token.
             self.advance_token()
 
+            # TODO(map) Make the error message here better.
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, self.curr_token.value, True)
+
             right_node = self.process_token(right_node)
         self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node), right_node.value)
         return AssignmentNode(op_token, op_token.value,
@@ -1692,14 +1706,16 @@ class Parser:
         handle_parenthesis because this can return a list or a single node.
         """
         root_node = None
+        keyword_value = self.get_prev_token().value
 
-        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
         # Advance once to get past the paren token.
         self.advance_token()
 
         arg_list = []
         root_node = None
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_value, True)
             node = self.process_token(root_node)
             if type(node) != ArgSeparatorNode:
                 root_node = node
@@ -1708,10 +1724,11 @@ class Parser:
                 root_node = None
                 node = None
             self.advance_token()
+
         # Add the final calculated node to the list
         arg_list.append(root_node)
 
-        return arg_list if len(arg_list) > 1 else root_node
+        return arg_list if len(arg_list) > 1 else arg_list[0]
 
     def handle_parenthesis(self):
         # This only works for numbers. For functions this will need to be
@@ -1823,9 +1840,13 @@ class Parser:
             node = self.process_token(root_node)
             if node and type(node) != NoOpNode:
                 root_node = node
-            if self.curr_token.ttype == EOL_TOKEN_TYPE:
+            if self.curr_token.ttype == EOL_TOKEN_TYPE and type(root_node) != list:
                 # Add the node to the list because it is a logical unit of work
                 node_list.append(root_node)
+                root_node = None
+            elif self.curr_token.ttype == EOL_TOKEN_TYPE and type(root_node) == list:
+                # The node was a MacroReferenceNode and was replaced by a list of nodes
+                node_list.extend(root_node)
                 root_node = None
             elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
                 # Need to add the node to the list because it is a logic unit
@@ -1834,7 +1855,7 @@ class Parser:
                 root_node = None
             elif isinstance(node, MacroNode):
                 # Cannot declare a MACRO inside the `main` node
-                raise InvalidMacroDeclaration(node.token.row, node.token.row)
+                raise InvalidMacroDeclaration(node.token.row, node.token.row, "main")
             self.advance_token()
         return node_list
 
@@ -1854,8 +1875,13 @@ class Parser:
         # Parse the inner parts of the print function
         root_node = None
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, "print", True)
             root_node = self.process_token(root_node)
             self.advance_token()
+
+        # TODO(map) Raise exception for more than one argument in the print statement.
+
         return [root_node]
 
     def handle_char_at_keyword(self, keyword_token):
@@ -1875,6 +1901,8 @@ class Parser:
         arg_list = []
         root_node = None
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_token.value, True)
             node = self.process_token(root_node)
             if type(node) != ArgSeparatorNode:
                 root_node = node
@@ -1958,6 +1986,9 @@ class Parser:
     def handle_var_declaration(self, keyword_token):
         child_node = None
         while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_value, True)
+
             child_node = self.process_token(child_node)
             self.advance_token()
 
@@ -2479,6 +2510,10 @@ class Compiler:
             # push the byte itself onto the stack here.
             if node.can_traverse_to_parent():
                 return [] + self.traverse_tree(node.parent_node)
+            return []
+        elif type(node) == MacroNode:
+            # Don't need to return assembly here because the Parser already
+            # subbed in the relevant nodes where the macro is referenced.
             return []
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")

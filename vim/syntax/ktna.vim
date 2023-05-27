@@ -1,7 +1,7 @@
 " Vim Syntax File
 " Language: Katana
 " Maintainer: Michael Platt
-" Latest Revision: 2023-02-23
+" Latest Revision: 2023-05-23
 
 hi KatanaMain ctermfg=94
 hi KatanaVarDecKeyword ctermfg=29
@@ -17,7 +17,7 @@ syn keyword katanaKeyword main
 highlight link katanaKeyword KatanaMain
 
 " Variable declaration keywords
-syn keyword katanaVarKeyword int64 bool char const string
+syn keyword katanaVarKeyword int8 int16 int32 int64 bool char const string MACRO
 highlight link katanaVarKeyword KatanaVarDecKeyword
 
 " Builtin function keywords
