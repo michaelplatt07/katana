@@ -1,0 +1,9 @@
+MACRO printMessage {
+    print("Adding 3 and 4 = ");
+}
+
+main() {
+    printMessage;
+    print(3 + 4);
+    printMessage;
+}

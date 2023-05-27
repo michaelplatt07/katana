@@ -1,0 +1,7 @@
+MACRO invalidMacroUse {
+    3 + 4;
+}
+
+main() {
+    print(invalidMacroUse);
+}
