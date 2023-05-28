@@ -1,20 +1,22 @@
 import pytest
-import re
 from unittest.mock import patch
 
 from katana.katana import (
+    Parser,
     AssignmentNode,
     BooleanNode,
     CharNode,
     CompareNode,
     FunctionKeywordNode,
-    NumberNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
     LoopFromKeywordNode,
     LoopUpKeywordNode,
+    MacroNameNode,
+    MacroNode,
+    MacroReferenceNode,
     MultiplyDivideNode,
-    Parser,
+    NumberNode,
     PlusMinusNode,
     RangeNode,
     StartNode,
@@ -23,13 +25,16 @@ from katana.katana import (
     VariableKeywordNode,
     VariableReferenceNode,
     BufferOverflowException,
+    EmptyMacroException,
     KeywordMisuseException,
     InvalidArgsException,
     InvalidAssignmentException,
     InvalidConcatenationException,
+    InvalidMacroDeclaration,
     InvalidTypeDeclarationException,
     NotEnoughArgsException,
     TooManyArgsException,
+    UnnamedMacroException,
     Token,
     ASSIGNMENT_TOKEN_TYPE,
     BOOLEAN_TOKEN_TYPE,
@@ -45,6 +50,9 @@ from katana.katana import (
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
     GREATER_THAN_TOKEN_TYPE,
+    MACRO_KEYWORD_TOKEN_TYPE,
+    MACRO_NAME_TOKEN_TYPE,
+    MACRO_REFERENCE_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
@@ -3355,3 +3363,155 @@ class TestParserVariablesOutsideMain:
         parser = Parser(token_list)
         parser.parse()
         assert [keyword_node, start_node] == parser.get_nodes()
+
+
+class TestParserMacro:
+    """
+    All tests related to the MACRO keyword.
+    """
+
+    def test_macro_successfully_declared(self):
+        token_list = [
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 4, 0, "MACRO", 4),
+            Token(MACRO_NAME_TOKEN_TYPE, 10, 0, "myMacro", 0),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 18, 0, "{", 3),
+            Token(NUM_TOKEN_TYPE, 8, 1, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 10, 1, "+", 1),
+            Token(NUM_TOKEN_TYPE, 12, 1, "4", 0),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 2, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 4, "(", 3),
+            Token(STRING_TOKEN_TYPE, 10, 4, "Hello", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 4, ")", 3),
+            Token(EOL_TOKEN_TYPE, 16, 4, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        parser.parse()
+        three_node = NumberNode(token_list[3], "3")
+        four_node = NumberNode(token_list[5], "4")
+        plus_node = PlusMinusNode(token_list[4], "+", three_node, four_node)
+        macro_name_node = MacroNameNode(token_list[1], "myMacro")
+        macro_node = MacroNode(token_list[0], "MACRO", macro_name_node, [plus_node])
+        hello_node = StringNode(token_list[14], "Hello")
+        print_node = FunctionKeywordNode(token_list[12], "print", [hello_node])
+        ast = StartNode(token_list[8], "main", [print_node])
+        assert [macro_node, ast] == parser.get_nodes()
+
+    def test_macro_declared_and_used(self):
+        token_list = [
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 0, "MACRO", 4),
+            Token(MACRO_NAME_TOKEN_TYPE, 6, 0, "printSeven", 0),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 17, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 12, 1, "+", 1),
+            Token(NUM_TOKEN_TYPE, 14, 1, "4", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 4, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 4, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 4, "{", 3),
+            Token(MACRO_REFERENCE_TOKEN_TYPE, 4, 5, "printSeven", 0),
+            Token(EOL_TOKEN_TYPE, 14, 5, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 6, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 7, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        parser.parse()
+        three_node = NumberNode(token_list[5], "3")
+        four_node = NumberNode(token_list[7], "4")
+        plus_node = PlusMinusNode(token_list[6], "+", three_node, four_node)
+        macro_name_node = MacroNameNode(token_list[1], "printSeven")
+        print_node = FunctionKeywordNode(token_list[3], "print", [plus_node])
+        macro_node = MacroNode(token_list[0], "MACRO", macro_name_node, [print_node])
+        ast = StartNode(token_list[11], "main", [print_node])
+        assert [macro_node, ast] == parser.get_nodes()
+
+    @patch("katana.katana.print_exception_message")
+    def test_macro_fails_declared_in_main(self, mock_print):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 4, 1, "MACRO", 4),
+            Token(MACRO_NAME_TOKEN_TYPE, 10, 1, "myMacro", 0),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 18, 1, "{", 3),
+            Token(NUM_TOKEN_TYPE, 8, 2, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 10, 2, "+", 1),
+            Token(NUM_TOKEN_TYPE, 12, 2, "4", 0),
+            Token(EOL_TOKEN_TYPE, 13, 2, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 4, "(", 3),
+            Token(STRING_TOKEN_TYPE, 10, 4, "Hello", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 4, ")", 3),
+            Token(EOL_TOKEN_TYPE, 18, 4, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 1, InvalidMacroDeclaration(1, 1, "main"))
+
+    @patch("katana.katana.print_exception_message")
+    def test_macro_fails_invalid_declaration_no_name(self, mock_print):
+        token_list = [
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 4, 0, "MACRO", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 10, 0, "{", 3),
+            Token(NUM_TOKEN_TYPE, 8, 1, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 10, 1, "+", 1),
+            Token(NUM_TOKEN_TYPE, 12, 1, "4", 0),
+            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 2, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 4, "(", 3),
+            Token(STRING_TOKEN_TYPE, 10, 4, "Hello", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 4, ")", 3),
+            Token(EOL_TOKEN_TYPE, 16, 4, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 4, UnnamedMacroException(0, 4))
+
+    @patch("katana.katana.print_exception_message")
+    def test_macro_fails_empty_macro(self, mock_print):
+        token_list = [
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 4, 0, "MACRO", 4),
+            Token(MACRO_NAME_TOKEN_TYPE, 10, 0, "myMacro", 0),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 18, 0, "{", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 1, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 2, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 2, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 2, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 3, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 3, "(", 3),
+            Token(STRING_TOKEN_TYPE, 10, 3, "Hello", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 3, ")", 3),
+            Token(EOL_TOKEN_TYPE, 16, 3, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 4, EmptyMacroException(0, 4))

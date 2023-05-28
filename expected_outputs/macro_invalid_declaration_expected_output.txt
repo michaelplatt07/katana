@@ -1,0 +1,8 @@
+
+
+main() {
+
+    print(invalidMacroUse);
+
+          ^
+6:10 Cannot use MACRO inside `print` method.

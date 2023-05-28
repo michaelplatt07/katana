@@ -19,6 +19,9 @@ from katana.katana import (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
+    MACRO_KEYWORD_TOKEN_TYPE,
+    MACRO_NAME_TOKEN_TYPE,
+    MACRO_REFERENCE_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
@@ -1236,3 +1239,35 @@ class TestLexerDotOperator:
         with pytest.raises(SystemExit):
             lexer.lex()
         mock_print.assert_called_with(code, 1, InvalidTokenException(1, 1, "."))
+
+
+class TestLexerMacroKeyword:
+    """
+    All tests related to using the macro keyword.
+    """
+
+    def test_macro_successfully_lexes(self):
+        program = Program(["MACRO myMacro {\n", "3 + 4;\n", "}\n", "main() {\n", "print(myMacro);\n", "}\n"])
+        token_list = [
+            Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 0, "MACRO", 4),
+            Token(MACRO_NAME_TOKEN_TYPE, 6, 0, "myMacro", 0),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 14, 0, "{", 3),
+            Token(NUM_TOKEN_TYPE, 0, 1, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 1, "+", 1),
+            Token(NUM_TOKEN_TYPE, 4, 1, "4", 0),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 4, "(", 3),
+            Token(MACRO_REFERENCE_TOKEN_TYPE, 6, 4, "myMacro", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 13, 4, ")", 3),
+            Token(EOL_TOKEN_TYPE, 14, 4, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
