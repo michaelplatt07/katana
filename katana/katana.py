@@ -2282,6 +2282,9 @@ class Compiler:
                     keyword_call_asm = self.get_printl_num_keyword_asm()
                 elif type(node.arg_nodes[0]) == CharNode:
                     keyword_call_asm = self.get_printl_char_keyword_asm()
+                elif type(node.arg_nodes[0]) == PlusMinusNode:
+                    # TODO(map) https://trello.com/c/wRuStWqL/11-update-the-print-node-logic-for-the-plusminusnode-to-handle-addition-of-things-other-than-strings
+                    keyword_call_asm = self.get_print_num_keyword_asm()
                 elif self.variables[node.arg_nodes[0].value]:
                     if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
                         keyword_call_asm = self.get_printl_string_keyword_asm()

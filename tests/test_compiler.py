@@ -285,6 +285,33 @@ class TestCompilerPrint:
                 "    call printl_string\n",
             ]
 
+    def test_printl_keyword_with_addition(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_printl_addition.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
+                "    ;; Push number onto stack\n",
+                "    push 5\n",
+                "    ;; Push number onto stack\n",
+                "    push 4\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push them onto the stack twice, once to do the overflow check and "
+                "then again to do the addition\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    ;; Add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "    ;; Keyword Func\n",
+                "    call print_num\n",
+            ]
+
     def test_assignment_keyword_used(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_assignment_used.ktna") as f:
