@@ -726,7 +726,7 @@ class TestParserPrint:
     @patch("katana.katana.print_exception_message")
     def test_print_no_left_paren_raises_error(self, mock_print):
         """
-        Given a progrma like:
+        Given a program like:
         main() {
             print{1);
         }
@@ -749,6 +749,68 @@ class TestParserPrint:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
+
+    @patch("katana.katana.print_exception_message")
+    def test_print_with_multiple_args_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            print(1, 2, 3);
+        }
+        Expected TooManyArgsException to be raised
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", 0),
+            Token(COMMA_TOKEN_TYPE, 11, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 13, 1, "4", 0),
+            Token(COMMA_TOKEN_TYPE, 14, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 16, 1, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 18, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 11, TooManyArgsException(1, 11))
+
+    @patch("katana.katana.print_exception_message")
+    def test_printl_with_multiple_args_raises_exception(self, mock_print):
+        """
+        Given a program like:
+        main() {
+            printl(1, 2, 3);
+        }
+        Expected TooManyArgsException to be raised
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 3),
+            Token(NUM_TOKEN_TYPE, 11, 1, "3", 0),
+            Token(COMMA_TOKEN_TYPE, 12, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 14, 1, "4", 0),
+            Token(COMMA_TOKEN_TYPE, 15, 1, ",", 0),
+            Token(NUM_TOKEN_TYPE, 17, 1, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 18, 1, ")", 3),
+            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 12, TooManyArgsException(1, 12))
 
 
 class TestParserMain:

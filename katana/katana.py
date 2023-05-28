@@ -1878,9 +1878,9 @@ class Parser:
             if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
                 raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, "print", True)
             root_node = self.process_token(root_node)
+            if isinstance(root_node, ArgSeparatorNode):
+                raise TooManyArgsException(self.curr_token.row, self.curr_token.col)
             self.advance_token()
-
-        # TODO(map) Raise exception for more than one argument in the print statement.
 
         return [root_node]
 

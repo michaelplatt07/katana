@@ -5,7 +5,6 @@ from katana.katana import (
     Lexer,
     Parser,
     Program,
-    MacroNode
 )
 
 
@@ -236,7 +235,6 @@ class TestCompilerPrint:
     """
     All tests related to the print keyword.
     """
-
     def test_print_keyword(self):
         curr_dir = os.getcwd()
         with open(curr_dir + "/tests/test_programs/sample_print.ktna") as f:
