@@ -312,7 +312,7 @@ class TestCompilerPrint:
                 "    add rax, rbx\n",
                 "    push rax\n",
                 "    ;; Keyword Func\n",
-                "    call print_num\n",
+                "    call printl_num\n",
             ]
 
     def test_assignment_keyword_used(self):
