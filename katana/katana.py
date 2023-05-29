@@ -2284,7 +2284,7 @@ class Compiler:
                     keyword_call_asm = self.get_printl_char_keyword_asm()
                 elif type(node.arg_nodes[0]) == PlusMinusNode:
                     # TODO(map) https://trello.com/c/wRuStWqL/11-update-the-print-node-logic-for-the-plusminusnode-to-handle-addition-of-things-other-than-strings
-                    keyword_call_asm = self.get_print_num_keyword_asm()
+                    keyword_call_asm = self.get_printl_num_keyword_asm()
                 elif self.variables[node.arg_nodes[0].value]:
                     if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
                         keyword_call_asm = self.get_printl_string_keyword_asm()
@@ -2708,7 +2708,7 @@ class Compiler:
             compiled_program.write("        ;; We need to do an initial check for numbers that are single digit.\n")
             compiled_program.write("        cmp r8, 0\n")
             compiled_program.write("        ;; If single digit number\n")
-            compiled_program.write("        je exit_print_num\n")
+            compiled_program.write("        je print_print_num\n")
             compiled_program.write("        ;; If not a single digit number\n")
             compiled_program.write("        jne l1_print_num\n")
             compiled_program.write("        l1_print_num:\n")
@@ -2728,10 +2728,10 @@ class Compiler:
             compiled_program.write("        ;; If remainder then loop again\n")
             compiled_program.write("        cmp r8, 0\n")
             compiled_program.write("        ;; If no numbers remain\n")
-            compiled_program.write("        je exit_print_num\n")
+            compiled_program.write("        je print_print_num\n")
             compiled_program.write("        ;; If numbers left continue to loop\n")
             compiled_program.write("        jne l1_print_num\n")
-            compiled_program.write("        exit_print_num:\n")
+            compiled_program.write("        print_print_num:\n")
             compiled_program.write("        ;; Print value\n")
             compiled_program.write("        mov rsi, rsp\n")
             compiled_program.write("        mov rax, 1\n")
@@ -2739,9 +2739,18 @@ class Compiler:
             compiled_program.write("        mov rdx, r9\n")
             compiled_program.write("        syscall\n")
             compiled_program.write("        ;; Clean up data on the stack\n")
+            compiled_program.write("        clean_print_num_stack:\n")
+            compiled_program.write("        ;; Always one value guaranteed or the program wouldn't compile.\n")
+            compiled_program.write("        ;; Pop value on stack\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        pop rax\n")
-            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Clobber rax with 8 as we are popping just to clean up stack.\n")
+            compiled_program.write("        ;; No sense in using a different reg since we don't care about the value.\n")
+            compiled_program.write("        mov rax, 8\n")
+            compiled_program.write("        sub r9, rax\n")
+            compiled_program.write("        cmp r9, 0\n")
+            compiled_program.write("        jne clean_print_num_stack\n")
+            compiled_program.write("        je exit_print_num\n")
+            compiled_program.write("        exit_print_num:\n")
             compiled_program.write("        ;; Push return address back.\n")
             compiled_program.write("        push rbx\n")
             compiled_program.write("        ret\n")
@@ -2839,10 +2848,10 @@ class Compiler:
             compiled_program.write("        ;; If remainder then loop again\n")
             compiled_program.write("        cmp r8, 0\n")
             compiled_program.write("        ;; If no numbers remain\n")
-            compiled_program.write("        je exit_printl_num\n")
+            compiled_program.write("        je print_printl_num\n")
             compiled_program.write("        ;; If numbers left continue to loop\n")
             compiled_program.write("        jne l1_printl_num\n")
-            compiled_program.write("        exit_printl_num:\n")
+            compiled_program.write("        print_printl_num:\n")
             compiled_program.write("        ;; Print value\n")
             compiled_program.write("        mov rsi, rsp\n")
             compiled_program.write("        mov rax, 1\n")
@@ -2850,9 +2859,18 @@ class Compiler:
             compiled_program.write("        mov rdx, r9\n")
             compiled_program.write("        syscall\n")
             compiled_program.write("        ;; Clean up data on the stack\n")
+            compiled_program.write("        clean_printl_num_stack:\n")
+            compiled_program.write("        ;; Always one value guaranteed or the program wouldn't compile.\n")
+            compiled_program.write("        ;; Pop value on stack\n")
             compiled_program.write("        pop rax\n")
-            compiled_program.write("        pop rax\n")
-            compiled_program.write("        pop rax\n")
+            compiled_program.write("        ;; Clobber rax with 8 as we are popping just to clean up stack.\n")
+            compiled_program.write("        ;; No sense in using a different reg since we don't care about the value.\n")
+            compiled_program.write("        mov rax, 8\n")
+            compiled_program.write("        sub r9, rax\n")
+            compiled_program.write("        cmp r9, 0\n")
+            compiled_program.write("        jne clean_printl_num_stack\n")
+            compiled_program.write("        je exit_printl_num\n")
+            compiled_program.write("        exit_printl_num:\n")
             compiled_program.write("        ;; Add linefeed.\n")
             compiled_program.write("        push 10\n")
             compiled_program.write("        mov rsi, rsp\n")
@@ -3192,13 +3210,13 @@ class Compiler:
                 "    push rbx\n",
         ]
         if int_type == "int8":
-            asm.extend("    call check_int_8_overflow\n")
+            asm.append("    call check_int_8_overflow\n")
         elif int_type == "int16":
-            asm.extend("    call check_int_16_overflow\n")
+            asm.append("    call check_int_16_overflow\n")
         elif int_type == "int32":
-            asm.extend("    call check_int_32_overflow\n")
-        elif int_type == "int64":
-            asm.extend("    call check_int_64_overflow\n")
+            asm.append("    call check_int_32_overflow\n")
+        elif int_type == "int64" or not int_type:
+            asm.append("    call check_int_64_overflow\n")
         return asm + [
                 "    ;; Add\n",
                 "    pop rax\n",
