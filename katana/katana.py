@@ -33,6 +33,7 @@ NO_OP = None
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 CHARACTER_TOKEN_TYPE = "CHARACTER"
+COLON_TOKEN_TYPE = "COLON"
 COMMA_TOKEN_TYPE = "COMMA"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
@@ -47,6 +48,15 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+FUNCTION_KEYWORD_TOKEN_TYPE = "FUNCTION_KEYWORD"
+FUNCTION_NAME_TOKEN_TYPE = "FUNCTION_NAME"
+FUNCTION_SEPARATOR_TOKEN_TYPE = "FUNCTION_SEPARATOR"
+FUNCTION_RETURN_TOKEN_TYPE = "FUNCTION_RETURN"
+FUNCTION_ARG_TOKEN_TYPE = "FUNCTION_ARG"
+FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE = "FUNCTION_ARG_SEPARATOR"
+FUNCTION_ARG_TYPE_TOKEN_TYPE = "FUNCTION_ARG_TYPE"
+FUNCTION_RETURN_KEYWORD_TOKEN_TYPE = "FUNCTION_RETURN_KEYWORD"
+FUNCTION_ARG_REFERENCE_TOKEN_TYPE = "FUNCTION_ARG_REFERENCE"
 MACRO_KEYWORD_TOKEN_TYPE = "MACRO_KEYWORD"
 MACRO_NAME_TOKEN_TYPE = "MACRO_NAME"
 MACRO_REFERENCE_TOKEN_TYPE = "MACRO_REFERENCE"
@@ -88,7 +98,7 @@ CONTINUATION_TOKENS = (
     RIGHT_CURL_BRACE_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE
 )
-IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
+IGNORE_TOKENS = (SPACE_TOKEN_TYPE, COLON_TOKEN_TYPE)
 IGNORE_OPS = (
     SPACE_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
@@ -1143,6 +1153,13 @@ class Lexer:
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
+        # Function tracking information. This is needed because we need to track
+        # function args as they are related to their respective functions. This
+        # means that `x` in `add` shouldn't cross pollinate with `x` in `print`
+        # Without this `x` could really mean anything.
+        self.in_function_declaration = False
+        self.curr_function_name = None
+        self.function_args = {}
 
     def lex(self):
         while self.program.has_next_char() and self.program.has_next_line():
@@ -1196,6 +1213,8 @@ class Lexer:
         self.check_paren_pairing()
         self.check_if_else_blocks()
 
+        # breakpoint()
+
         # Return the list of tokens but filter out any NEW_LINE_TOKEN_TYPE as
         # they don't serve a value in the parser. Don't modify the original
         # so that it can be viewed if desired for debugging.
@@ -1229,13 +1248,16 @@ class Lexer:
             elif character == '<':
                 return Token(LESS_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
+                # No longer in function declaration so alphas are variables again.
+                self.in_function_declaration = False
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
                 return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '}':
                 return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
-                self.check_for_valid_termination(character)
+                if not self.in_function_declaration:
+                    self.check_for_valid_termination(character)
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -1245,10 +1267,16 @@ class Lexer:
                 return self.generate_string_token()
             elif character == ".":
                 return self.handle_dot_character()
-            elif character == ",":
+            elif character == "," and not self.in_function_declaration:
                 return Token(COMMA_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+            elif character == "," and self.in_function_declaration:
+                return Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isalpha():
                 return self.generate_keyword_token()
+            elif character == ':' and self.program.get_next_char() == ':':
+                return self.handle_function_separator()
+            elif character == ':' and self.program.get_next_char() != ':':  # Do we care about a single colon by itself?
+                return Token(COLON_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == "\n":
                 self.check_for_valid_termination(character)
                 return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -1310,7 +1338,8 @@ class Lexer:
             self.program.advance_character()
             keyword += self.program.get_curr_char()
 
-        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
+        # breakpoint()
+        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS and not self.in_function_declaration:
             if keyword == "if":
                 self.if_idx_list.append(len(self.token_list))
             elif keyword == "else":
@@ -1330,6 +1359,27 @@ class Lexer:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in ["true", "false"]:
             return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword == "fn":
+            return Token(FUNCTION_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif keyword == "return":
+            return Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+        elif len(self.token_list) > 0 and self.token_list[-1].value == "fn":
+            self.in_function_declaration = True
+            self.curr_function_name = keyword
+            self.function_args[self.curr_function_name] = {}
+            return Token(FUNCTION_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword not in VARIABLE_KEYWORDS and keyword != "nil":
+            self.function_args[self.curr_function_name].update({keyword: ""})
+            return Token(FUNCTION_ARG_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
+            self.function_args[self.curr_function_name].update({self.token_list[-1].value: keyword})
+            return Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
+            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword == "nil":
+            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif keyword in self.function_args.get(self.curr_function_name, {}):
+            return Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -1376,6 +1426,11 @@ class Lexer:
         equal_idx = self.program.curr_col
         self.program.advance_character()
         return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
+
+    def handle_function_separator(self):
+        fn_idx = self.program.curr_col
+        self.program.advance_character()
+        return Token(FUNCTION_SEPARATOR_TOKEN_TYPE, fn_idx, self.program.curr_line, "::", VERY_HIGH)
 
     def check_paren_pairing(self):
         # Check to make sure all the parenthesis line up accordingly.
