@@ -1,0 +1,24 @@
+// fn add :: (x: int64, y: int64) :: int64 {
+//     print(x);
+//     print(y);
+//     return x + y;
+// }
+
+// main() {
+//     add(3, 4);
+// }
+
+fn add :: (x: int64, y: int64) :: int64 {
+    return x + y;
+}
+main() {
+    add(3, 4);
+}
+
+// MACRO printWord {
+//     print("Word");
+// }
+
+// main() {
+//     printWord;
+// }

@@ -28,6 +28,7 @@ from katana.katana import (
     FUNCTION_KEYWORD_TOKEN_TYPE,
     FUNCTION_NAME_TOKEN_TYPE,
     FUNCTION_SEPARATOR_TOKEN_TYPE,
+    FUNCTION_REFERENCE_TOKEN_TYPE,
     MACRO_KEYWORD_TOKEN_TYPE,
     MACRO_NAME_TOKEN_TYPE,
     MACRO_REFERENCE_TOKEN_TYPE,
@@ -1425,3 +1426,44 @@ class TestLexerFunction:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+    def test_function_declaration_called_in_main(self):
+        code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n", "main() {\n", "add(3, 4);\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+

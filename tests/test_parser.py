@@ -14,7 +14,6 @@ from katana.katana import (
     LoopUpKeywordNode,
     MacroNameNode,
     MacroNode,
-    MacroReferenceNode,
     MultiplyDivideNode,
     NumberNode,
     PlusMinusNode,
@@ -26,10 +25,12 @@ from katana.katana import (
     VariableReferenceNode,
     BufferOverflowException,
     EmptyMacroException,
+    UnnamedFunctionException,
     KeywordMisuseException,
     InvalidArgsException,
     InvalidAssignmentException,
     InvalidConcatenationException,
+    InvalidFunctionDeclarationException,
     InvalidMacroDeclaration,
     InvalidTypeDeclarationException,
     NotEnoughArgsException,
@@ -50,6 +51,16 @@ from katana.katana import (
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
     GREATER_THAN_TOKEN_TYPE,
+    FUNCTION_ARG_TOKEN_TYPE,
+    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+    FUNCTION_ARG_TYPE_TOKEN_TYPE,
+    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
+    FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
+    FUNCTION_RETURN_TOKEN_TYPE,
+    FUNCTION_KEYWORD_TOKEN_TYPE,
+    FUNCTION_NAME_TOKEN_TYPE,
+    FUNCTION_SEPARATOR_TOKEN_TYPE,
+    FUNCTION_REFERENCE_TOKEN_TYPE,
     MACRO_KEYWORD_TOKEN_TYPE,
     MACRO_NAME_TOKEN_TYPE,
     MACRO_REFERENCE_TOKEN_TYPE,
@@ -3577,3 +3588,205 @@ class TestParserMacro:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with([], 4, EmptyMacroException(0, 4))
+
+
+class TestParserFunctionKeyword:
+    """
+    All tests related to user defined functions.
+    """
+
+    @patch("katana.katana.print_exception_message")
+    def test_function_without_name_raises_error(self, mock_print):
+        """
+        Given a program with a function declared without a name like:
+        fn :: (x: int64, y: int64) :: int64 {
+            return x + y;
+        }
+        main() {
+        }
+        Expected an error of UnnamedFunctionException to be raised.
+        """
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 0, UnnamedFunctionException(0, 0))
+
+    @patch("katana.katana.print_exception_message")
+    def test_function_invalid_syntax_raises_error(self, mock_print):
+        """
+        Given a program like:
+        fn add (x: int64, y: int64) :: int64 {
+            return x + y;
+        }
+        main() {
+            add(3, 4);
+        }
+        Expected an error of InvalidFunctionDeclarationException to be raised.
+        """
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
+
+    @patch("katana.katana.print_exception_message")
+    def test_function_without_left_paren_raises_error(self, mock_print):
+        """
+        Given a program like:
+        fn add :: x: int64, y: int64) :: int64 {
+            return x + y;
+        }
+        main() {
+            add(3, 4);
+        }
+        Expected an error of InvalidFunctionDeclarationException to be raised.
+        """
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
+
+    @pytest.mark.skip
+    def test_function_declaration_explicit_declare_everything(self):
+        """
+        Given a program like:
+        fn add :: (x: int64, y: int64) :: int64 {
+            return x + y;
+        }
+        main() {
+            add(3, 4);
+        }
+        Expected an AST like:
+        [(fn(add[x, y], (int64), [], (x+y))), (main[(add[(3, 4)])]]
+        """
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        parser = Parser(token_list)
+        parser.parse()
+        ast = StartNode(token_list[19], "main", [])
+        breakpoint()
+        assert [ast] == parser.get_nodes()
+
