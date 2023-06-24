@@ -33,6 +33,7 @@ NO_OP = None
 ASSIGNMENT_TOKEN_TYPE = "ASSIGNMENT"
 BOOLEAN_TOKEN_TYPE = "BOOLEAN"
 CHARACTER_TOKEN_TYPE = "CHARACTER"
+COLON_TOKEN_TYPE = "COLON"
 COMMA_TOKEN_TYPE = "COMMA"
 COMMENT_TOKEN_TYPE = "COMMENT"
 DIVIDE_TOKEN_TYPE = "DIVIDE"
@@ -47,6 +48,16 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+FUNCTION_KEYWORD_TOKEN_TYPE = "FUNCTION_KEYWORD"
+FUNCTION_NAME_TOKEN_TYPE = "FUNCTION_NAME"
+FUNCTION_SEPARATOR_TOKEN_TYPE = "FUNCTION_SEPARATOR"
+FUNCTION_RETURN_TOKEN_TYPE = "FUNCTION_RETURN"
+FUNCTION_ARG_TOKEN_TYPE = "FUNCTION_ARG"
+FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE = "FUNCTION_ARG_SEPARATOR"
+FUNCTION_ARG_TYPE_TOKEN_TYPE = "FUNCTION_ARG_TYPE"
+FUNCTION_RETURN_KEYWORD_TOKEN_TYPE = "FUNCTION_RETURN_KEYWORD"
+FUNCTION_ARG_REFERENCE_TOKEN_TYPE = "FUNCTION_ARG_REFERENCE"
+FUNCTION_REFERENCE_TOKEN_TYPE = "FUNCTION_REFERENCE"
 MACRO_KEYWORD_TOKEN_TYPE = "MACRO_KEYWORD"
 MACRO_NAME_TOKEN_TYPE = "MACRO_NAME"
 MACRO_REFERENCE_TOKEN_TYPE = "MACRO_REFERENCE"
@@ -88,9 +99,11 @@ CONTINUATION_TOKENS = (
     RIGHT_CURL_BRACE_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE
 )
-IGNORE_TOKENS = (SPACE_TOKEN_TYPE,)
+IGNORE_TOKENS = (SPACE_TOKEN_TYPE, COLON_TOKEN_TYPE)
 IGNORE_OPS = (
     SPACE_TOKEN_TYPE,
+    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+    FUNCTION_ARG_TYPE_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
     EOL_TOKEN_TYPE
@@ -380,6 +393,36 @@ class InvalidConcatenationException(Exception):
         return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
 
 
+class UnnamedFunctionException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Unnamed Function")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Cannot declare Function without a name."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
+class InvalidFunctionDeclarationException(Exception):
+    def __init__(self, line_num, col_num):
+        super().__init__("Invalid Function")
+        self.line_num = line_num + 1
+        self.col_num = col_num
+
+    def __str__(self):
+        return f"{self.line_num}:{self.col_num} Function was declared with invalid syntax."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        return self.line_num == other.line_num and self.col_num == other.col_num
+
+
 class InvalidMacroDeclaration(Exception):
     def __init__(self, line_num, col_num, function_name, is_ref=False):
         super().__init__("Invalid MACRO")
@@ -558,6 +601,153 @@ class FunctionKeywordNode(FunctionNode):
 
     def __eq__(self, other):
         return type(self) == type(other) and super().__eq__(other)
+
+
+class FunctionDeclarationNode(Node):
+    """
+    Class for holding a full function declaration.
+    """
+    def __init__(self, token, value, function_name, function_args, function_return_type, function_body=None, parent_node=None):
+        super().__init__(token, value, parent_node)
+        self.value = value
+        self.function_name = function_name
+        self.function_args = function_args
+        self.function_return_type = function_return_type
+        self.function_body = function_body
+
+    def __eq__(self, other):
+        # TODO(map) Fix the equal comparator here to check everything.
+        function_names_equal = self.function_name == other.function_name
+        function_args_equal = self.function_args == other.function_args
+        function_ret_types_equal = self.function_return_type == other.function_return_type
+        return type(self) == type(other) and super().__eq__(other) and function_names_equal and function_args_equal and function_ret_types_equal
+
+    def __repr__(self):
+        return f"({self.value}, {self.function_name} {self.function_args}, {self.function_return_type}, {self.function_body})"
+
+
+class FunctionReferenceNode(Node):
+    """
+    Class for holding a call to a function
+    """
+    def __init__(self, token, value, function_args, parent_node=None):
+        super().__init__(token, parent_node)
+        self.value = value
+        self.function_args = function_args
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.function_args == other.function_args and super().__eq__(other)
+
+    def __repr__(self):
+        # TODO(MAP) This may get confusing with the funtion declaration in how it reads.
+        return f"({self.value}, {self.function_args})"
+
+
+class FunctionNameNode(Node):
+    """
+    Node for holding the name of the user defined function.
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, parent_node)
+        self.value = value
+
+    def __eq__(self, other):
+        return type(self) == type(other) and super().__eq__(other)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class FunctionArgNode(Node):
+    """
+    Node for holding the definition of a function argument
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class FunctionArgReferenceNode(Node):
+    """
+    Node for holding the reference of a function argument
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class FunctionReturnTypeNode(Node):
+    """
+    Node for holding the return type of a function
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class FunctionReturnNode(Node):
+    """
+    Node for holding the return statement of a function
+    """
+    def __init__(self, token, value, return_body, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.return_body = return_body
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        returns_equal = self.return_body == other.return_body
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        if not returns_equal and raise_assertion_flag:
+            assert False, f"Returns {self.return_body} != {other.return_body}"
+        return (types_equal and values_equal and returns_equal)
+
+    def __repr__(self):
+        return f"({self.value}, {self.return_body})"
 
 
 class LogicKeywordNode(KeywordNode):
@@ -1143,6 +1333,13 @@ class Lexer:
         self.unpaired_parens = 0
         self.misused_keywords = 0
         self.comment_index = -1
+        # Function tracking information. This is needed because we need to track
+        # function args as they are related to their respective functions. This
+        # means that `x` in `add` shouldn't cross pollinate with `x` in `print`
+        # Without this `x` could really mean anything.
+        self.in_function_declaration = False
+        self.curr_function_name = None
+        self.function_args = {}
 
     def lex(self):
         while self.program.has_next_char() and self.program.has_next_line():
@@ -1229,13 +1426,16 @@ class Lexer:
             elif character == '<':
                 return Token(LESS_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
             elif character == '{':
+                # No longer in function declaration so alphas are variables again.
+                self.in_function_declaration = False
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
                 return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '}':
                 return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
-                self.check_for_valid_termination(character)
+                if not self.in_function_declaration:
+                    self.check_for_valid_termination(character)
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -1245,10 +1445,16 @@ class Lexer:
                 return self.generate_string_token()
             elif character == ".":
                 return self.handle_dot_character()
-            elif character == ",":
+            elif character == "," and not self.in_function_declaration:
                 return Token(COMMA_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+            elif character == "," and self.in_function_declaration:
+                return Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isalpha():
                 return self.generate_keyword_token()
+            elif character == ':' and self.program.get_next_char() == ':':
+                return self.handle_function_separator()
+            elif character == ':' and self.program.get_next_char() != ':':  # Do we care about a single colon by itself?
+                return Token(COLON_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character == "\n":
                 self.check_for_valid_termination(character)
                 return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -1310,7 +1516,7 @@ class Lexer:
             self.program.advance_character()
             keyword += self.program.get_curr_char()
 
-        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS:
+        if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS and not self.in_function_declaration:
             if keyword == "if":
                 self.if_idx_list.append(len(self.token_list))
             elif keyword == "else":
@@ -1330,6 +1536,29 @@ class Lexer:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in ["true", "false"]:
             return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+        elif keyword == "fn":
+            return Token(FUNCTION_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif keyword == "return":
+            return Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+        elif len(self.token_list) > 0 and self.token_list[-1].value == "fn":
+            self.in_function_declaration = True
+            self.curr_function_name = keyword
+            self.function_args[self.curr_function_name] = {}
+            return Token(FUNCTION_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword not in VARIABLE_KEYWORDS and keyword != "nil":
+            self.function_args[self.curr_function_name].update({keyword: ""})
+            return Token(FUNCTION_ARG_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
+            self.function_args[self.curr_function_name].update({self.token_list[-1].value: keyword})
+            return Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
+            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif self.in_function_declaration and keyword == "nil":
+            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif keyword in self.function_args.get(self.curr_function_name, {}):
+            return Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+        elif keyword in self.function_args.keys():
+            return Token(FUNCTION_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -1376,6 +1605,11 @@ class Lexer:
         equal_idx = self.program.curr_col
         self.program.advance_character()
         return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
+
+    def handle_function_separator(self):
+        fn_idx = self.program.curr_col
+        self.program.advance_character()
+        return Token(FUNCTION_SEPARATOR_TOKEN_TYPE, fn_idx, self.program.curr_line, "::", VERY_HIGH)
 
     def check_paren_pairing(self):
         # Check to make sure all the parenthesis line up accordingly.
@@ -1464,6 +1698,7 @@ class Parser:
             else:
                 # There was a NoOpNode meaning we can continue
                 continue
+
             if type(root_node) == StartNode:
                 self.main_node = root_node
             elif root_node and type(node) == NoOpNode:
@@ -1523,6 +1758,18 @@ class Parser:
                 node = CharNode(self.curr_token, self.curr_token.value)
             elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
                 node = BooleanNode(self.curr_token, self.curr_token.value)
+            elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE:
+                node = self.parse_function_node(self.curr_token)
+            elif self.curr_token.ttype == FUNCTION_ARG_TOKEN_TYPE:
+                node = self.parse_function_arg_node(self.curr_token)
+            elif self.curr_token.ttype == FUNCTION_RETURN_TOKEN_TYPE:
+                node = FunctionReturnTypeNode(self.curr_token, self.curr_token.value)
+            elif self.curr_token.ttype == FUNCTION_RETURN_KEYWORD_TOKEN_TYPE:
+                node = self.parse_function_return(self.curr_token)
+            elif self.curr_token.ttype == FUNCTION_ARG_REFERENCE_TOKEN_TYPE:
+                node = FunctionArgReferenceNode(self.curr_token, self.curr_token.value)
+            elif self.curr_token.ttype == FUNCTION_REFERENCE_TOKEN_TYPE:
+                node = self.parse_function_reference(self.curr_token)
             elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
                 node = self.parse_macro_node(self.curr_token)
             elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
@@ -1568,6 +1815,12 @@ class Parser:
         except UnnamedMacroException as ume:
             print_exception_message(program_lines, ume.col_num, ume)
             sys.exit()
+        except UnnamedFunctionException as ufe:
+            print_exception_message(program_lines, ufe.col_num, ufe)
+            sys.exit()
+        except InvalidFunctionDeclarationException as ifde:
+            print_exception_message(program_lines, ifde.col_num, ifde)
+            sys.exit()
         except EmptyMacroException as eme:
             print_exception_message(program_lines, eme.col_num, eme)
             sys.exit()
@@ -1608,6 +1861,134 @@ class Parser:
             ret_node.right_side = node
             return ret_node
         return node
+
+    def parse_function_node(self, token):
+        if self.peek_next_token().ttype != FUNCTION_NAME_TOKEN_TYPE:
+            raise UnnamedFunctionException(token.row, token.col)
+        self.advance_token()
+        function_name_node = FunctionNameNode(self.curr_token, self.curr_token.value)
+        # Move past the token for the function name
+        self.advance_token()
+        # TODO(map) This needs to account for all circumstances involving a more
+        # truncated function declaration. This means examples like:
+        # fn add :: int64
+        # where we can declare a function that takes no params.
+        if self.curr_token.ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
+            raise InvalidFunctionDeclarationException(token.row, token.col)
+        # Move past the double colon in the function declaration
+        self.advance_token()
+
+        if self.curr_token.ttype != LEFT_PAREN_TOKEN_TYPE:
+            raise InvalidFunctionDeclarationException(token.row, token.col)
+        # Go past the left parens that starts the method params
+        self.advance_token()
+
+        function_args = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            node = self.process_token(root_node)
+            if type(node) == NoOpNode and root_node:
+                function_args.append(root_node)
+                self.advance_token()
+                root_node = None
+            else:
+                root_node = node
+                self.advance_token()
+        
+        # Move past closing right parens on function args
+        self.advance_token()
+
+        if self.curr_token.ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
+            raise InvalidFunctionDeclarationException(token.row, token.col)
+        # Move past the double colon in the function declaration
+        self.advance_token()
+
+        return_type_node = self.process_token(self.curr_token)
+
+        if self.peek_next_token().ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
+            raise Exception # TODO(map) Raise proper exception here
+
+        self.advance_token() # Move past return type in function declaration
+        self.advance_token() # Move past the left curl brace to parse the body
+
+        function_body = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            single_function_body_node = self.process_token(root_node)
+            if isinstance(single_function_body_node, NoOpNode):
+                function_body.append(root_node)
+                root_node = None
+                self.advance_token()
+            else:
+                root_node = single_function_body_node
+                self.advance_token()
+
+        self.advance_token() # Move past the right curl brace closing the function
+        # breakpoint()
+
+        return FunctionDeclarationNode(token, token.value, function_name_node, function_args, return_type_node, function_body)
+
+
+    def parse_function_arg_node(self, token):
+        node = FunctionArgNode(token, token.value)
+
+        # TODO(map) There needs to be some mapping for function arg tracking
+
+        # Check that a type was declared for the function
+        if self.peek_next_token().ttype != FUNCTION_ARG_TYPE_TOKEN_TYPE:
+            assert False, "TODO(map) Write a test for this."
+
+        return node
+
+
+    def parse_function_return(self, token):
+        # Move past the return keyword and build the ast of the return itself
+        self.advance_token()
+        root_node = None
+        return_body = self.process_token(root_node)
+
+        # Move past the currently processed token and build a tree if needed.
+        self.advance_token()
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            return_body = self.process_token(return_body)
+            self.advance_token()
+        return_node = FunctionReturnNode(token, token.value, return_body)
+        return return_node
+
+    def parse_function_reference(self, token):
+        self.advance_token() # Move past the function name being called.
+
+        # Confirm the left paren is right after print keyword
+        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            raise Exception # TODO(map) Raise proper exception
+
+        # Move past the left paren.
+        self.advance_token()
+
+        # Case where `print` was called with nothing to print.
+        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            raise Exception # TODO(map) Raise proper exception
+
+        # Parse the inner parts of the print function
+        arg_list = []
+        root_node = None
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+                raise Exception # TODO(map) Raise proper exception
+            node = self.process_token(root_node)
+            if type(node) != ArgSeparatorNode:
+                root_node = node
+            if type(node) == ArgSeparatorNode:
+                arg_list.append(root_node)
+                root_node = None
+                node = None
+            self.advance_token()
+        # Add the final calculated node to the list
+        arg_list.append(root_node)
+
+        # TODO(map) Do type checking here.
+        # self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
+        return FunctionReferenceNode(token, token.value, arg_list)
 
     def parse_macro_node(self, token):
         if self.peek_next_token().ttype != MACRO_NAME_TOKEN_TYPE:
@@ -1762,6 +2143,7 @@ class Parser:
         # Move past keyword token
         self.advance_token()
 
+        # breakpoint()
         # Map of the functions needed to be called to parse certain tokens.
         func_map = {
             "main": (self.handle_main_keyword, StartNode, "children_nodes"),

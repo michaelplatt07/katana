@@ -19,6 +19,16 @@ from katana.katana import (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
+    FUNCTION_ARG_TOKEN_TYPE,
+    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+    FUNCTION_ARG_TYPE_TOKEN_TYPE,
+    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
+    FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
+    FUNCTION_RETURN_TOKEN_TYPE,
+    FUNCTION_KEYWORD_TOKEN_TYPE,
+    FUNCTION_NAME_TOKEN_TYPE,
+    FUNCTION_SEPARATOR_TOKEN_TYPE,
+    FUNCTION_REFERENCE_TOKEN_TYPE,
     MACRO_KEYWORD_TOKEN_TYPE,
     MACRO_NAME_TOKEN_TYPE,
     MACRO_REFERENCE_TOKEN_TYPE,
@@ -1271,3 +1281,189 @@ class TestLexerMacroKeyword:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
+
+
+class TestLexerFunction:
+    """
+    All tests related to declaring and using functions.
+    """
+
+    def test_function_declaration_explicit_declare_everything(self):
+        code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_no_params_with_return(self):
+        code = ["fn add :: () :: int64 {\n", "return 3 + 4;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 13, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 16, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 22, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 11, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_no_params_returns_nothing(self):
+        code = ["fn add :: () :: nil {\n", "3 + 4;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 13, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 16, 0, "nil", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 20, 0, "{", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 1, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_params_returns_nothing(self):
+        code = ["fn add :: (x: int64, y: int64) :: nil {\n", "x + y;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "nil", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 38, 0, "{", VERY_HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 0, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 4, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_special_case_skip_params_returns(self):
+        code = ["fn add :: int64 {\n", "return 3 + 4;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 10, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 16, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 11, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_special_case_skip_params_no_return(self):
+        code = ["fn add :: nil {\n", "3 + 4;\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 10, 0, "nil", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 14, 0, "{", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 1, "3", LOW),
+            Token(PLUS_TOKEN_TYPE, 2, 1, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 4, 1, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 5, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_function_declaration_called_in_main(self):
+        code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n", "main() {\n", "add(3, 4);\n", "}\n"]
+        program = Program(code)
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 31, 0, "::", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 34, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 40, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
