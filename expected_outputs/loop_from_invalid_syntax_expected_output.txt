@@ -2,5 +2,5 @@ main() {
 
     loopFrom(0) {
 
-    ^
-Keyword 'loopFrom' does not support '<class '__main__.NumberNode'>' at 2:4.
+             ^
+Keyword 'loopFrom' does not support '<class '__main__.NumberNode'>' at 2:13.

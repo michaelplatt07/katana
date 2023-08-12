@@ -4,5 +4,5 @@ main() {
 
     print(invalidMacroUse);
 
-          ^
-6:10 Cannot use MACRO inside `print` method.
+    ^
+6:4 Cannot use MACRO inside `print` method.

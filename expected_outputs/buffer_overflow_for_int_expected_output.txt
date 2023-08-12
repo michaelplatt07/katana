@@ -2,5 +2,5 @@ main() {
 
     int8 x = 300; // The max value of an int8 is 255
 
-    ^
-Buffer overflow at 2:4. Value too large.
+         ^
+Buffer overflow at 2:9. Value too large.

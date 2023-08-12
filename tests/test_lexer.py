@@ -49,6 +49,7 @@ from katana.katana import (
     ULTRA_HIGH,
     BadFormattedLogicBlock,
     InvalidCharException,
+    InvalidFunctionDeclarationException,
     InvalidTokenException,
     InvalidVariableNameError,
     NoTerminatorError,
@@ -127,7 +128,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (["12;\n"], [Token(NUM_TOKEN_TYPE, 0, 0, "12", LOW),
@@ -1287,6 +1288,25 @@ class TestLexerFunction:
     """
     All tests related to declaring and using functions.
     """
+
+    @patch("katana.katana.print_exception_message")
+    def test_function_without_left_paren_raises_error(self, mock_print):
+        """
+        Given a program like:
+        fn add :: x: int64, y: int64) :: int64 {
+            return x + y;
+        }
+        main() {
+            add(3, 4);
+        }
+        Expected an error of InvalidFunctionDeclarationException to be raised.
+        """
+        code = ["fn add :: x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n"]
+        program = Program(code)
+        lexer = Lexer(program)
+        with pytest.raises(SystemExit):
+            lexer.lex()
+        mock_print.assert_called_with(code, 10, InvalidFunctionDeclarationException(0, 10))
 
     def test_function_declaration_explicit_declare_everything(self):
         code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n"]
