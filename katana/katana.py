@@ -2102,7 +2102,7 @@ class Parser:
         return main_node
 
     def process_fn_token(self, fn_token):
-        breakpoint()
+        # breakpoint()
         # Create the fn node with no children. They will be added later in
         # this method.
         fn_node = self.process_token()
@@ -2381,7 +2381,7 @@ class Parser:
         elif self.curr_token.ttype == EOL_TOKEN_TYPE:
             node = EndOfLineNode(self.curr_token)
         else:
-            breakpoint()
+            # breakpoint()
             assert False, f"Unknown token type {self.curr_token.ttype}"
 
         self.advance_token()
@@ -3150,8 +3150,8 @@ class Parser:
                 ast = node
             else:
                 # Update the node's priority based on the paren counter
-                if node.priority is None:
-                    breakpoint()
+                # if node.priority is None:
+                    # breakpoint()
                 node.priority += paren_counter
 
                 # There is a node in the tree that is not complete yet.
