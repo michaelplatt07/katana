@@ -2,6 +2,7 @@ import argparse
 import copy
 import os
 import sys
+
 # TODO(map) Move all the classes and enums outs so imports are nice
 #########
 # GLOBALS
@@ -75,6 +76,11 @@ VARIABLE_REFERENCE_TOKEN_TYPE = "VARIABLE_REFERENCE"
 ##############
 # Const tuples
 ##############
+TOP_LEVEL_TOKENS = (
+    "main",
+    "fn",
+    "MACRO"
+)
 ALL_TOKENS = (
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
@@ -106,12 +112,16 @@ IGNORE_OPS = (
     FUNCTION_ARG_TYPE_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
-    EOL_TOKEN_TYPE
 )
 FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar", "copyStr")
 LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
 VARIABLE_KEYWORDS = ("const", "int8", "int16", "int32", "int64", "string", "bool", "char")
 
+##################
+# Assignment Types
+##################
+NUMERIC = "numeric"
+FUNCTION = "function"
 
 ###################
 # Method Signatures
@@ -380,6 +390,13 @@ class InvalidAssignmentException(Exception):
     def __str__(self):
         return f"{self.line_num}:{self.col_num} Cannot assign a {self.base_type} with a {self.assignment_type}."
 
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.base_type == other.base_type, f"{self.base_type, other.base_type}"
+        assert self.assignment_type == other.assignment_type, f"{self.assignment_type, other.assignment_type}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.base_type == other.base_type and self.assignment_type == other.assignment_type
+
 
 class InvalidConcatenationException(Exception):
     def __init__(self, line_num, col_num, base_type, concat_type):
@@ -391,6 +408,13 @@ class InvalidConcatenationException(Exception):
 
     def __str__(self):
         return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
+
+    def __eq__(self, other):
+        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
+        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
+        assert self.base_type == other.base_type, f"{self.base_type, other.base_type}"
+        assert self.concat_type == other.concat_type, f"{self.concat_type, other.concat_type}"
+        return self.line_num == other.line_num and self.col_num == other.col_num and self.base_type == other.base_type and self.concat_type == other.concat_type
 
 
 class UnnamedFunctionException(Exception):
@@ -405,7 +429,7 @@ class UnnamedFunctionException(Exception):
     def __eq__(self, other):
         assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
         assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
+        return self.line_num == other.line_num and self.col_num == other.col_num and type(self) == type(other)
 
 
 class InvalidFunctionDeclarationException(Exception):
@@ -420,7 +444,7 @@ class InvalidFunctionDeclarationException(Exception):
     def __eq__(self, other):
         assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
         assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
+        return self.line_num == other.line_num and self.col_num == other.col_num and type(self) == type(other)
 
 
 class InvalidMacroDeclaration(Exception):
@@ -531,20 +555,164 @@ class NoOpNode(Node):
     Node that functionally does nothing. This is in case I want to preserve
     data across the compilation much like with useless tokens.
     """
-    def __init__(self,
-                 token: Token) -> None:
-        self.token: Token = token
+    def __init__(self, token):
+        self.token = token
         super().__init__(token, NO_OP, None)
 
 
-class ArgSeparatorNode(NoOpNode):
+class LeftParenNode(Node):
+    """
+    Basic left parenthesis node that is not tied to a function call or
+    conditional block of code.
+    """
+    def __init__(self, token, value):
+        self.token = token
+        self.value = value
+        super().__init__(token, HIGH)
+
+
+class RightParenNode(Node):
+    """
+    Basic right parenthesis node that is not tied to a function call or
+    conditional block of code.
+    """
+    def __init__(self, token, value):
+        self.token = token
+        self.value = value
+        super().__init__(token, HIGH)
+
+
+class FunctionCallLeftParenNode(NoOpNode):
+    """
+    Left parenthesis that is paired with the calling of a function.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token)
+
+
+class FunctionCallRightParenNode(NoOpNode):
+    """
+    Right parenthesis that is paired with the calling of a function.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token)
+
+
+class ConditionalLeftParenNode(NoOpNode):
+    """
+    Left parenthesis that is paired with a conditional statement.
+    """
+    def Left__init__(self, token):
+        self.token = token
+        super().__init__(token)
+
+
+class ConditionalRightParenNode(NoOpNode):
+    """
+    Right parenthesis that is paired with a conditional statement.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token)
+
+
+class FunctionBodyLeftCurlNode(Node):
+    """
+    Left curl brace that is paired with the function of a body
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class FunctionBodyRightCurlNode(Node):
+    """
+    Right parenthesis that is paired with the calling of a function.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class IfBodyLeftCurlNode(Node):
+    """
+    Left curl brace that is paired with the declaration of the body of an if
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class IfBodyRightCurlNode(Node):
+    """
+    Right curl brace that is paired with the declaration of the body of an if
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class ElseBodyLeftCurlNode(Node):
+    """
+    Left curl brace that is paired with the declaration of the body of an else
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class ElseBodyRightCurlNode(Node):
+    """
+    Right curl brace that is paired with the declaration of the body of an else
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class LoopBodyLeftCurlNode(Node):
+    """
+    Left curl brace that is paired with the declaration of the body of a loop
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class LoopBodyRightCurlNode(Node):
+    """
+    Right curl brace that is paired with the declaration of the body of a loop
+    keyword.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token, LOW)
+
+
+class EndOfLineNode(NoOpNode):
+    """
+    Node to represent the end of a line of code.
+    """
+    def __init__(self, token):
+        self.token = token
+        super().__init__(token)
+
+
+class ArgSeparatorNode(Node):
     """
     Node to declare a type we can use for conditional checks. Child of NoOp as
     we don't want to do anything with it, but it is specific for separating out
     arguments in a function.
     """
     def __init__(self, token):
-        super().__init__(token)
+        super().__init__(token, LOW)
 
 
 class KeywordNode(Node):
@@ -552,11 +720,12 @@ class KeywordNode(Node):
     Node for keyword in the Katana language.
     """
 
-    def __init__(self, token, value, child_node, parent_node=None):
+    def __init__(self, token, value, child_node=None, parent_node=None):
         super().__init__(token, ULTRA_HIGH, parent_node)
         self.value = value
         self.child_node = child_node
-        self.child_node.parent_node = self
+        if self.child_node:
+            self.child_node.parent_node = self
 
     def __eq__(self, other):
         child_equal = self.child_node == other.child_node
@@ -564,7 +733,36 @@ class KeywordNode(Node):
         return child_equal and values_equal and super().__eq__(other)
 
     def __repr__(self):
-        return f"({self.value}({self.child_node}))"
+        if self.child_node:
+            return f"({self.value}({self.child_node}))"
+        else:
+            return f"({self.value})"
+
+
+class FunctionDecSeparatorNode(Node):
+    """
+    Node for holding a separator in the function declartion. This is the "::"
+    operator and really only serves to make sure the function syntax is correct
+    as part of the rule checking
+    """
+    def __init__(self, token):
+        super().__init__(token, LOW)
+        self.token = token
+
+    def __eq__(self, other):
+        return self.token == other.token
+
+
+class FunctionDecLeftParenNode(Node):
+    """
+    Simple node for left parens as they are used in function declaration.
+    """
+    def __init__(self, token):
+        super().__init__(token, LOW)
+        self.token = token
+
+    def __eq__(self, other):
+        return self.token == other.token
 
 
 class FunctionNode(Node):
@@ -573,7 +771,7 @@ class FunctionNode(Node):
     node is that the function node has a list of args but a keyword only has
     a single childe node.
     """
-    def __init__(self, token, value, arg_nodes, parent_node=None):
+    def __init__(self, token, value, arg_nodes=[], parent_node=None):
         super().__init__(token, ULTRA_HIGH, parent_node)
         self.value = value
         self.arg_nodes = arg_nodes
@@ -586,8 +784,9 @@ class FunctionNode(Node):
 
     def __repr__(self):
         arg_nodes = "["
-        for node in self.arg_nodes:
-            arg_nodes += node.__repr__() + ","
+        if self.arg_nodes:
+            for node in self.arg_nodes:
+                arg_nodes += node.__repr__() + ","
         arg_nodes += "]"
         return f"({self.value}{arg_nodes})"
 
@@ -596,7 +795,7 @@ class FunctionKeywordNode(FunctionNode):
     """
     More specialized node for Function keywords vs other types of keywords.
     """
-    def __init__(self, token, value, arg_nodes, parent_node=None):
+    def __init__(self, token, value, arg_nodes=None, parent_node=None):
         super().__init__(token, value, arg_nodes, parent_node)
 
     def __eq__(self, other):
@@ -754,7 +953,7 @@ class LogicKeywordNode(KeywordNode):
     """
     More specialized node for Logic keywords vs other types of keywords.
     """
-    def __init__(self, token, value, child_node, parent_node=None, true_side=[], false_side=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, true_side=None, false_side=None):
         super().__init__(token, value, child_node, parent_node)
         self.true_side = true_side
         self.false_side = false_side
@@ -780,7 +979,7 @@ class VariableKeywordNode(KeywordNode):
     """
     More specialized node for Variable keywords vs other types of keywords.
     """
-    def __init__(self, token, value, child_node, parent_node=None):
+    def __init__(self, token, value, child_node=None, parent_node=None):
         super().__init__(token, value, child_node, parent_node)
 
     def __eq__(self, other):
@@ -810,12 +1009,13 @@ class LoopUpKeywordNode(LoopKeywordNode):
     """
     Specialized node for the `loopUp` keyword specifically.
     """
-    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
         self.start_value = 0
-        self.end_value = child_node.value
+        if self.child_node:
+            self.end_value = child_node.value
 
         if loop_body:
             for node in loop_body:
@@ -834,11 +1034,12 @@ class LoopDownKeywordNode(LoopKeywordNode):
     """
     Specialized node for the `loopDown` keyword specifically.
     """
-    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
-        self.start_value = child_node.value
+        if self.child_node:
+            self.start_value = child_node.value
         self.end_value = 0
 
         if loop_body:
@@ -858,12 +1059,13 @@ class LoopFromKeywordNode(LoopKeywordNode):
     """
     Specialized node for the `loopFrom` keyword specifically.
     """
-    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
-        self.start_value = child_node.left_side.value
-        self.end_value = child_node.right_side.value
+        if child_node:
+            self.start_value = child_node.left_side.value
+            self.end_value = child_node.right_side.value
 
         if loop_body:
             for node in loop_body:
@@ -882,7 +1084,7 @@ class StartNode(Node):
     """
     Special node that represents the `main` keyword that starts the program.
     """
-    def __init__(self, token, value, children_nodes):
+    def __init__(self, token, value, children_nodes=[]):
         super().__init__(token, HIGHEST, None)
         self.value = value
         self.children_nodes = children_nodes
@@ -957,8 +1159,10 @@ class ExpressionNode(Node):
         self.parent_node = parent_node
 
         # Set the parent node of the left and right side to self.
-        self.left_side.parent_node = self
-        self.right_side.parent_node = self
+        if self.left_side:
+            self.left_side.parent_node = self
+        if self.right_side:
+            self.right_side.parent_node = self
 
     def __eq__(self, other):
         # Make sure there is a parent on both sides or no parent on either side
@@ -969,6 +1173,8 @@ class ExpressionNode(Node):
         elif not self.parent_node and not other.parent_node:
             parents_equal = True
         else:
+            # TODO(map) This doesn't give a clear explanation when one of the
+            # values aren't equal. Consider a better error message.
             parents_equal = (self.parent_node and other.parent_node
                              and self.parent_node.token == other.parent_node.token
                              and self.parent_node.priority == other.parent_node.priority)
@@ -980,6 +1186,8 @@ class ExpressionNode(Node):
         elif not right_side_equal and raise_assertion_flag:
             assert False, "Right sides were not equal."
         elif not parents_equal and raise_assertion_flag:
+            assert self.parent_node.token == other.parent_node.token, f"Token comparison: {self.parent_node.token} != {other.parent_node.token}"
+            assert self.parent_node.priority == other.parent_node.priority, f"Priority comparison: {self.parent_node.priority} != {other.parent_node.priority}"
             assert False, "Parents were not equal"
 
         types_equal = type(self) == type(other)
@@ -1197,12 +1405,16 @@ class VariableReferenceNode(Node):
 
 
 class MacroNode(Node):
-    def __init__(self, token, value, name_node, children_nodes, parent_node=None):
+    def __init__(self, token, value, name_node=None, children_nodes=[], parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.name_node = name_node
         self.children_nodes = children_nodes
         self.parent_node = parent_node
+
+        for node in self.children_nodes:
+            node.parent_node = self
+
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1338,6 +1550,7 @@ class Lexer:
         # means that `x` in `add` shouldn't cross pollinate with `x` in `print`
         # Without this `x` could really mean anything.
         self.in_function_declaration = False
+        self.fn_left_paren_set = False
         self.curr_function_name = None
         self.function_args = {}
 
@@ -1430,12 +1643,16 @@ class Lexer:
                 self.in_function_declaration = False
                 return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '(':
+                if self.in_function_declaration:
+                    self.fn_left_paren_set = True
                 return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == '}':
                 return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ')':
                 if not self.in_function_declaration:
                     self.check_for_valid_termination(character)
+                if self.in_function_declaration:
+                    self.fn_left_paren_set = False
                 return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
             elif character == ';':
                 return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
@@ -1450,7 +1667,12 @@ class Lexer:
             elif character == "," and self.in_function_declaration:
                 return Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
             elif character.isalpha():
-                return self.generate_keyword_token()
+                token = self.generate_keyword_token()
+                if token.ttype == FUNCTION_ARG_TOKEN_TYPE and not self.fn_left_paren_set:
+                    raise InvalidFunctionDeclarationException(token.row, token.col)
+                else:
+                    return token
+                # if token.ttype ==
             elif character == ':' and self.program.get_next_char() == ':':
                 return self.handle_function_separator()
             elif character == ':' and self.program.get_next_char() != ':':  # Do we care about a single colon by itself?
@@ -1479,6 +1701,9 @@ class Lexer:
             sys.exit()
         except InvalidCharException as ice:
             print_exception_message(self.program.lines, self.program.curr_col, ice)
+            sys.exit()
+        except InvalidFunctionDeclarationException as ifde:
+            print_exception_message(self.program.lines, self.program.curr_col, ifde)
             sys.exit()
 
     def check_for_valid_termination(self, value):
@@ -1663,6 +1888,8 @@ class Lexer:
         # of an `if` block and the start of an `else` block
         filtered_token_list = list(filter(lambda token: (token.ttype != NEW_LINE_TOKEN_TYPE), self.token_list))
         for idx, token in enumerate(filtered_token_list):
+            # TODO(map) There's a fun bug here where if there is a string with
+            # the value of "else" there will be an exception message raised.
             if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                 print_exception_message(self.program.lines, token.row, BadFormattedLogicBlock(token.row, 0))
                 sys.exit()
@@ -1679,7 +1906,12 @@ class Parser:
         self.main_node = None
         self.variable_to_type_map = {}
         self.macros = {}
+        self.macro_reference_set = False
         self.node_list = []
+        self.if_else_list = []
+        self.left_paren_func_call_set = False
+        self.in_function_body = False
+        self.current_if_node = None
 
     def get_nodes(self):
         ret_nodes = []
@@ -1690,30 +1922,74 @@ class Parser:
 
     def parse(self):
         root_node = None
+        # TODO(map) Figure out what I want to actually do here. Currently I am
+        # choosing to not advance to parser because the method being used will
+        # parse to the end of the line and go to the next token. One possible
+        # solution could be to have a method that handles building a top level
+        # AST that would not process the EOL token.
+        should_skip_advance = False
         while self.has_next_token:
-            self.advance_token()
-            node = self.process_token(root_node)
-            if node and type(node) != NoOpNode:
-                root_node = node
+            if should_skip_advance:
+                should_skip_advance = False
+                pass
             else:
-                # There was a NoOpNode meaning we can continue
-                continue
-
-            if type(root_node) == StartNode:
-                self.main_node = root_node
-            elif root_node and type(node) == NoOpNode:
-                self.node_list.append(root_node)
-                root_node = None
-            elif not root_node.parent_node:
-                self.node_list.append(root_node)
-                root_node = None
-            else:
-                # Haven't reached the end of a logical unit of work as a node.
-                continue
+                self.advance_token()
+            try:
+                if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "main":
+                    self.node_list.append(self.process_main_token(self.curr_token))
+                elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE and self.curr_token.value == "fn":
+                    self.node_list.append(self.process_fn_token(self.curr_token))
+                elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE and self.curr_token.value == "MACRO":
+                    self.node_list.append(self.process_macro_token(self.curr_token))
+                    should_skip_advance = True
+                elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in VARIABLE_KEYWORDS:
+                    dec_node = self.process_token()
+                    self.node_list.append(self.build_var_dec_line_ast(dec_node))
+                    should_skip_advance = True
+                elif self.curr_token.ttype == EOF_TOKEN_TYPE:
+                    # We've reached the end of the token list
+                    self.has_next_token = False
+                else:
+                    assert False, f"Token {self.curr_token.value} is not one of the {len(TOP_LEVEL_TOKENS)} top level tokens."
+            except KeywordMisuseException as kme:
+                print_exception_message(program_lines, kme.col_num, kme)
+                sys.exit()
+            except TooManyArgsException as tmae:
+                print_exception_message(program_lines, tmae.col_num, tmae)
+                sys.exit()
+            except BufferOverflowException as boe:
+                print_exception_message(program_lines, boe.col_num, boe)
+                sys.exit()
+            except InvalidArgsException as iae:
+                print_exception_message(program_lines, iae.col_num, iae)
+                sys.exit()
+            except InvalidAssignmentException as iaae:
+                print_exception_message(program_lines, iaae.col_num, iaae)
+                sys.exit()
+            except InvalidConcatenationException as ice:
+                print_exception_message(program_lines, ice.col_num, ice)
+                sys.exit()
+            except InvalidTypeDeclarationException as itde:
+                print_exception_message(program_lines, itde.col_num, itde)
+                sys.exit()
+            except InvalidMacroDeclaration as imd:
+                print_exception_message(program_lines, imd.col_num, imd)
+                sys.exit()
+            except EmptyMacroException as eme:
+                print_exception_message(program_lines, eme.col_num, eme)
+                sys.exit()
+            except UnnamedFunctionException as ufe:
+                print_exception_message(program_lines, ufe.col_num, ufe)
+                sys.exit()
+            except InvalidFunctionDeclarationException as ifde:
+                print_exception_message(program_lines, ifde.col_num, ifde)
+                sys.exit()
 
     def advance_token(self):
-        self.curr_token_pos += 1
-        self.curr_token = self.token_list[self.curr_token_pos]
+        # Ensure we can advance
+        if self.curr_token_pos + 1 < len(self.token_list):
+            self.curr_token_pos += 1
+            self.curr_token = self.token_list[self.curr_token_pos]
 
     def peek_next_token(self):
         return self.token_list[self.curr_token_pos + 1]
@@ -1721,807 +1997,1310 @@ class Parser:
     def get_prev_token(self):
         return self.token_list[self.curr_token_pos - 1]
 
-    def process_token(self, root_node):
-        try:
-            node = None
-            if self.curr_token.ttype == NUM_TOKEN_TYPE:
-                node = self.parse_literal()
-            elif self.curr_token.ttype == PLUS_TOKEN_TYPE:
-                node = self.parse_op(PlusMinusNode, root_node)
-            elif self.curr_token.ttype == MINUS_TOKEN_TYPE:
-                node = self.parse_op(PlusMinusNode, root_node)
-            elif self.curr_token.ttype == MULTIPLY_TOKEN_TYPE:
-                node = self.parse_op(MultiplyDivideNode, root_node)
-            elif self.curr_token.ttype == DIVIDE_TOKEN_TYPE:
-                node = self.parse_op(MultiplyDivideNode, root_node)
-            elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
-                node = self.parse_assignment(root_node)
-            elif self.curr_token.ttype == GREATER_THAN_TOKEN_TYPE:
-                node = self.parse_comparator(CompareNode, root_node)
-            elif self.curr_token.ttype == LESS_THAN_TOKEN_TYPE:
-                node = self.parse_comparator(CompareNode, root_node)
-            elif self.curr_token.ttype == EQUAL_TOKEN_TYPE:
-                node = self.parse_comparator(CompareNode, root_node)
-            elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
-                node = self.parse_op(RangeNode, root_node)
-            elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                node = self.handle_parenthesis()
-            elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
-                node = NoOpNode(self.curr_token)
-            elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
-                node = NoOpNode(self.curr_token)
-            elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
-                node = self.handle_keyword()
-            elif self.curr_token.ttype == STRING_TOKEN_TYPE:
-                node = self.handle_string()
-            elif self.curr_token.ttype == CHARACTER_TOKEN_TYPE:
-                node = CharNode(self.curr_token, self.curr_token.value)
-            elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
-                node = BooleanNode(self.curr_token, self.curr_token.value)
-            elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE:
-                node = self.parse_function_node(self.curr_token)
-            elif self.curr_token.ttype == FUNCTION_ARG_TOKEN_TYPE:
-                node = self.parse_function_arg_node(self.curr_token)
-            elif self.curr_token.ttype == FUNCTION_RETURN_TOKEN_TYPE:
-                node = FunctionReturnTypeNode(self.curr_token, self.curr_token.value)
-            elif self.curr_token.ttype == FUNCTION_RETURN_KEYWORD_TOKEN_TYPE:
-                node = self.parse_function_return(self.curr_token)
-            elif self.curr_token.ttype == FUNCTION_ARG_REFERENCE_TOKEN_TYPE:
-                node = FunctionArgReferenceNode(self.curr_token, self.curr_token.value)
-            elif self.curr_token.ttype == FUNCTION_REFERENCE_TOKEN_TYPE:
-                node = self.parse_function_reference(self.curr_token)
-            elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
-                node = self.parse_macro_node(self.curr_token)
-            elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                # Make a copy of the node otherwise when the node is visited
-                # for the second time, it will already be marked as visited.
-                node = copy.deepcopy(self.macros[self.curr_token.value])
-            elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
-                is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
-                node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
-            elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
-                node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
-            elif self.curr_token.ttype == COMMA_TOKEN_TYPE:
-                node = ArgSeparatorNode(self.curr_token)
-            elif self.curr_token.ttype in IGNORE_OPS:
-                node = NoOpNode(self.curr_token)
-            elif self.curr_token.ttype == EOF_TOKEN_TYPE:
-                node = NoOpNode(self.curr_token)
-                self.has_next_token = False
-            else:
-                assert False, f"Unknown token type {self.curr_token.ttype}"
-            return node
-        except KeywordMisuseException as kme:
-            print_exception_message(program_lines, kme.col_num, kme)
-            sys.exit()
-        except InvalidTypeDeclarationException as itde:
-            print_exception_message(program_lines, itde.col_num, itde)
-            sys.exit()
-        except TooManyArgsException as tmae:
-            print_exception_message(program_lines, tmae.col_num, tmae)
-            sys.exit()
-        except NotEnoughArgsException as neae:
-            print_exception_message(program_lines, neae.col_num, neae)
-            sys.exit()
-        except InvalidArgsException as iae:
-            print_exception_message(program_lines, iae.col_num, iae)
-            sys.exit()
-        except BufferOverflowException as boe:
-            print_exception_message(program_lines, boe.col_num, boe)
-            sys.exit()
-        except InvalidMacroDeclaration as imd:
-            print_exception_message(program_lines, imd.col_num, imd)
-            sys.exit()
-        except UnnamedMacroException as ume:
-            print_exception_message(program_lines, ume.col_num, ume)
-            sys.exit()
-        except UnnamedFunctionException as ufe:
-            print_exception_message(program_lines, ufe.col_num, ufe)
-            sys.exit()
-        except InvalidFunctionDeclarationException as ifde:
-            print_exception_message(program_lines, ifde.col_num, ifde)
-            sys.exit()
-        except EmptyMacroException as eme:
-            print_exception_message(program_lines, eme.col_num, eme)
-            sys.exit()
-
-    def parse_literal(self):
-        """
-        Parse a literal token.
-
-        If we are parsing a literal token we create it but don't set the
-        parent_node because it will either get set later in the parse_op on
-        the creation of the op node, or it isn't linked to anything anyways.
-        """
-        return NumberNode(self.curr_token, self.curr_token.value, None)
-
-    def parse_op(self, op_type, root_node):
-        # This determines whether or not the root node is an operation or a
-        # number and if we should replace the right side with an op
-        replace_right_side_with_op = (
-                type(root_node) not in [NumberNode, VariableNode, VariableReferenceNode]
-                and root_node.priority < self.curr_token.priority
-                and self.token_list[self.curr_token_pos-1].priority < self.curr_token.priority
-                )
-        if replace_right_side_with_op:
-            left_node = root_node.right_side
-        else:
-            left_node = root_node
-        op_token = self.curr_token
-        self.advance_token()
-        right_node = self.process_token(root_node)
-        node = op_type(op_token, op_token.value,
-                       left_side=left_node, right_side=right_node)
-
-        self.check_if_valid_operation(op_token.value, left_node, right_node)
-
-        if replace_right_side_with_op:
-            ret_node = root_node
-            node.parent_node = ret_node
-            ret_node.right_side = node
-            return ret_node
-        return node
-
-    def parse_function_node(self, token):
-        if self.peek_next_token().ttype != FUNCTION_NAME_TOKEN_TYPE:
-            raise UnnamedFunctionException(token.row, token.col)
-        self.advance_token()
-        function_name_node = FunctionNameNode(self.curr_token, self.curr_token.value)
-        # Move past the token for the function name
-        self.advance_token()
-        # TODO(map) This needs to account for all circumstances involving a more
-        # truncated function declaration. This means examples like:
-        # fn add :: int64
-        # where we can declare a function that takes no params.
-        if self.curr_token.ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
-            raise InvalidFunctionDeclarationException(token.row, token.col)
-        # Move past the double colon in the function declaration
-        self.advance_token()
-
-        if self.curr_token.ttype != LEFT_PAREN_TOKEN_TYPE:
-            raise InvalidFunctionDeclarationException(token.row, token.col)
-        # Go past the left parens that starts the method params
-        self.advance_token()
-
-        function_args = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if type(node) == NoOpNode and root_node:
-                function_args.append(root_node)
-                self.advance_token()
-                root_node = None
-            else:
-                root_node = node
-                self.advance_token()
-        
-        # Move past closing right parens on function args
-        self.advance_token()
-
-        if self.curr_token.ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
-            raise InvalidFunctionDeclarationException(token.row, token.col)
-        # Move past the double colon in the function declaration
-        self.advance_token()
-
-        return_type_node = self.process_token(self.curr_token)
-
-        if self.peek_next_token().ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
-            raise Exception # TODO(map) Raise proper exception here
-
-        self.advance_token() # Move past return type in function declaration
-        self.advance_token() # Move past the left curl brace to parse the body
-
-        function_body = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            single_function_body_node = self.process_token(root_node)
-            if isinstance(single_function_body_node, NoOpNode):
-                function_body.append(root_node)
-                root_node = None
-                self.advance_token()
-            else:
-                root_node = single_function_body_node
-                self.advance_token()
-
-        self.advance_token() # Move past the right curl brace closing the function
-        # breakpoint()
-
-        return FunctionDeclarationNode(token, token.value, function_name_node, function_args, return_type_node, function_body)
-
-
-    def parse_function_arg_node(self, token):
-        node = FunctionArgNode(token, token.value)
-
-        # TODO(map) There needs to be some mapping for function arg tracking
-
-        # Check that a type was declared for the function
-        if self.peek_next_token().ttype != FUNCTION_ARG_TYPE_TOKEN_TYPE:
-            assert False, "TODO(map) Write a test for this."
-
-        return node
-
-
-    def parse_function_return(self, token):
-        # Move past the return keyword and build the ast of the return itself
-        self.advance_token()
-        root_node = None
-        return_body = self.process_token(root_node)
-
-        # Move past the currently processed token and build a tree if needed.
-        self.advance_token()
-        while self.curr_token.ttype != EOL_TOKEN_TYPE:
-            return_body = self.process_token(return_body)
-            self.advance_token()
-        return_node = FunctionReturnNode(token, token.value, return_body)
-        return return_node
-
-    def parse_function_reference(self, token):
-        self.advance_token() # Move past the function name being called.
-
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise Exception # TODO(map) Raise proper exception
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise Exception # TODO(map) Raise proper exception
-
-        # Parse the inner parts of the print function
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise Exception # TODO(map) Raise proper exception
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-
-        # TODO(map) Do type checking here.
-        # self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
-        return FunctionReferenceNode(token, token.value, arg_list)
-
-    def parse_macro_node(self, token):
-        if self.peek_next_token().ttype != MACRO_NAME_TOKEN_TYPE:
-            raise UnnamedMacroException(token.row, token.col)
-        self.advance_token()
-        macro_name_node = MacroNameNode(self.curr_token, self.curr_token.value)
-
-        if self.peek_next_token().ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
-            raise KeywordMisuseException(token.row, token.col, token.value, MACRO_SIGNATURE)
-
-        # Go to left curly brace and then past it
-        self.advance_token()
-        self.advance_token()
-        children_nodes = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if type(node) == NoOpNode:
-                children_nodes.append(root_node)
-                self.advance_token()
-                root_node = None
-            else:
-                root_node = node
-                self.advance_token()
-
-        if len(children_nodes) < 1:
-            raise EmptyMacroException(token.row, token.col)
-
-        self.macros[macro_name_node.value] = children_nodes
-        return MacroNode(token, token.value, macro_name_node, children_nodes)
-
-
-    def parse_comparator(self, op_type, root_node):
-        """
-        This is just like the `parse_op` method except we don't ever want to
-        take anything from either the left or right and have them mix.
-        Priorities between the left and right side are not considered in this
-        method.
-        """
-        left_node = root_node
-        op_token = self.curr_token
-        self.advance_token()
-        right_node = None
-        # Only need to loop here because the root_node being passed will have
-        # already been evaluated if there is an operation there.
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            right_node = self.process_token(right_node)
-            self.advance_token()
-        node = op_type(op_token, op_token.value,
-                       left_side=left_node, right_side=right_node)
-        self.curr_token_pos = self.curr_token_pos - 1
-        self.curr_token = self.token_list[self.curr_token_pos]
-        return node
-
-    def parse_assignment(self, root_node):
-        """
-        This is its own method because an assignment can contain more than a
-        single value and might be an expression on the right hand side.
-        """
-        left_node = root_node
-        op_token = self.curr_token
-        right_node = None
-        # Peek ahead to ensure we are not getting an EOL token.
-        while self.peek_next_token().ttype != EOL_TOKEN_TYPE:
-            # Advance and process the token.
-            self.advance_token()
-
-            # TODO(map) Make the error message here better.
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, self.curr_token.value, True)
-
-            right_node = self.process_token(right_node)
-        self.check_assignment_type_matching(self.variable_to_type_map.get(left_node.value), type(right_node), right_node.value)
-        return AssignmentNode(op_token, op_token.value,
-                              left_side=left_node, right_side=right_node)
-
-    # NOTE(map) This method is very brittle right now.
-    # TODO(map) Can these left to right side maps exist as a dict?
-    def check_assignment_type_matching(self, left_side_type, right_side_type, right_side_value):
-        # The `parse_assignment` could be the initial assignment of the var
-        # so we need to confirm there is a type before checking if they match.
-        if left_side_type:
-            right_side_char = right_side_type == CharNode
-            right_side_char_at = right_side_type == FunctionKeywordNode and right_side_value == "charAt"
-            if left_side_type == "char" and not right_side_char and not right_side_char_at:
-                raise InvalidAssignmentException(self.curr_token.row, self.curr_token.col, left_side_type, right_side_type)
-
-    # TODO(map) Do we really want to have multiple return types here? Maybe
-    # it's better to determine if the keyword supports a list here and if not
-    # we error out. Then this becomes a check that the number of params match
-    # while the validate_function_args holds the type checking.
-    def handle_keyword_args(self):
-        """
-        Method that will parse the tokens within the parenthesis when they are
-        used to wrap function or keyword arguments. Differs from
-        handle_parenthesis because this can return a list or a single node.
-        """
-        root_node = None
-        keyword_value = self.get_prev_token().value
-
-        # Advance once to get past the paren token.
-        self.advance_token()
-
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_value, True)
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-
-        return arg_list if len(arg_list) > 1 else arg_list[0]
-
-    def handle_parenthesis(self):
-        # This only works for numbers. For functions this will need to be
-        # updated to handle those situations.
-        root_node = None
-
-        # if self.token_list[self.curr_token_pos - 1].ttype in ALL_TOKENS:
-        # Advance once to get past the paren token.
-        self.advance_token()
-
-        # Currently don't care about the previous token. Keeping this in
-        # so we can error out if the token isn't recognized.
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            root_node = self.process_token(root_node)
-            self.advance_token()
-
-        return root_node
-
-    def handle_string(self):
-        return StringNode(self.curr_token, self.curr_token.value, None)
-
-    def handle_keyword(self):
-        node_value = self.curr_token.value
-
-        # Used for logic nodes
-        truth_body = None
-        false_body = None
-        loop_body = None
-
-        keyword_token = self.curr_token
-        # Move past keyword token
-        self.advance_token()
-
-        # breakpoint()
-        # Map of the functions needed to be called to parse certain tokens.
-        func_map = {
-            "main": (self.handle_main_keyword, StartNode, "children_nodes"),
-            "const": (self.handle_const_keyword, VariableKeywordNode, "child_node"),
-            "int8": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "int16": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "int32": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "int64": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "string": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "char": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "bool": (self.handle_var_declaration, VariableKeywordNode, "child_node"),
-            "print": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
-            "printl": (self.handle_print_keyword, FunctionKeywordNode, "arg_nodes"),
-            "charAt": (self.handle_char_at_keyword, FunctionKeywordNode, "arg_nodes"),
-            "updateChar": (self.handle_update_char_keyword, FunctionKeywordNode, "arg_nodes"),
-            "copyStr": (self.handle_copy_str_keyword, FunctionKeywordNode, "arg_nodes"),
-            "if": (self.handle_keyword_args, LogicKeywordNode, "child_node"),
-            "loopUp": (self.handle_keyword_args, LoopUpKeywordNode, "child_node"),
-            "loopDown": (self.handle_keyword_args, LoopDownKeywordNode, "child_node"),
-            "loopFrom": (self.handle_keyword_args, LoopFromKeywordNode, "child_node"),
-        }
-        contents_function, node_class, node_args = func_map.get(node_value)
-        if node_class == LogicKeywordNode:
-            # Need to get the true and false body to assign to node.
-            contents = contents_function()
-            truth_body = self.get_truth_side()
-            false_body = self.get_false_side()
-        elif node_class in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
-            # Need to get contents of the loop.
-            contents = contents_function()
-            self.validate_function_args(contents, node_class, keyword_token, node_value)
-            loop_body = self.get_loop_body(node_value)
-        else:
-            contents = contents_function(keyword_token)
-        kwargs = {
-            "token": keyword_token,
-            "value": keyword_token.value,
-            node_args: contents
-        }
-        if truth_body:
-            kwargs["true_side"] = truth_body
-            kwargs["false_side"] = false_body
-        if loop_body:
-            kwargs["loop_body"] = loop_body
-
-        keyword_node = node_class(**kwargs)
-        return keyword_node
-
-    def handle_main_keyword(self, keyword_token):
+    def process_main_token(self, main_token):
         """Signature is `main() { BODY };`"""
-        # Confirm the left paren is right after the main keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
+        # Create the main node with no children. They will be added later in
+        # this method.
+        main_node = self.process_token()
 
-        # Move past the left paren.
-        self.advance_token()
+        # Confirm the left paren is right after the main keyword
+        root_node = self.process_token()
+        if not isinstance(root_node, FunctionCallLeftParenNode):
+            raise KeywordMisuseException(main_token.row, main_token.col, main_token.value, MAIN_SIGNATURE)
 
         # Confirm the right paren closes the left.
-        if not self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
-
-        # Move pas the right paren
-        self.advance_token()
+        root_node = self.process_token()
+        if not isinstance(root_node, FunctionCallRightParenNode):
+            raise KeywordMisuseException(main_token.row, main_token.col, main_token.value, MAIN_SIGNATURE)
 
         # Confirm left curl brack is present.
-        if not self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, MAIN_SIGNATURE)
+        root_node = self.process_token()
+        if not isinstance(root_node, FunctionBodyLeftCurlNode):
+            raise KeywordMisuseException(main_token.row, main_token.col, main_token.value, MAIN_SIGNATURE)
 
-        # Move past the left curl brace
-        self.advance_token()
+        # Flag for determining if we are at end of the main loop
+        end_of_main = False
 
-        node_list = []
-        # Parse the body.
-        root_node = None
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if node and type(node) != NoOpNode:
-                root_node = node
-            if self.curr_token.ttype == EOL_TOKEN_TYPE and type(root_node) != list:
-                # Add the node to the list because it is a logical unit of work
-                node_list.append(root_node)
-                root_node = None
-            elif self.curr_token.ttype == EOL_TOKEN_TYPE and type(root_node) == list:
-                # The node was a MacroReferenceNode and was replaced by a list of nodes
-                node_list.extend(root_node)
-                root_node = None
-            elif (isinstance(node, LogicKeywordNode) or isinstance(node, LoopKeywordNode)) and node.value in ["if", "loopUp", "loopDown", "loopFrom"]:
-                # Need to add the node to the list because it is a logic unit
-                # of work not ended by a semicolon.
-                node_list.append(root_node)
-                root_node = None
-            elif isinstance(node, MacroNode):
-                # Cannot declare a MACRO inside the `main` node
-                raise InvalidMacroDeclaration(node.token.row, node.token.row, "main")
-            self.advance_token()
-        return node_list
+        # Process the first token since we should anyways.
+        processed_node = self.process_token()
 
-    def handle_print_keyword(self, keyword_token):
-        """Signature is `print(VALUE)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
+        # Loop through the entire body of the main function.
+        # while type(processed_node) != FunctionBodyRightCurlNode:
+        while not end_of_main:
+            # Ran into a NoOp after a line has been processed. This should
+            # really only happen for a comment after a line of code.
+            if type(processed_node) in [NoOpNode, EndOfLineNode]:
+                # Process the next token after the NoOp
+                processed_node = self.process_token()
+                end_of_main = type(processed_node) == FunctionBodyRightCurlNode
+                continue
 
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, PRINT_SIGNATURE)
-
-        # Parse the inner parts of the print function
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, "print", True)
-            root_node = self.process_token(root_node)
-            if isinstance(root_node, ArgSeparatorNode):
-                raise TooManyArgsException(self.curr_token.row, self.curr_token.col)
-            self.advance_token()
-
-        return [root_node]
-
-    def handle_char_at_keyword(self, keyword_token):
-        """Signature is `charAt(STRING, INDEX)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, CHAR_AT_SIGNATURE)
-
-        # Parse the inner parts of the print function
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_token.value, True)
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-
-        self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
-        return arg_list
-
-    def handle_update_char_keyword(self, keyword_token):
-        """Signature is `updateChar(STRING, INDEX, NEW_CHAR)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `print` was called with nothing to print.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, UPDATE_CHAR_SIGNATURE)
-
-        # Parse the inner parts of the print function
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-        return arg_list
-
-    def handle_copy_str_keyword(self, keyword_token):
-        """Sigautre is `copyStr(STRING, STRING)`"""
-        # Confirm the left paren is right after print keyword
-        if not self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, COPY_STR_SIGNATURE)
-
-        # Move past the left paren.
-        self.advance_token()
-
-        # Case where `copyStr` was called with no parameters.
-        if self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-            raise KeywordMisuseException(keyword_token.row, keyword_token.col, keyword_token.value, COPY_STR_SIGNATURE)
-
-        # Parse the inner parts of the print function
-        arg_list = []
-        root_node = None
-        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
-            node = self.process_token(root_node)
-            if type(node) != ArgSeparatorNode:
-                root_node = node
-            if type(node) == ArgSeparatorNode:
-                arg_list.append(root_node)
-                root_node = None
-                node = None
-            self.advance_token()
-        # Add the final calculated node to the list
-        arg_list.append(root_node)
-
-        self.validate_function_args(arg_list, FunctionKeywordNode, keyword_token, keyword_token.value)
-        return arg_list
-
-    def handle_const_keyword(self, keyword_token):
-        child_node = None
-        while self.curr_token.ttype != EOL_TOKEN_TYPE:
-            child_node = self.process_token(child_node)
-        return child_node
-
-    def handle_var_declaration(self, keyword_token):
-        child_node = None
-        while self.curr_token.ttype != EOL_TOKEN_TYPE:
-            if self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-                raise InvalidMacroDeclaration(self.curr_token.row, self.curr_token.col, keyword_value, True)
-
-            child_node = self.process_token(child_node)
-            self.advance_token()
-
-        # Put the variable and type in the map to be able to check references
-        # and uses later.
-        self.variable_to_type_map[child_node.left_side.value] = keyword_token.value
-
-        # Check the integer value can fit in the integer type declaration
-        if keyword_token.value == "int8" and int(child_node.right_side.value) > 255:
-            raise BufferOverflowException(keyword_token.row, keyword_token.col)
-        if keyword_token.value == "int16" and int(child_node.right_side.value) > 65536:
-            raise BufferOverflowException(keyword_token.row, keyword_token.col)
-        if keyword_token.value == "int32" and int(child_node.right_side.value) > 4294967296:
-            raise BufferOverflowException(keyword_token.row, keyword_token.col)
+            if self.macro_reference_set:
+                for node in processed_node:
+                    main_node.children_nodes.append(node)
+                    node.parent_node = main_node
+                self.macro_reference_set = False
+            elif type(processed_node) == MacroNode:
+                raise InvalidMacroDeclaration(main_token.row, main_token.col, main_token.value)
+            else:
+                line_ast = self.build_line_ast(processed_node)
+                main_node.children_nodes.append(line_ast)
 
 
-        # Check to see if the `char` initial assignment is the result of
-        # calling the `charAt` function since that's a fair initial declaration
-        assignment_is_char_at = type(child_node.right_side) == FunctionKeywordNode and child_node.right_side.value == "charAt"
-        if keyword_token.value == "int64" and not (child_node.right_side.value.isnumeric() or type(child_node.right_side) == PlusMinusNode):
-            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-        elif keyword_token.value == "string" and type(child_node.right_side) != StringNode:
-            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-        elif keyword_token.value == "char" and type(child_node.right_side) != CharNode and not assignment_is_char_at:
-            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
-        elif keyword_token.value == "bool" and type(child_node.right_side) != BooleanNode:
-            raise InvalidTypeDeclarationException(child_node.left_side.token.row, child_node.left_side.token.col)
+            # Process the next token after the EOL
+            processed_node = self.process_token()
+            # Determine if we have reached the end of the main func body
+            if type(processed_node) == FunctionBodyRightCurlNode:
+                end_of_main = True
+
+        # Set the childrens parents to the main node
+        for child_node in main_node.children_nodes:
+            child_node.parent_node = main_node
+
+        return main_node
+
+    def process_fn_token(self, fn_token):
+        # Create the fn node with no children. They will be added later in
+        # this method.
+        fn_node = self.process_token()
+
+        # Make sure the next node is the name of the function.
+        fn_name_node = self.process_token()
+        if not isinstance(fn_name_node, FunctionNameNode):
+            raise UnnamedFunctionException(fn_token.row, fn_token.col)
+
+        # Next check for a function args separator node
+        processed_node = self.process_token()
+        if not isinstance(processed_node, FunctionDecSeparatorNode):
+            raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
+
+        # Check for left paren around params
+        processed_node = self.process_token()
+        if not isinstance(processed_node, FunctionDecLeftParenNode):
+            raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
+
+        assert False, "process_fn_token is not implemented."
+
+    def process_macro_token(self, macro_token):
+        """Signature is `MACRO macro_name { BODY };`"""
+        # Create the main node with no children. They will be added later in
+        # this method.
+        macro_node = self.process_token()
+
+        # Confirm the macro name is after the macro keyword
+        macro_name_node = self.process_token()
+        if not isinstance(macro_name_node, MacroNameNode):
+            raise KeywordMisuseException(macro_token.row, macro_token.col, macro_token.value, MACRO_SIGNATURE)
+        macro_node.name_node = macro_name_node
+        macro_name_node.parent_node = macro_node
+ 
+        # Confirm the macro name is after the macro keyword
+        root_node = self.process_token()
+        if not isinstance(root_node, FunctionBodyLeftCurlNode):
+            raise KeywordMisuseException(macro_token.row, macro_token.col, macro_token.value, MACRO_SIGNATURE)
+
+        # Flag for determining if we are at end of the main loop
+        end_of_macro = False
+
+        # Process the first token since we should anyways.
+        processed_node = self.process_token()
+
+        # Confirm the node is not a right curl brace meaning an empty macro
+        if isinstance(processed_node, FunctionBodyRightCurlNode):
+            raise EmptyMacroException(macro_token.row, macro_token.col)
+
+        # Loop through the entire body of the main function.
+        # while type(processed_node) != FunctionBodyRightCurlNode:
+        while not end_of_macro:
+            line_ast = self.build_line_ast(processed_node)
+            macro_node.children_nodes.append(line_ast)
+
+            # Process the next token after the EOL
+            processed_node = self.process_token()
+            # Determine if we have reached the end of the main func body
+            if type(processed_node) == FunctionBodyRightCurlNode:
+                end_of_macro = True
+
+        # Set the childrens parents to the main node
+        for child_node in macro_node.children_nodes:
+            child_node.parent_node = macro_node
+
+        self.macros[macro_name_node.value] = macro_node.children_nodes
+
+        return macro_node
+
+    def build_line_ast(self, processed_node):
+        if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            line_ast = self.build_print_ast(processed_node)
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
+            line_ast = self.build_char_at_line_ast(processed_node)
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+            line_ast = self.build_update_char_line_ast(processed_node)
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+            line_ast = self.build_copy_str_line_ast(processed_node)
+        # "const" can only be declared on a variable right now. This
+        # makes it safe to call the build var ast method even if const
+        # is the value of the currently processed node as we know a var
+        # declaration will follow
+        elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char", "bool"]:
+            line_ast = self.build_var_dec_line_ast(processed_node)
+        elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            line_ast = self.build_if_conditional_line_ast(processed_node)
+            # Mark the current if node so we can pair it with an else if needed
+            self.current_if_node = processed_node
+        elif type(processed_node) == LoopUpKeywordNode:
+            line_ast = self.build_loop_up_line_ast(processed_node)
+        elif type(processed_node) == LoopDownKeywordNode:
+            line_ast = self.build_loop_down_line_ast(processed_node)
+        elif type(processed_node) == LoopFromKeywordNode:
+            line_ast = self.build_loop_from_line_ast(processed_node)
         else:
-            return child_node
+            line_ast = self.build_non_keyword_line_ast(processed_node)
+            # TODO(map) Be aware of this warning.
+            # print("WARNING: There may be a problem in building a non-keyword line.")
+        return line_ast
 
-    def validate_function_args(self, function_args, function_keyword, token, node_value):
-        if not function_args:
-            if function_keyword == LoopUpKeywordNode:
-                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_UP_SIGNATURE)
-            if function_keyword == LoopDownKeywordNode:
-                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_DOWN_SIGNATURE)
-            if function_keyword == LoopFromKeywordNode:
-                raise KeywordMisuseException(token.row, token.col, token.value, LOOP_FROM_SIGNATURE)
+    def process_token(self):
+        node = None
+        if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "main":
+            node = StartNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
+            node = MacroNode(self.curr_token, self.curr_token.value, children_nodes=[])
+        elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE:
+            node = FunctionNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            # Currently working on a function
+            if self.get_prev_token().ttype == KEYWORD_TOKEN_TYPE and self.get_prev_token().value not in ["if", "else"]:
+                node = FunctionCallLeftParenNode(self.curr_token)
+                self.left_paren_func_call_set = True
+            # Currently in an "if" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+                node = ConditionalLeftParenNode(self.curr_token)
+            # This is a paren that is not linked to any key operations like an
+            # if/else block or a function call.
+            else:
+                node = LeftParenNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            # Currently working on a function
+            if self.left_paren_func_call_set:
+                node = FunctionCallRightParenNode(self.curr_token)
+                self.left_paren_func_call_set = False
+            # Currently in an "if" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+                node = ConditionalRightParenNode(self.curr_token)
+            # This is a paren that is not linked to any key operations like an
+            # if/else block or a function call.
+            else:
+                node = RightParenNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+            # Currently working on a loop block
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+                node = LoopBodyLeftCurlNode(self.curr_token)
+            # Currently in an "if" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+                node = IfBodyLeftCurlNode(self.curr_token)
+            # Currently in an "else" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "else":
+                node = ElseBodyLeftCurlNode(self.curr_token)
+            # There is no if/else combination we are currently processing
+            else:
+                node = FunctionBodyLeftCurlNode(self.curr_token)
+        elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+            # Currently working on a loop block
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+                node = LoopBodyRightCurlNode(self.curr_token)
+                self.if_else_list.pop()
+            # Currently in an "if" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+                node = IfBodyRightCurlNode(self.curr_token)
+                # Remove the "if" node because we have finished processing it.
+                self.if_else_list.pop()
+            # Currently in an "else" block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "else":
+                node = ElseBodyRightCurlNode(self.curr_token)
+                # Remove the "else" node because we have finished processing it.
+                self.if_else_list.pop()
+            # There is no if/else combination we are currently processing
+            else:
+                node = FunctionBodyRightCurlNode(self.curr_token)
+        elif self.curr_token.ttype == NUM_TOKEN_TYPE:
+            node = NumberNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype == CHARACTER_TOKEN_TYPE:
+            node = CharNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == STRING_TOKEN_TYPE:
+            node = StringNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype in [PLUS_TOKEN_TYPE, MINUS_TOKEN_TYPE]:
+            node = PlusMinusNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype in [MULTIPLY_TOKEN_TYPE, DIVIDE_TOKEN_TYPE]:
+            node = MultiplyDivideNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
+            node = NoOpNode(self.curr_token)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["print", "printl", "charAt", "updateChar", "copyStr"]:
+            node = FunctionKeywordNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == MACRO_NAME_TOKEN_TYPE:
+            node = MacroNameNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_NAME_TOKEN_TYPE:
+            node = FunctionNameNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["const", "int8", "int16", "int32", "int64", "string", "char", "bool"]:
+            node = VariableKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
+            is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
+            node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
+        elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
+            node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+            node = copy.deepcopy(self.macros[self.curr_token.value])
+            self.macro_reference_set = True
+        elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
+            node = AssignmentNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
+            node = BooleanNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["if", "else"]:
+            node = LogicKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopUp":
+            node = LoopUpKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopDown":
+            node = LoopDownKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopFrom":
+            node = LoopFromKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
+            node = RangeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype in [EQUAL_TOKEN_TYPE, GREATER_THAN_TOKEN_TYPE, LESS_THAN_TOKEN_TYPE]:
+            node = CompareNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == COMMA_TOKEN_TYPE:
+            node = ArgSeparatorNode(self.curr_token)
+        elif self.curr_token.ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
+            node = FunctionDecSeparatorNode(self.curr_token)
+        elif self.curr_token.ttype == EOL_TOKEN_TYPE:
+            node = EndOfLineNode(self.curr_token)
         else:
-            if function_keyword in [LoopUpKeywordNode, LoopDownKeywordNode]:
-                # LoopUp/Down doesn't support a list of args
-                if type(function_args) == list and len(function_args) > 1:
-                    raise TooManyArgsException(token.row, token.col)
-                elif type(function_args) == RangeNode:
-                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
-                elif set(self.get_function_args_set(function_args)) - {"int8", "int16", "int32", "int64", NumberNode}:
-                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args.value, type(function_args)))
-            if function_keyword == LoopFromKeywordNode:
-                # LoopFrom doesn't support a list of args
-                if type(function_args) == list and len(function_args) > 1:
-                    raise TooManyArgsException(token.row, token.col)
-                elif not type(function_args) == RangeNode:
-                    raise InvalidArgsException(token.row, token.col, node_value, type(function_args))
-            if function_keyword == FunctionKeywordNode and node_value == "charAt":
-                # charAt must have two arguments
-                if type(function_args) != list or len(function_args) != 2:
-                    raise NotEnoughArgsException(token.row, token.col)
-                elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
-                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
-                elif set(self.get_function_args_set(function_args[1])) - {"int8", "int16", "int32", "int64", NumberNode}:
-                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
-            if function_keyword == FunctionKeywordNode and node_value == "copyStr":
-                # charAt must have two arguments
-                if type(function_args) != list or len(function_args) != 2:
-                    raise NotEnoughArgsException(token.row, token.col)
-                elif set(self.get_function_args_set(function_args[0])) - {"string", StringNode}:
-                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[0].value, type(function_args[0])))
-                elif set(self.get_function_args_set(function_args[1])) - {"string", StringNode}:
-                    raise InvalidArgsException(token.row, token.col, node_value, self.variable_to_type_map.get(function_args[1].value, type(function_args[1])))
+            assert False, f"Unknown token type {self.curr_token.ttype}"
 
-    def get_function_args_set(self, node):
-        # Helper method to get a set of the distinct primitive function arg types.
-        # No more children_nodes
-        if not node.get_children_nodes():
-            return [self.variable_to_type_map.get(node.value, type(node))]
-            # return [node.value]
-        # We have children and need to get their types
-        children = []
-        for child_node in node.get_children_nodes():
-            children.extend(self.get_function_args_set(child_node))
-        return children
-
-    def get_truth_side(self):
-        truth_body = None
-        truth_node_list = []
-        # Move past closing paren on conditional check
         self.advance_token()
+        return node
 
-        # Move past left curl bracket
-        self.advance_token()
+    def build_non_keyword_line_ast(self, start_node):
+        node_list = [start_node]
 
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            ret_node = self.process_token(truth_body)
-            if type(ret_node) != NoOpNode:
-                truth_body = ret_node
-            self.advance_token()
-            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                truth_node_list.append(truth_body)
-                truth_body = None
+        processed_node = self.process_token()
+        while type(processed_node) != EndOfLineNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["charAt", "updateChar"]:
+                node_list.append(self.build_char_at_line_ast(processed_node))
+            else:
+                node_list.append(processed_node)
+            processed_node = self.process_token()
 
-        # We don't want to move past the curl brace that closes the if
-        # statement because the `handle_main` will always be stepping over it
-        # as part of its processing.
+        return self.build_ast_from_node_list(node_list)
 
-        return truth_node_list
+    def build_print_ast(self, print_node):
+        processed_node = self.process_token()
+        if type(processed_node) != FunctionCallLeftParenNode:
+            assert False, "TODO(map) Raise no left paren exception"
+        # Set up the list for holding the print args
+        print_arg_node_list = [processed_node]
 
-    def get_false_side(self):
-        false_body = None
-        # Flag if there is an else keyword and parse it.
-        is_else_keyword_present = self.peek_next_token().value == "else"
-        false_node_list = []
-        if is_else_keyword_present:
-            # Move beyond the closing right curl brace of the `if` statment
-            self.advance_token()
+        # Process the next node
+        processed_node = self.process_token()
+        while type(processed_node) != FunctionCallRightParenNode:
+            # TODO(map) This should really be done in a better way.
+            if type(processed_node) == list:
+                raise InvalidMacroDeclaration(print_node.token.row, print_node.token.col, "print", is_ref=True)
+            else:
+                print_arg_node_list.append(processed_node)
+            processed_node = self.process_token()
 
-            # Move past the else keyword.
-            self.advance_token()
+        # Add the closing function call right paren node
+        print_arg_node_list.append(processed_node)
 
-            # Move past the curl bracket that starts the else body.
-            self.advance_token()
+        line_of_lines = []
+        line_of_nodes = []
+        for node in print_arg_node_list:
+            if type(node) in [ArgSeparatorNode, FunctionCallRightParenNode]:
+                line_of_lines.append(line_of_nodes)
+                line_of_nodes = []
+            elif type(node) == FunctionCallLeftParenNode:
+                pass
+            else:
+                line_of_nodes.append(node)
 
-            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-                ret_node = self.process_token(false_body)
-                if type(ret_node) != NoOpNode:
-                    false_body = ret_node
-                self.advance_token()
-                if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) == LogicKeywordNode:
-                    false_node_list.append(ret_node)
-                    false_body = None
-        return false_node_list
+        print_args = []
+        for line_of_nodes in line_of_lines:
+            node = self.build_ast_from_node_list(line_of_nodes)
+            if node:
+                print_args.append(node)
 
-    def get_loop_body(self, node_value):
-        # Move past right paren
-        self.advance_token()
+        # Check the arg count is ok
+        if len(print_args) < 1:
+            raise KeywordMisuseException(print_node.token.row, print_node.token.col, print_node.token.value, PRINT_SIGNATURE)
+        if len(print_args) > 1:
+            raise TooManyArgsException(print_node.token.row, print_node.token.col)
 
-        loop_contents = []
-        loop_body = None
+        # Set the parent node and arg nodes appropriately.
+        for node in print_args:
+            node.parent_node = print_node
+        print_node.arg_nodes = print_args
+        
+        # Move past the end of line token
+        self.process_token()
 
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            ret_node = self.process_token(loop_body)
-            if type(ret_node) != NoOpNode:
-                loop_body = ret_node
-            self.advance_token()
-            if self.curr_token.ttype == EOL_TOKEN_TYPE or type(ret_node) in [LogicKeywordNode, LoopUpKeywordNode, LoopDownKeywordNode]:
-                loop_contents.append(loop_body)
-                loop_body = None
+        return print_node
 
-        if node_value not in ["loopUp", "loopDown", "loopFrom"]:
-            assert False, f"Loop of type {node_value} is not recognized."
+    def build_update_char_line_ast(self, update_char_node):
+        processed_node = self.process_token()
+        if type(processed_node) != FunctionCallLeftParenNode:
+            raise KeywordMisuseException(update_char_node.token.row, update_char_node.token.col, update_char_node.value, UPDATE_CHAR_SIGNATURE)
+
+        update_char_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            update_char_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        update_char_arg_list.append(processed_node)
+
+        update_char_args = self.build_function_args_ast(update_char_arg_list)
+
+        # Check the arg count is ok
+        if len(update_char_args) < 3:
+            raise KeywordMisuseException(update_char_node.token.row, update_char_node.token.col, update_char_node.token.value, UPDATE_CHAR_SIGNATURE)
+        if len(update_char_args) > 3:
+            raise TooManyArgsException(update_char_node.token.row, update_char_node.token.col)
+
+        for node in update_char_args:
+            node.parent_node = update_char_node
+        update_char_node.arg_nodes = update_char_args
+
+        # Move past the end of line token
+        self.process_token()
+        
+        return update_char_node
+
+    def build_char_at_line_ast(self, char_at_node):
+        # Get the left paren node
+        processed_node = self.process_token()
+        if type(processed_node) != FunctionCallLeftParenNode:
+            raise KeywordMisuseException(char_at_node.token.row, char_at_node.token.col, char_at_node.value, CHAR_AT_SIGNATURE)
+
+        char_at_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            char_at_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        char_at_arg_list.append(processed_node)
+
+        line_of_lines = []
+        line_of_nodes = []
+        for node in char_at_arg_list:
+            if type(node) in [ArgSeparatorNode, FunctionCallRightParenNode]:
+                line_of_lines.append(line_of_nodes)
+                line_of_nodes = []
+            elif type(node) == FunctionCallLeftParenNode:
+                pass
+            else:
+                line_of_nodes.append(node)
+
+        char_at_args = []
+        for line_of_nodes in line_of_lines:
+            node = self.build_ast_from_node_list(line_of_nodes)
+            if node:
+                char_at_args.append(node)
+
+        # Check the arg count is ok
+        if len(char_at_args) < 2:
+            raise KeywordMisuseException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, CHAR_AT_SIGNATURE)
+        if len(char_at_args) > 2:
+            raise TooManyArgsException(char_at_node.token.row, char_at_node.token.col)
+
+        # Check that params are the correct type.
+        if type(char_at_args[0]) not in [StringNode, VariableReferenceNode]:
+            raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, type(char_at_args[0]))
+        if type(char_at_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[0].value) != "string":
+            raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, self.variable_to_type_map.get(char_at_args[0].value))
+        if type(char_at_args[1]) not in [NumberNode, VariableReferenceNode, PlusMinusNode]:
+            raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, type(char_at_args[1]))
+        if type(char_at_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[1].value) not in ["int8", "int16", "int32", "int64"]:
+            raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, self.variable_to_type_map.get(char_at_args[1].value))
+
+        # Set the parent node and arg nodes appropriately.
+        for node in char_at_args:
+            node.parent_node = char_at_node
+        char_at_node.arg_nodes = char_at_args
+        
+        # Normally there would be a line to move past the end of line token but
+        # in the case where the char at call is made within a variable
+        # declaration, such as:
+        # char x = charAt("Hello", 0);
+        # there is a bug that could arise where a node get processed as a line
+        # of work when it shouldn't be.
+        # To see this bug, add back:
+        # self.process_token()
+        # and run the following two lines:
+        # charAt("Hello", 0);
+        # char x = charAt("Hello", 0);
+        
+        return char_at_node
+
+    def build_copy_str_line_ast(self, copy_str_node):
+        # Get the left paren node
+        processed_node = self.process_token()
+        if type(processed_node) != FunctionCallLeftParenNode:
+            raise KeywordMisuseException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.value, COPY_STR_SIGNATURE)
+
+        copy_str_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            copy_str_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        copy_str_arg_list.append(processed_node)
+
+        copy_str_args = self.build_function_args_ast(copy_str_arg_list)
+
+        # Check the arg count is ok
+        if len(copy_str_args) < 2:
+            raise KeywordMisuseException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, COPY_STR_SIGNATURE)
+        if len(copy_str_args) > 2:
+            raise TooManyArgsException(copy_str_node.token.row, copy_str_node.token.col)
+
+        # Check that params are the correct type.
+        if type(copy_str_args[0]) not in [StringNode, VariableReferenceNode]:
+            raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, type(copy_str_args[0]))
+        if type(copy_str_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[0].value) != "string":
+            raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, self.variable_to_type_map.get(copy_str_args[0].value))
+        if type(copy_str_args[1]) not in [StringNode, VariableReferenceNode]:
+            raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, type(copy_str_args[1]))
+        if type(copy_str_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[1].value) != "string":
+            raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, self.variable_to_type_map.get(copy_str_args[1].value))
+
+        # Set the parent node and arg nodes appropriately.
+        for node in copy_str_args:
+            node.parent_node = copy_str_node
+        copy_str_node.arg_nodes = copy_str_args
+
+        # Move past the end of line token
+        self.process_token()
+ 
+        return copy_str_node
+
+    def build_loop_up_line_ast(self, loop_up_node):
+        self.if_else_list.append(loop_up_node)
+        # Get the left paren node
+        processed_node = self.process_token()
+
+        loop_up_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            loop_up_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        loop_up_arg_list.append(processed_node)
+        
+        # TODO(map) This is not good but for now it'll raise the correct error
+        for node in loop_up_arg_list:
+            if type(node) == ArgSeparatorNode:
+                raise TooManyArgsException(loop_up_node.token.row, loop_up_node.token.col)
+
+        # Build the list of args
+        loop_up_args = self.build_loop_up_down_args(loop_up_arg_list)
+
+        # TODO(map) Also not good but we can have the validation here for now
+        if len(loop_up_args) == 0:
+            raise KeywordMisuseException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", LOOP_UP_SIGNATURE)
+
+        loop_up_arg = loop_up_args[0]
+        loop_arg_is_var = type(loop_up_arg) == VariableReferenceNode
+        loop_arg_is_number = type(loop_up_arg) == NumberNode
+        loop_arg_is_num_var = type(loop_up_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_up_arg.value) in ["int8", "int16", "int32", "int64"]
+        # Case where arg is not variable but is not correct node type
+        if not loop_arg_is_var and not loop_arg_is_number:
+            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", type(loop_up_arg))
+        # Case of not number node and variable node and variable type not good
+        if not loop_arg_is_number and loop_arg_is_var and not loop_arg_is_num_var:
+            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", self.variable_to_type_map.get(loop_up_arg.value))
+
+        # Set the parent node and arg nodes appropriately.
+        loop_up_node.child_node = loop_up_arg
+        loop_up_arg.parent_node = loop_up_node
+
+        # Check we have a left curl brace for distinguishing the loop body of
+        # work
+        if type(self.process_token()) != LoopBodyLeftCurlNode:
+            assert False, "TODO(map) Raise no left curl brace exception"
+
+        body_node_list = []
+
+        # Process next node
+        processed_node = self.process_token()
+        if type(processed_node) == LoopBodyRightCurlNode:
+            assert False, "TODO(map) Raise empty loop body exception"
+        while type(processed_node) != LoopBodyRightCurlNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+                line_ast = self.build_print_ast(processed_node)
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+                line_ast = self.build_copy_str_line_ast(processed_node)
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+                line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+                line_ast = self.build_if_conditional_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+                assert False, "WRITE ME ELSE"
+            elif type(processed_node) == LoopUpKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
+            # We don't want to do anything on a NoOpNode because that means the
+            # comment is the only thing on the line.
+            elif type(processed_node) == NoOpNode:
+                line_ast = processed_node
+            else:
+                line_ast = self.build_non_keyword_line_ast(processed_node)
+                # TODO(map) Be aware of this warning.
+                # print("WARNING: There may be a problem in the loop body.")
+
+            if type(processed_node) != NoOpNode:
+                body_node_list.append(line_ast)
+
+            # Process the next node
+            processed_node = self.process_token()
+       
+        # Move past the closing right brace
+        self.process_token
+        
+        for node in body_node_list:
+            node.parent_node = loop_up_node
+        loop_up_node.loop_body = body_node_list
+
+        return loop_up_node
+
+    def build_loop_down_line_ast(self, loop_down_node):
+        self.if_else_list.append(loop_down_node)
+        # Get the left paren node
+        processed_node = self.process_token()
+
+        loop_down_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            loop_down_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        loop_down_arg_list.append(processed_node)
+
+        # TODO(map) This is not good but for now it'll raise the correct error
+        for node in loop_down_arg_list:
+            if type(node) == ArgSeparatorNode:
+                raise TooManyArgsException(loop_down_node.token.row, loop_down_node.token.col)
+
+        # Build the list of args
+        loop_down_args  = self.build_loop_up_down_args(loop_down_arg_list)
+
+        # TODO(map) Also not good but we can have the validation here for now
+        if len(loop_down_args) == 0:
+            raise KeywordMisuseException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", LOOP_DOWN_SIGNATURE)
+
+        loop_down_arg = loop_down_args[0]
+        loop_arg_is_var = type(loop_down_arg) == VariableReferenceNode
+        loop_arg_is_number = type(loop_down_arg) == NumberNode
+        loop_arg_is_num_var = type(loop_down_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_down_arg.value) in ["int8", "int16", "int32", "int64"]
+        if not loop_arg_is_var and not loop_arg_is_number:
+            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", type(loop_down_arg))
+        if not loop_arg_is_number and loop_arg_is_var and not loop_arg_is_num_var:
+            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", self.variable_to_type_map.get(loop_down_arg.value))
+
+        # Set the parent node and arg nodes appropriately.
+        loop_down_node.child_node = loop_down_arg
+        loop_down_arg.parent_node = loop_down_node
+
+        # Check we have a left curl brace for distinguishing the loop body of
+        # work
+        if type(self.process_token()) != LoopBodyLeftCurlNode:
+            assert False, "TODO(map) Raise no left curl brace exception"
+
+        body_node_list = []
+
+        # Process next node
+        processed_node = self.process_token()
+        if type(processed_node) == LoopBodyRightCurlNode:
+            assert False, "TODO(map) Raise empty loop body exception"
+        while type(processed_node) != LoopBodyRightCurlNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+                line_ast = self.build_print_ast(processed_node)
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+                line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+                self.build_if_conditional_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+                assert False, "WRITE ME ELSE"
+            else:
+                line_ast = self.build_non_keyword_line_ast(processed_node)
+                # TODO(map) Be aware of this warning.
+                # print("WARNING: There may be a problem in the loop body.")
+            body_node_list.append(line_ast)
+
+            # Process the next node
+            processed_node = self.process_token()
+       
+        # Move past the closing right brace
+        self.process_token
+        
+        for node in body_node_list:
+            node.parent_node = loop_down_node
+        loop_down_node.loop_body = body_node_list
+
+        return loop_down_node
+
+    def build_loop_from_line_ast(self, loop_from_node):
+        self.if_else_list.append(loop_from_node)
+        # Get the left paren node
+        processed_node = self.process_token()
+
+        loop_from_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            loop_from_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        loop_from_arg_list.append(processed_node)
+
+        # Build the list of args
+        loop_from_args = self.build_loop_args(loop_from_arg_list)
+
+        # TODO(map) Also not good but we can have the validation here for now
+        if len(loop_from_args) == 0:
+            raise KeywordMisuseException(loop_from_node.token.row, loop_from_node.token.col, "loopFrom", LOOP_FROM_SIGNATURE)
+
+        loop_from_arg = loop_from_args[0]
+        # Set the parent node and arg nodes appropriately.
+        loop_from_node.child_node = loop_from_arg
+        loop_from_arg.parent_node = loop_from_node
+
+        # Check we have a left curl brace for distinguishing the loop body of
+        # work
+        if type(self.process_token()) != LoopBodyLeftCurlNode:
+            assert False, "TODO(map) Raise no left curl brace exception"
+
+        body_node_list = []
+
+        # Process next node
+        processed_node = self.process_token()
+        if type(processed_node) == LoopBodyRightCurlNode:
+            assert False, "TODO(map) Raise empty loop body exception"
+        while type(processed_node) != LoopBodyRightCurlNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+                line_ast = self.build_print_ast(processed_node)
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+                line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+                self.build_if_conditional_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+                assert False, "WRITE ME ELSE"
+            else:
+                line_ast = self.build_non_keyword_line_ast(processed_node)
+                # TODO(map) Be aware of this warning.
+                # print("WARNING: There may be a problem in the loop body.")
+            body_node_list.append(line_ast)
+
+            # Process the next node
+            processed_node = self.process_token()
+       
+        # Move past the closing right brace
+        self.process_token
+        
+        for node in body_node_list:
+            node.parent_node = loop_from_node
+        loop_from_node.loop_body = body_node_list
+
+        return loop_from_node
+
+    def build_var_dec_line_ast(self, var_node):
+        # Set the flag for if the var is a const
+        var_is_const = (type(var_node) == VariableKeywordNode and var_node.value == "const")
+
+        # The node passed to us was the keyword "const" so we still need to get
+        # the type, unlike a variable that can be modified where the node that
+        # was passed is the type.
+        if var_is_const:
+            var_type_node = self.process_token()
+
+        # Get the variable name and the assignment
+        var_name_node = self.process_token()
+        assignment_node = self.process_token()
+
+        # Handle getting everything to the right of the equal sign
+        value_node_list = []
+        processed_node = self.process_token()
+        while type(processed_node) != EndOfLineNode:
+
+            if type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
+                char_at_node = self.build_char_at_line_ast(processed_node)
+                value_node_list.append(char_at_node)
+            else:
+                value_node_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # TODO(map) This may not always work
+        # Set the value_node to the first node.
+        value_node = value_node_list[0]
+
+        var_typing = var_type_node.value if var_is_const else var_node.value
+        if var_typing == "bool" and type(value_node) != BooleanNode:
+            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        elif var_typing == "string" and type(value_node) != StringNode:
+            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
+        elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
+            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        elif var_typing == "int64" and type(value_node) != NumberNode:
+            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        
+        type_to_max_val = {
+            "int8": 255,
+            "int16": 65536,
+            "int32": 4294967296,
+            "int64": 14294967296, # TODO(map) Get the right number
+            }
+        # TODO(map) Need to make a method to walk the right side and calculate
+        # the right side value to raise an error.
+        if var_is_const:
+            max_value = type_to_max_val.get(var_type_node.value)
         else:
-            return loop_contents
+            max_value = type_to_max_val.get(var_node.value)
+
+        if type(value_node) == NumberNode and max_value < int(value_node.value):
+            raise BufferOverflowException(var_name_node.token.row, var_name_node.token.col) 
+
+        # TODO(map) This may not always be the correct way of doing things
+        if len(value_node_list) > 1:
+            value_node = self.build_arithmetic_line_ast(value_node_list)
+
+        # Set up child/parent relationships
+        assignment_node.left_side = var_name_node
+        var_name_node.parent_node = assignment_node
+        assignment_node.right_side = value_node
+        value_node.parent_node = assignment_node
+
+        if var_is_const:
+            var_type_node.child_node = assignment_node
+            assignment_node.parent_node = var_type_node
+            var_node.child_node = var_type_node
+            var_type_node.parent_node = var_node
+        else:
+            var_node.child_node = assignment_node
+            assignment_node.parent_node = var_node
+
+        if var_is_const:
+            self.variable_to_type_map[var_type_node.child_node.left_side.value] = var_type_node.value
+        else:
+            self.variable_to_type_map[var_node.child_node.left_side.value] = var_node.value
+
+        return var_node
+
+    def build_if_conditional_line_ast(self, if_node):
+        self.if_else_list.append(if_node)
+        # Check we have a left paren for conditional.
+        if type(self.process_token()) != ConditionalLeftParenNode:
+            assert False, "TODO(map) Raise improper IF style exception"
+
+        # Set up list of nodes that will be used for the conditional
+        conditional_node_list = []
+        # Process the next token
+        processed_node = self.process_token()
+        if type(processed_node) == ConditionalRightParenNode:
+            assert False, "TODO(map) Raise empty if conditional exception"
+        while type(processed_node) != ConditionalRightParenNode:
+            conditional_node_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Build the node that is the actual comparison on the if statement
+        conditional_ast = self.build_conditional_line_ast(conditional_node_list)
+
+        # Check we have a left curl brace for distinguishing the conditional
+        # body of work if condition is met
+        if type(self.process_token()) != IfBodyLeftCurlNode:
+            assert False, "TODO(map) Raise no left curl brace exception"
+
+        body_node_list = []
+
+        # Process next node
+        processed_node = self.process_token()
+        if type(processed_node) == IfBodyRightCurlNode:
+            assert False, "TODO(map) Raise empty if body exception"
+        while type(processed_node) != IfBodyRightCurlNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+                line_ast = self.build_print_ast(processed_node)
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+                line_ast = self.build_update_char_line_ast(processed_node)
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+                line_ast = self.build_copy_str_line_ast(processed_node)
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+                line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+                line_ast = self.build_if_conditional_line_ast(processed_node)
+            else:
+                line_ast = self.build_non_keyword_line_ast(processed_node)
+                # TODO(map) Be aware of this warning.
+                # print("WARNING: There may be a problem in the if conditional.")
+            body_node_list.append(line_ast)
+
+            # Process the next node
+            processed_node = self.process_token()
+       
+        # Set up child/parent relationships
+        if_node.child_node = conditional_ast
+        conditional_ast.parent_node = if_node
+        for node in body_node_list:
+            node.parent_node = if_node
+        if_node.true_side = body_node_list
+
+        # We have an else paired with the if and need to add it on to the
+        # current if node.
+        if self.curr_token.value == "else":
+            # Process the else token itself
+            else_node = self.process_token()
+            self.build_else_conditional_line_ast(if_node, else_node)
+
+        return if_node
+
+    def build_else_conditional_line_ast(self, if_node, else_node):
+        self.if_else_list.append(else_node)
+        
+        # Check we have a left curl brace for distinguishing the else body of
+        # work.
+        if type(self.process_token()) != ElseBodyLeftCurlNode:
+            assert False, "TODO(map) Raise no left curl brace exception"
+
+        # Loop until we hit the first real node. This prevents a NoOpNode
+        # from being passed in case there are one or more comments before
+        # the first line of work in the else.
+        processed_node = self.process_token()
+        while type(processed_node) == NoOpNode:
+            processed_node = self.process_token()
+
+        body_node_list = []
+
+        while type(processed_node) != ElseBodyRightCurlNode:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+                line_ast = self.build_print_ast(processed_node)
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+                line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+                line_ast = self.build_update_char_line_ast(processed_node)
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+                line_ast = self.build_copy_str_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+                line_ast = self.build_if_conditional_line_ast(processed_node)
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+                assert False, "WRITE ME ELSE"
+            else:
+                line_ast = self.build_non_keyword_line_ast(processed_node)
+                # TODO(map) Be aware of this warning.
+                # print("WARNING: There may be a problem in the else conditional.")
+            body_node_list.append(line_ast)
+
+            # Process the next node
+            processed_node = self.process_token()
+       
+        # Move past the closing right brace
+        self.process_token
+
+        # Set up child/parent relationships
+        for node in body_node_list:
+            node.parent_node = if_node
+        if_node.false_side = body_node_list
+
+        return if_node
+
+    def build_conditional_line_ast(self, line_of_nodes):
+        # NOTE: Assumes there are only three nodes, the left side, comparator,
+        # and right side for now.
+        if len(line_of_nodes) == 3:
+            left_side = line_of_nodes[0]
+            comparator_node = line_of_nodes[1]
+            right_side = line_of_nodes[2]
+
+            # Set up child/parent relationships
+            comparator_node.left_side = left_side
+            left_side.parent_node = comparator_node
+            comparator_node.right_side = right_side
+            right_side.parent_node = comparator_node
+        else:
+            comparator_node = self.build_ast_from_node_list(line_of_nodes)
+
+        return comparator_node
+
+    def build_ast_from_node_list(self, line_of_nodes):
+        # NOTE(map) Assumes that everything in the line_of_nodes list is either
+        # an expression of some sort (ie comparator, arithmetic, etc) or a
+        # literal node (ie strings, numbers, etc). If this is not the case then
+        # the logic here falls apart. This is because the nodes in the check
+        # below have priorities set correctly so the AST can be built. This also
+        # assumes that any node either has no children (primitive node) or only
+        # has a left/right side.
+
+        # Check to make sure the nodes are the type expected. This is really
+        # bad to have to do because this is called for every list of nodes on
+        # a conditional. Should be removed at some point but the assert is nice
+        # to have as a safety check
+        for node in line_of_nodes:
+            assert type(node) in [NumberNode, StringNode, CharNode, BooleanNode, PlusMinusNode, MultiplyDivideNode, CompareNode, VariableReferenceNode, AssignmentNode, FunctionKeywordNode, LeftParenNode, RightParenNode, FunctionCallLeftParenNode, FunctionCallRightParenNode, ArgSeparatorNode], f"Type {type(node)} not allowed in AST build."
+
+        # Initialize ast and loop over the list of nodes that should be valid.
+        ast = None
+        current_working_node = None
+        paren_counter = 0
+        for node in line_of_nodes:
+            # If there is a left paren we add one to the counter so it can be
+            # added to the priority of the operation giving it greater or equal
+            # priority when needed.
+            if type(node) == LeftParenNode:
+                paren_counter += 1
+            # Subtract away one from the counter if there is a right parent as
+            # this means we respect the non-inflated priorities.
+            elif type(node) == RightParenNode:
+                paren_counter -= 1
+            # AST has not been set yet
+            elif not ast:
+                ast = node
+            else:
+                # Update the node's priority based on the paren counter
+                node.priority += paren_counter
+
+                # There is a node in the tree that is not complete yet.
+                if current_working_node:
+                    self.check_if_valid_operation(current_working_node.value, current_working_node.left_side, node)
+                    if type(node) in [NumberNode, CharNode, StringNode]:
+                        current_working_node.right_side = node
+                        node.parent_node = current_working_node
+                        current_working_node = None
+                    else:
+                        # Specifically want to error out if we are trying to
+                        # set the right side of a node to something other than
+                        # a primitive as the current working node should always
+                        # be able to handle a child.
+                        assert False, "Cannot process current working node."
+                # Plus or minus as current op and root of AST is lower or equal prio
+                elif type(node) == PlusMinusNode and ast.priority < node.priority:
+                    # AST is a primitive so we can just set the side appropriately
+                    if type(ast) in [NumberNode, VariableReferenceNode]:
+                        node.left_side = ast
+                        ast.parent_node = node
+                        ast = node
+                    # We need to shuffle some things around
+                    else:
+                        node.left_side = ast.right_side
+                        node.left_side.parent_node = node
+                        ast.right_side = node
+                        node.parent_node = ast
+                        current_working_node = node
+                # Plus or minus as current op and root of AST is higher or prio
+                elif type(node) == PlusMinusNode and ast.priority >= node.priority:
+                    # AST is a compare or assignment node and the right side is set so we have to shuffle nodes
+                    if type(ast) in [CompareNode, AssignmentNode]:
+                        node.left_side = ast.right_side
+                        node.left_side.parent_node = node
+                        ast.right_side = node
+                        node.parent_node = ast
+                        current_working_node = node
+                    # Regular case where the left side of the node is assigned the AST
+                    else:
+                        node.left_side = ast
+                        ast.parent_node = node
+                        ast = node
+                # Multiply or divide as current op and root of AST is lower or equal prio
+                elif type(node) == MultiplyDivideNode and ast.priority < node.priority:
+                    # AST is a primitive so we can just set the side appropriately
+                    if type(ast) == NumberNode:
+                        node.left_side = ast
+                        ast.parent_node = node
+                        ast = node
+                    # Otherwise we have to do some shuffling around
+                    else:
+                        node.left_side = ast.right_side
+                        node.left_side.parent_node = node
+                        ast.right_side = node
+                        node.parent_node = ast
+                        current_working_node = node
+                # Multiply or divide as current op and root of AST is higher prio
+                elif type(node) == MultiplyDivideNode and ast.priority >= node.priority:
+                    node.left_side = ast
+                    ast.parent_node = node
+                    ast = node
+                # Assignment as current op
+                elif type(node) == AssignmentNode:
+                    # Check that AST is a variable reference type
+                    if type(ast) != VariableReferenceNode:
+                        assert False, "Cannot assign to a non-variable node"
+                    node.left_side = ast
+                    ast.parent_node = node
+                    ast = node
+                # Compare is the current op and root of AST is lower prio
+                elif type(node) == CompareNode and ast.priority < node.priority:
+                    node.left_side = ast
+                    ast.parent_node = node
+                    ast = node
+                # Number or variable reference node used in assignment
+                elif type(node) in [NumberNode, VariableReferenceNode] and type(ast) == AssignmentNode:
+                    left_side_type = self.variable_to_type_map.get(ast.left_side.value)
+                    if type(node) == VariableReferenceNode:
+                        right_side_type = self.variable_to_type_map.get(ast.left_side.value)
+                    elif type(node) == NumberNode and int(node.value) < 255:
+                        right_side_type = "int8"
+                    else:
+                        assert False, "In assignment and failed to determine type matching."
+
+                    # The left and right sides match so we can just set the ASTs right side
+                    if left_side_type == right_side_type:
+                        ast.right_side = node
+                        node.parent_node = ast
+                    # Both the left and right side types are int but they don't match so we have to make sure they fit.
+                    elif left_side_type in ["int8", "int16", "int32", "int64"] and right_side_type in ["int8", "int16", "int32", "int64"]:
+                        if right_side_type == "int8":
+                            int_fits_in_var = True
+                        elif right_side_type == "int16" and left_side_type in ["int16", "int32", "int64"]:
+                            int_fits_in_var = True
+                        elif right_side_type == "int32" and left_side_type in ["int32", "int64"]:
+                            int_fits_in_var = True
+                        elif right_side_type == "int64" and left_side_type == "int64":
+                            int_fits_in_var = True
+                        if int_fits_in_var:
+                            ast.right_side = node
+                            node.parent_node = ast
+                    # The types cannot be paired.
+                    else: 
+                        raise InvalidAssignmentException(ast.left_side.token.row, ast.left_side.token.col, left_side_type, right_side_type)
+                # Variable reference node and root node is compare node
+                elif type(node) == VariableReferenceNode and type(ast) == CompareNode:
+                    ast.right_side = node
+                    node.parent_node = ast
+                # Number node and no left side side of the AST
+                elif type(node) == NumberNode and not ast.left_side:
+                    ast.left_side = node
+                    node.parent_node = ast
+                # Number node and no right side side of the AST
+                elif type(node) == NumberNode and not ast.right_side:
+                    ast.right_side = node
+                    node.parent_node = ast
+                # Char node and no left side side of the AST
+                elif type(node) == CharNode and not ast.left_side:
+                    ast.left_side = node
+                    node.parent_node = ast
+                # Char node and no right side side of the AST
+                elif type(node) == CharNode and not ast.right_side:
+                    ast.right_side = node
+                    node.parent_node = ast
+                # Boolean node and no left side side of the AST
+                elif type(node) == BooleanNode and not ast.left_side:
+                    ast.left_side = node
+                    node.parent_node = ast
+                # Boolean node and no right side side of the AST
+                elif type(node) == BooleanNode and not ast.right_side:
+                    ast.right_side = node
+                    node.parent_node = ast
+                # Function node and no left side side of the AST
+                elif type(node) == FunctionKeywordNode and not ast.left_side:
+                    ast.left_side = node
+                    node.parent_node = ast
+                # Function node and no right side side of the AST
+                elif type(node) == FunctionKeywordNode and not ast.right_side:
+                    ast.right_side = node
+                    node.parent_node = ast
+                else:
+                    assert False, f"Not sure how to build AST for {type(node)}"
+
+        return ast
+
+    def build_arithmetic_line_ast(self, line_of_nodes):
+        """
+        Process a line with an arithmatic unit of work.
+
+        This function is designed around processing any lines of code in the
+        language that only contains arithmetic and parenthesis (just PEMDAS ops)
+        and shouldn't be used to handle a line of code that contains anything
+        else.
+
+        This can be used as a subset of other line ast functions. If a line of
+        code were to read:
+        `print(3 + 4)`
+        this could be called with just the function's parameters as the
+        line_of_nodes being passed to the function and return as AST that would
+        represent the function args.
+        """
+        ast = None
+        curr_working_node = None
+        paren_counter = 0
+
+        for node in line_of_nodes: 
+            # If there is a left paren we add one to the counter so it can be
+            # added to the priority of the operation giving it greater or equal
+            # priority when needed.
+            if type(node) == LeftParenNode:
+                paren_counter += 1
+
+            # Subtract away one from the counter if there is a right parent as
+            # this means we respect the non-inflated priorities.
+            elif type(node) == RightParenNode:
+                paren_counter -= 1
+
+            # If there is a current working node we need to build off that as
+            # opposed to the root node of the AST.
+            elif curr_working_node:
+                curr_working_node.right_side = node
+                node.parent_node = curr_working_node
+                # Either the nodes is a basic node and cannot have sides set or
+                # the node's left and right sides are populated
+                if type(node) != NumberNode and not node.left_side and not node.right_side:
+                    curr_working_node = node
+                else:
+                    curr_working_node = None
+
+            # Not AST set yet and we can set the AST to a node that isn't NoOp
+            elif not ast and type(node) not in [LeftParenNode, RightParenNode]:
+                ast = node
+               
+            # The current node has a higher priority than the AST's priority
+            # and the current root of the AST is a NumberNode. Only the
+            # NumberNode has a priority of LOW
+            elif node.priority > ast.priority and ast.priority == LOW:
+                node.left_side = ast
+                ast.parent_node = node
+                ast = node
+                # Promote the priority of the AST root node for tracking and
+                # comparing later
+                ast.priority = ast.priority + paren_counter
+
+            # The current node has a higher priority than the AST's priority
+            # and the current root of the AST is some operation. We take the
+            # right side of the AST as the left side of the Node and set the
+            # right side of the AST to the Node
+            elif node.priority + paren_counter > ast.priority:
+                node.left_side =  ast.right_side
+                ast.right_side.parent_node = node
+                ast.right_side = node
+                node.parent_node = ast
+                # Promote the priority of the AST root node for tracking and
+                # comparing later
+                ast.priority = ast.priority + paren_counter
+                curr_working_node = node
+                
+            # The current node is lower priority than the root node of the AST
+            # and the right side of the AST is not currently set.
+            elif node.priority < ast.priority and not ast.right_side:
+                ast.right_side = node
+                node.parent_node = ast
+
+            # The current node is lower priority than the root node of the AST
+            # and the right side has already been set. We need to replace the
+            # right side with the current node and if an op, set the
+            # curr_working_node
+            elif node.priority < ast.priority and ast.right_side:
+                node.left_side = ast
+                ast.parent_node = node
+                ast = node
+                curr_working_node = node
+
+            # The priority of the current node and the AST root node are the
+            # same and we are not assigning a value so to preserve the tree we
+            # will add it to the left side and make a note of where this node
+            # lives so we can build off it if needed further on.
+            elif node.priority == ast.priority and type(ast) != AssignmentNode:
+                node.left_side = ast
+                ast.parent_node = node
+                ast = node
+                curr_working_node = node
+
+            # Opposite of case above where we are assigning a value to some
+            # other node (ie updating a var value)
+            elif node.priority == ast.priority and type(ast) == AssignmentNode:
+                node.right_side = ast
+                ast.parent_node = node
+                ast = node
+                curr_working_node = node
+
+        if type(ast) == AssignmentNode and type(ast.left_side) == VariableReferenceNode:
+            if ast.right_side.value.isalpha():
+                assignment_type = "char"
+            elif ast.right_side.value.isnumeric():
+                if int(ast.right_side.value) < 255:
+                    assignment_type = "int8"
+            else:
+                assert False, "Don't know how to handle assignment value"
+        
+            assignment_type_matches_var = self.variable_to_type_map.get(ast.left_side.value) == assignment_type
+            if not assignment_type_matches_var:
+                raise InvalidAssignmentException(ast.left_side.token.row, ast.left_side.token.col, self.variable_to_type_map.get(ast.left_side.value), assignment_type)
+
+        return ast
+
+    def build_function_args_ast(self, line_of_nodes):
+        """
+        Method for building a list of ASTs that are the function args.
+
+        This requires the outer parenthesis to operate.
+        TODO(map) Provide more context here
+        """
+        # Nothing was passed
+        if len(line_of_nodes) == 0:
+            return []
+        # Only two nodes were passed, check if they are parens meaning empty
+        # list
+        if len(line_of_nodes) == 2 and type(line_of_nodes[0]) == FunctionCallLeftParenNode and type(line_of_nodes[1]) == FunctionCallRightParenNode:
+            return []
+
+        root_node = None
+        args_list = []
+        for node in line_of_nodes: 
+            # Conditional to ensure that we reach a logical end of a function
+            # param we add it to the args list.
+            type_should_add = type(node) == ArgSeparatorNode or type(node) == FunctionCallRightParenNode
+            if root_node and type_should_add:
+                args_list.append(root_node)
+                root_node = None
+            else:
+                root_node = node
+
+        return args_list
+
+    def build_loop_up_down_args(self, line_of_nodes):
+        # Nothing was passed
+        if len(line_of_nodes) == 0:
+            return []
+        # Only two nodes were passed, check if they are parens meaning empty
+        # list
+        if len(line_of_nodes) == 2 and type(line_of_nodes[0]) == FunctionCallLeftParenNode and type(line_of_nodes[1]) == FunctionCallRightParenNode:
+            return []
+
+        # If the length of the line of nodes is not 3, we could have more or
+        # less than the requisite params for the loop. 3 is the current magic
+        # number as it includes a left/right paren pair and the single number
+        # to loop to
+        if len(line_of_nodes) != 3:
+            middle_idx = int(len(line_of_nodes) / 2)
+            raise InvalidArgsException(line_of_nodes[middle_idx].token.row, line_of_nodes[middle_idx].token.col, "loop", type(line_of_nodes[middle_idx]))
+
+        return [line_of_nodes[1]]
+
+    def build_loop_args(self, line_of_nodes):
+        # Nothing was passed
+        if len(line_of_nodes) == 0:
+            return []
+        # Only two nodes were passed, check if they are parens meaning empty
+        # list
+        if len(line_of_nodes) == 2 and type(line_of_nodes[0]) == FunctionCallLeftParenNode and type(line_of_nodes[1]) == FunctionCallRightParenNode:
+            return []
+
+        # If the length of the line of nodes list is not 5, we could have
+        # more or less than the requisite params for the loop. 5 is the
+        # current magic number as it includes a left/right paren pair, two
+        # numbers for the range, and the range node.
+        if len(line_of_nodes) != 5:
+            middle_idx = int(len(line_of_nodes) / 2)
+            raise InvalidArgsException(line_of_nodes[middle_idx].token.row, line_of_nodes[middle_idx].token.col, "loopFrom", type(line_of_nodes[middle_idx]))
+
+        range_node = line_of_nodes[2]
+        range_node.left_side = line_of_nodes[1]
+        line_of_nodes[1].parent_node = range_node 
+        range_node.right_side = line_of_nodes[3]
+        line_of_nodes[3].parent_node = range_node 
+
+        return [range_node]
 
     def check_if_valid_operation(self, op_type, left_node, right_node):
         # Checking for add operation being of the same type.
@@ -2531,7 +3310,6 @@ class Parser:
         # TODO(map) Implement the checks for all the other op types.
         else:
             pass
-
 
 
 ##########
