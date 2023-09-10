@@ -543,9 +543,10 @@ class Node:
 
         return priority_equal and token_equal
 
+    # TODO(map) Re-examine how this works. Need better rules around traversal
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode
         else:
             return False
 
@@ -3569,6 +3570,8 @@ class Compiler:
         self.loops = {}
         self.initialize_vars_asm = []
         self.user_func_asm = {}
+        self.function_and_args_map = {}
+        self.curr_function_name = None
 
     def compile(self):
         self.create_empty_out_file()
@@ -3605,6 +3608,8 @@ class Compiler:
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
             asm = self.get_assembly()
+            # Write any user defined functions in to the assembly file.
+            self.write_user_functions()
             # Write any raw strings that will be used that aren't assigned to a
             # variable in the code.
             for key in self.raw_strings:
@@ -3920,19 +3925,23 @@ class Compiler:
             # We need to walk through the function node and set it up as a label
             # that can be referenced and re-used over and over.
             node.visited = True
-            breakpoint()
             return [
-                    f"    {node.function_name.value}\n",
+                    f"section .text\n",
+                    f"    {node.function_name.value}:\n",
                     "        ;; Get return address\n",
                     "        pop rcx\n",
                     "        ;; Get pointer to the args\n",
                     "        pop rdx\n",
-                    f"        mov r8, [rdx + {(len(node.function_args) - 1) * 8}]\n",
                     ] + self.traverse_function_node(node)
         elif type(node) == FunctionReturnNode:
             node.visited = True
+            # TODO(map) Figure out how to know to push rax onto the stack
             return [
-                    "    push rcx ;; Push return address onto stack"
+                    "        ;; Reset the pointer to the clean part of the stack\n"
+                    "        mov rsp, r8\n",] + self.traverse_tree(node.return_body) + [
+                    "        ;; Push return address onto stack\n"
+                    "        push rcx\n",
+                    "        ret\n",
                     ]
         elif type(node) == FunctionReferenceNode:
             func_reference_asm = [
@@ -3948,6 +3957,17 @@ class Compiler:
                 "    ;; Call add function\n",
                 f"    call {node.value}\n",
             ]
+        elif type(node) == FunctionArgReferenceNode:
+            breakpoint()
+            node.visited = True
+            arg_loc = self.function_and_args_map[self.curr_function_name][node.value]
+            # TODO(map) Maybe do a dictionary here and calculate the offset?
+            if type(node.parent_node) == AssignmentNode:
+                return [] + self.traverse_tree(node.parent_node)
+            elif node.can_traverse_to_parent():
+                return self.get_push_fn_arg_reference_onto_stack_asm(arg_loc) + self.traverse_tree(node.parent_node)
+            else:
+                return self.get_push_fn_arg_reference_onto_stack_asm(arg_loc)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -3990,13 +4010,41 @@ class Compiler:
         return child_asm
 
     def traverse_function_node(self, node):
+        # TODO(map) Consider whether or not the language should prevent a user
+        # from passing more than some number of functions. This could be
+        # beneficial as it would make the ASM easier and potential limit the
+        # memory footprint but would also require people to use more complex
+        # data structures
+        assert len(node.function_args) < 4, "Function arg count greater than 4"
+
+        node.visited = True
+        function_body_asm = []
+
+        # Get the of args and pop those into the registers. This will assume
+        # for now that the number of args is less than some magical number
+        # because it's easier to initially implement but the assertion should
+        # go away eventually so you can pass any number of args.
+        function_body_asm.extend(["        ;; Get the pointer to the clean stack\n"])
+        function_body_asm.extend([f"        mov r8, [rdx + {8 * len(node.function_args)}]\n"])
+        reg_num = 9  # Start with r9 for loading args into registers
+        arg_to_reg_map = {}
+        for idx, arg in enumerate(node.function_args):
+            arg_to_reg_map[arg.fn_arg_name.value] = f"r{reg_num}"
+            function_body_asm.extend([f"        ;; Get a function argument\n",
+                                 f"        mov r{reg_num}, [rdx + {8 * idx}]\n"])
+            reg_num += 1
+
+        self.function_and_args_map[node.function_name.value] = arg_to_reg_map
+        self.curr_function_name = node.function_name.value
+
         # TODO(map) This doesn't handle if other data is pushed on the stack
         # before the function args are referenced. If there are a lot of args
         # there's no way to hold them all in the register. Need a way to track
         # the location of the args.
-        function_body_asm = []
+        breakpoint()
         for body_line in node.function_body:
             function_body_asm += self.traverse_tree(body_line)
+
         return function_body_asm
 
     def process_op_node(self, node):
@@ -4084,6 +4132,12 @@ class Compiler:
                 pass
         # assert False, "Not implemented"
 
+    def write_user_functions(self):
+        with open(self.output_path, 'a') as compiled_program:
+            for asm in self.user_func_asm.values():
+                for line in asm:
+                    compiled_program.write(line)
+            
     def create_keyword_functions(self):
         self.create_constant_values()
         self.create_error_string_constants()
@@ -4572,6 +4626,12 @@ class Compiler:
         return [
             "    ;; Push number onto stack\n",
             f"    push {num}\n"
+            ]
+
+    def get_push_fn_arg_reference_onto_stack_asm(self, arg_loc):
+        return [
+            "    ;; Push number onto stack\n",
+            f"    push {arg_loc}\n"
             ]
 
     def get_push_var_onto_stack_asm(self, node_value, val, is_const, need_str_len):
