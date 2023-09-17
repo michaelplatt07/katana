@@ -1474,6 +1474,7 @@ class TestCompilerFunctions:
             compiler = get_compiler_class(f.readlines())
             assembly = compiler.get_assembly()
 
+            # TODO(map) The formatting on this function could be nicer
             assert compiler.user_func_asm["add"] == [
                 "section .text\n",
                 "    add:\n",
@@ -1489,31 +1490,48 @@ class TestCompilerFunctions:
                 "        mov r10, [rdx + 8]\n",
                 "        ;; Push return for this method onto the stack to save a reference\n",
                 "        push rcx\n",
-                "        ;; Push the values of the args onto the stack to check for overflow\n",
-                "        push r9\n",
-                "        push r10\n",
-                "        call check_int_64_overflow\n",
-                "        ;; Get the return pointer back from the stack now that the check is complete\n",
+                "    ;; Push number onto stack\n",
+                "    push r9\n",
+                "    ;; Push number onto stack\n",
+                "    push r10\n",
+                "    ;; Get the two values to add\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Push copy of values to be preserved after overflow check\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    ;; Push copy of values to be consumed in overflow check\n",
+                "    push rax\n",
+                "    push rbx\n",
+                "    call check_int_64_overflow\n",
+                "    ;; Get the values back off the stack\n",
+                "    pop rax\n",
+                "    pop rbx\n",
+                "    ;; Add\n",
+                "    add rax, rbx\n",
+                "    push rax\n",
+                "        ;; Get return value before pointer reset\n",
+                "        pop rax\n",
+                "        ;; Get return address before pointer reset\n",
                 "        pop rcx\n",
                 "        ;; Reset the pointer to the clean part of the stack\n",
                 "        mov rsp, r8\n",
-                "        ;; Add\n",
-                "        add r9, r10\n",
-                "        push r9\n",
+                "        ;; Push return value onto stack\n",
+                "        push rax\n",
                 "        ;; Push return address onto stack\n",
                 "        push rcx\n",
-                "        ret\n"
+                "        ret\n",
             ]
 
-            # assert assembly == [
-            #     "    ;; Push pointer to current stack position onto stack\n",
-            #     "    push rsp\n",
-            #     "    ;; Push arg 1\n",
-            #     "    push 3\n",
-            #     "    ;; Push arg 2\n",
-            #     "    push 4\n",
-            #     "    ;; Push pointer to the start of the args\n",
-            #     "    push rsp\n",
-            #     "    ;; Call add function\n",
-            #     "    call add\n"
-            # ]
+            assert assembly == [
+                "    ;; Push pointer to current stack position onto stack\n",
+                "    push rsp\n",
+                "    ;; Push arg 1\n",
+                "    push 3\n",
+                "    ;; Push arg 2\n",
+                "    push 4\n",
+                "    ;; Push pointer to the start of the args\n",
+                "    push rsp\n",
+                "    ;; Call add function\n",
+                "    call add\n"
+            ]

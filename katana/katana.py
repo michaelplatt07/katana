@@ -3579,8 +3579,6 @@ class Compiler:
         self.create_global_start()
         # Set up the keyword built in functions
         self.create_keyword_functions()
-        # Set up user defined functions
-        self.create_user_functions()
         # Write the program
         self.write_assembly()
         self.create_assembly_for_exit()
@@ -3935,11 +3933,20 @@ class Compiler:
                     ] + self.traverse_function_node(node)
         elif type(node) == FunctionReturnNode:
             node.visited = True
-            # TODO(map) Figure out how to know to push rax onto the stack
+            return_body_asm = self.traverse_tree(node.return_body)
             return [
-                    "        ;; Reset the pointer to the clean part of the stack\n"
-                    "        mov rsp, r8\n",] + self.traverse_tree(node.return_body) + [
-                    "        ;; Push return address onto stack\n"
+                    "        ;; Push return for this method onto the stack to save a reference\n",
+                    "        push rcx\n",
+                    ] + return_body_asm + [
+                    "        ;; Get return value before pointer reset\n",
+                    "        pop rax\n",
+                    "        ;; Get return address before pointer reset\n",
+                    "        pop rcx\n",
+                    "        ;; Reset the pointer to the clean part of the stack\n",
+                    "        mov rsp, r8\n",
+                    "        ;; Push return value onto stack\n",
+                    "        push rax\n",
+                    "        ;; Push return address onto stack\n",
                     "        push rcx\n",
                     "        ret\n",
                     ]
@@ -3958,10 +3965,8 @@ class Compiler:
                 f"    call {node.value}\n",
             ]
         elif type(node) == FunctionArgReferenceNode:
-            breakpoint()
             node.visited = True
             arg_loc = self.function_and_args_map[self.curr_function_name][node.value]
-            # TODO(map) Maybe do a dictionary here and calculate the offset?
             if type(node.parent_node) == AssignmentNode:
                 return [] + self.traverse_tree(node.parent_node)
             elif node.can_traverse_to_parent():
@@ -4041,7 +4046,6 @@ class Compiler:
         # before the function args are referenced. If there are a lot of args
         # there's no way to hold them all in the register. Need a way to track
         # the location of the args.
-        breakpoint()
         for body_line in node.function_body:
             function_body_asm += self.traverse_tree(body_line)
 
@@ -4118,19 +4122,6 @@ class Compiler:
             return []
         else:
             assert False, f"Unrecognized root node value {node.value}"
-
-    def create_user_functions(self):
-        user_function_assembly = []
-        for node in self.node_list:
-            # If we get a function node we need to declare it outside of the
-            # main program assembly so we can reference it many times
-            if type(node) == FunctionNode:
-                self.traverse_tree(node)
-            else:
-                # This is not a function node so we don't need to process it as
-                # such.
-                pass
-        # assert False, "Not implemented"
 
     def write_user_functions(self):
         with open(self.output_path, 'a') as compiled_program:
@@ -4716,9 +4707,10 @@ class Compiler:
         asm = ["    ;; Get the two values to add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
-                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    ;; Push copy of values to be preserved after overflow check\n",
                 "    push rax\n",
                 "    push rbx\n",
+                "    ;; Push copy of values to be consumed in overflow check\n",
                 "    push rax\n",
                 "    push rbx\n",
         ]
@@ -4731,9 +4723,10 @@ class Compiler:
         elif int_type == "int64" or not int_type:
             asm.append("    call check_int_64_overflow\n")
         return asm + [
-                "    ;; Add\n",
+                "    ;; Get the values back off the stack\n",
                 "    pop rax\n",
                 "    pop rbx\n",
+                "    ;; Add\n",
                 "    add rax, rbx\n",
                 "    push rax\n"]
 
