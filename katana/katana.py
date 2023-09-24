@@ -836,7 +836,7 @@ class FunctionReferenceNode(Node):
     Class for holding a call to a function
     """
     def __init__(self, token, value, function_args=[], parent_node=None):
-        super().__init__(token, parent_node)
+        super().__init__(token, LOW, parent_node)
         self.value = value
         self.function_args = function_args
 
@@ -1966,6 +1966,7 @@ class Parser:
         self.left_paren_func_call_set = False
         self.in_function_body = False
         self.current_if_node = None
+        self.fn_name_ret_type_map = {}
 
     def get_nodes(self):
         ret_nodes = []
@@ -2222,6 +2223,7 @@ class Parser:
         for node in fn_body_list:
             node.parent_node = fn_node
 
+        self.fn_name_ret_type_map[fn_node.function_name.value] = fn_node.function_return_type.value
         return fn_node
 
     def process_macro_token(self, macro_token):
@@ -2958,6 +2960,9 @@ class Parser:
             if type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
                 char_at_node = self.build_char_at_line_ast(processed_node)
                 value_node_list.append(char_at_node)
+            elif type(processed_node) == FunctionReferenceNode:
+                fn_return_node = self.build_func_reference(processed_node)
+                value_node_list.append(fn_return_node)
             else:
                 value_node_list.append(processed_node)
             processed_node = self.process_token()
@@ -2966,16 +2971,21 @@ class Parser:
         # Set the value_node to the first node.
         value_node = value_node_list[0]
 
+        assigning_fn_return_value = type(value_node) == FunctionReferenceNode
         var_typing = var_type_node.value if var_is_const else var_node.value
-        if var_typing == "bool" and type(value_node) != BooleanNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        elif var_typing == "string" and type(value_node) != StringNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
-        elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        elif var_typing == "int64" and type(value_node) != NumberNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        if assigning_fn_return_value :
+            if var_typing != self.fn_name_ret_type_map[value_node.value]:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        else:
+            if var_typing == "bool" and type(value_node) != BooleanNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            elif var_typing == "string" and type(value_node) != StringNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
+            elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            elif var_typing == "int64" and type(value_node) != NumberNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
         
         type_to_max_val = {
             "int8": 255,
@@ -3795,6 +3805,16 @@ class Compiler:
                 var_val = value_node.value
                 self.initialize_vars_asm.extend(self.traverse_tree(value_node))
                 self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
+            elif type(value_node) == FunctionReferenceNode:
+                # TODO(map) Need to update the appropriate count based on the type of the function return
+                self.num_count += 1
+                var_name = f"number_{self.num_count}"
+                var_type = "num"
+                var_val = value_node.value
+                type_count = self.num_count
+                self.initialize_vars_asm.extend(self.traverse_tree(value_node))
+                # TODO(map) Again, this only works for ints right now
+                self.initialize_vars_asm.extend(self.get_assign_new_int_to_var_from_expression(var_name, "int64"))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
@@ -3802,6 +3822,7 @@ class Compiler:
                 asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
             else:
                 asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
+            # TODO(map) The `var_len` may not be correct here.
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
@@ -5092,6 +5113,14 @@ class Compiler:
             var_decl = [
                 f"    char_{type_count} db -1\n",
             ]
+        elif node_type == FunctionReferenceNode:
+            # TODO(map) This only works for int64 right now
+            if var_type == "int64":
+                var_decl = [
+                        f"    number_{type_count} dq -1\n",
+                    ]
+            else:
+                assert False, f"TODO(map) Implement the type {var_type}"
         elif node_type == StringNode:
             var_decl = [
                 f"    string_{type_count} dq 0\n",
