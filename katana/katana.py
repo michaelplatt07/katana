@@ -8,7 +8,7 @@ import sys
 # GLOBALS
 #########
 verbose_flag = False
-raise_assertion_flag = True
+raise_assertion_flag = False
 
 ###########
 # Constants
@@ -543,9 +543,10 @@ class Node:
 
         return priority_equal and token_equal
 
+    # TODO(map) Re-examine how this works. Need better rules around traversal
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode
         else:
             return False
 
@@ -765,72 +766,77 @@ class FunctionDecLeftParenNode(Node):
         return self.token == other.token
 
 
+class FunctionDecRightParenNode(Node):
+    """
+    Simple node for right parens as they are used in function declaration.
+    """
+    def __init__(self, token):
+        super().__init__(token, LOW)
+        self.token = token
+
+    def __eq__(self, other):
+        return self.token == other.token
+
+
 class FunctionNode(Node):
     """
     Node for all things function based. Key difference between this and keyword
     node is that the function node has a list of args but a keyword only has
     a single childe node.
     """
-    def __init__(self, token, value, arg_nodes=[], parent_node=None):
+    def __init__(self, token, value, function_name=None, function_args=[], function_return_type=None, function_body=None, parent_node=None):
         super().__init__(token, ULTRA_HIGH, parent_node)
         self.value = value
-        self.arg_nodes = arg_nodes
-        for node in arg_nodes:
+        self.function_name = function_name
+        self.function_return_type = function_return_type
+        self.function_body = function_body
+        self.function_args = function_args
+        for node in function_args:
             node.parent_node = self
 
     def __eq__(self, other):
-        args_equal = self.arg_nodes == other.arg_nodes
+        # TODO(map) Make this equal better
+        args_equal = self.function_args == other.function_args
         return args_equal and type(self) == type(other) and super().__eq__(other)
 
     def __repr__(self):
         arg_nodes = "["
-        if self.arg_nodes:
-            for node in self.arg_nodes:
+        if self.function_args:
+            for node in self.function_args:
                 arg_nodes += node.__repr__() + ","
         arg_nodes += "]"
-        return f"({self.value}{arg_nodes})"
+        body_nodes = "["
+        if self.function_body:
+            for node in self.function_body:
+                body_nodes += node.__repr__() + ","
+        body_nodes += "]"
+
+        return f"({self.value}, {self.function_name}, {self.function_return_type}, {arg_nodes}, {body_nodes})"
 
 
-class FunctionKeywordNode(FunctionNode):
+class FunctionKeywordNode(Node):
     """
     More specialized node for Function keywords vs other types of keywords.
     """
-    def __init__(self, token, value, arg_nodes=None, parent_node=None):
-        super().__init__(token, value, arg_nodes, parent_node)
+    def __init__(self, token, value, parent_node=None, arg_nodes=None):
+        super().__init__(token, HIGH, parent_node)
+        self.value = value
+        if arg_nodes:
+            self.arg_nodes = arg_nodes
 
     def __eq__(self, other):
         return type(self) == type(other) and super().__eq__(other)
 
-
-class FunctionDeclarationNode(Node):
-    """
-    Class for holding a full function declaration.
-    """
-    def __init__(self, token, value, function_name, function_args, function_return_type, function_body=None, parent_node=None):
-        super().__init__(token, value, parent_node)
-        self.value = value
-        self.function_name = function_name
-        self.function_args = function_args
-        self.function_return_type = function_return_type
-        self.function_body = function_body
-
-    def __eq__(self, other):
-        # TODO(map) Fix the equal comparator here to check everything.
-        function_names_equal = self.function_name == other.function_name
-        function_args_equal = self.function_args == other.function_args
-        function_ret_types_equal = self.function_return_type == other.function_return_type
-        return type(self) == type(other) and super().__eq__(other) and function_names_equal and function_args_equal and function_ret_types_equal
-
     def __repr__(self):
-        return f"({self.value}, {self.function_name} {self.function_args}, {self.function_return_type}, {self.function_body})"
+        return f"({self.value}, {self.arg_nodes})"
 
 
 class FunctionReferenceNode(Node):
     """
     Class for holding a call to a function
     """
-    def __init__(self, token, value, function_args, parent_node=None):
-        super().__init__(token, parent_node)
+    def __init__(self, token, value, function_args=[], parent_node=None):
+        super().__init__(token, LOW, parent_node)
         self.value = value
         self.function_args = function_args
 
@@ -877,6 +883,54 @@ class FunctionArgNode(Node):
 
     def __repr__(self):
         return f"{self.value}"
+
+
+class FunctionArgSeparatorNode(Node):
+    """
+    Node for holding the separator of function arguments
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        return (types_equal and values_equal)
+
+    def __repr__(self):
+        return f"{self.value}"
+
+
+class FunctionArgTypeNode(Node):
+    """
+    Node for holding the type definition of a function argument
+    """
+    def __init__(self, token, value, fn_arg_name=None, parent_node=None):
+        super().__init__(token, LOW, parent_node)
+        self.value = value
+        self.fn_arg_name = fn_arg_name
+        self.parent_node = parent_node
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        values_equal = self.value == other.value
+        fn_arg_names_equal = self.fn_arg_name == other.fn_arg_name
+        if not types_equal and raise_assertion_flag:
+            assert False, f"Type {type(self)} != {type(other)}"
+        if not values_equal and raise_assertion_flag:
+            assert False, f"Value {self.value} != {other.value}"
+        if not fn_arg_names_equal and raise_assertion_flag:
+            assert False, f"Value {self.fn_arg_name} != {other.fn_arg_name}"
+        return (types_equal and values_equal and fn_arg_names_equal)
+
+    def __repr__(self):
+        return f"({self.value}({self.fn_arg_name}))"
 
 
 class FunctionArgReferenceNode(Node):
@@ -927,7 +981,7 @@ class FunctionReturnNode(Node):
     """
     Node for holding the return statement of a function
     """
-    def __init__(self, token, value, return_body, parent_node=None):
+    def __init__(self, token, value, return_body=None, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.return_body = return_body
@@ -1912,6 +1966,7 @@ class Parser:
         self.left_paren_func_call_set = False
         self.in_function_body = False
         self.current_if_node = None
+        self.fn_name_ret_type_map = {}
 
     def get_nodes(self):
         ret_nodes = []
@@ -1939,6 +1994,7 @@ class Parser:
                     self.node_list.append(self.process_main_token(self.curr_token))
                 elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE and self.curr_token.value == "fn":
                     self.node_list.append(self.process_fn_token(self.curr_token))
+                    should_skip_advance = True
                 elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE and self.curr_token.value == "MACRO":
                     self.node_list.append(self.process_macro_token(self.curr_token))
                     should_skip_advance = True
@@ -2063,6 +2119,7 @@ class Parser:
         # Create the fn node with no children. They will be added later in
         # this method.
         fn_node = self.process_token()
+        self.if_else_list.append(fn_node)
 
         # Make sure the next node is the name of the function.
         fn_name_node = self.process_token()
@@ -2079,7 +2136,95 @@ class Parser:
         if not isinstance(processed_node, FunctionDecLeftParenNode):
             raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
 
-        assert False, "process_fn_token is not implemented."
+        # Check for any parameters that are being declared on the function.
+        func_arg_params = []
+        processed_node = self.process_token()
+        name_node = None
+        type_node = None
+        if not isinstance(processed_node, FunctionDecRightParenNode):
+            # There are parameters and they need to be parsed
+            while not isinstance(processed_node, FunctionDecRightParenNode):
+                if isinstance(processed_node, FunctionArgNode):
+                    name_node = processed_node
+                elif isinstance(processed_node, FunctionArgTypeNode):
+                    type_node = processed_node
+                    name_node.parent_node = type_node
+                    type_node.fn_arg_name = name_node
+                    self.variable_to_type_map[name_node.value] = type_node.value
+                elif isinstance(processed_node, FunctionArgSeparatorNode):
+                    func_arg_params.append(type_node)
+                    name_node = None
+                    type_node = None
+                else:
+                    assert False, "Unsure how to handle node in func args"
+                processed_node = self.process_token()
+        
+        # TODO(map) This is not great but it's one way to ensure we add the
+        # final node if it isn't already added
+        if len(func_arg_params) > 0 and func_arg_params[-1] != type_node:
+            func_arg_params.append(type_node)
+
+        # Check for the right closing parenthesis on the method param
+        # declaration. No need to process a token though as the loop above has
+        # already processed the node right after the last param.
+        if not  isinstance(processed_node, FunctionDecRightParenNode):
+            raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
+
+        # Next check for a function args separator node
+        processed_node = self.process_token()
+        if not isinstance(processed_node, FunctionDecSeparatorNode):
+            raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
+
+
+        # Get the return type node from the function declaration
+        return_type_node = self.process_token()
+        if not isinstance(return_type_node, FunctionReturnTypeNode):
+            assert False, "TODO(map) Raise the appropriate exception"
+
+        # Get the left curl brace to start the function body definition
+        processed_node = self.process_token()
+        if not isinstance(processed_node, FunctionBodyLeftCurlNode):
+            assert False, "TODO(map) Raise the appropriate exception"
+
+        # Flag for determining if we are at end of the loop
+        end_of_function = False
+
+        # Process the first node as there should always be a line of work in a
+        # method regardless
+        processed_node = self.process_token()
+        fn_body_list = []
+        while not end_of_function:
+            line_ast = self.build_line_ast(processed_node)
+            fn_body_list.append(line_ast)
+
+            # Process the next token after the EOL
+            processed_node = self.process_token()
+            # Determine if we have reached the end of the main func body
+            if type(processed_node) == FunctionBodyRightCurlNode:
+                end_of_function = True
+
+        # Build up the complete function node now that we have all the different
+        # components needed.
+        # Set the function name node
+        fn_node.function_name = fn_name_node
+        fn_name_node.parent_node = fn_node
+
+        # Set the function arg nodes
+        fn_node.function_args = func_arg_params
+        for node in func_arg_params:
+            node.parent_node = fn_node
+
+        # Set the function return type node
+        fn_node.function_return_type = return_type_node
+        return_type_node.parent_node = fn_node
+
+        # Set the function body nodes
+        fn_node.function_body = fn_body_list
+        for node in fn_body_list:
+            node.parent_node = fn_node
+
+        self.fn_name_ret_type_map[fn_node.function_name.value] = fn_node.function_return_type.value
+        return fn_node
 
     def process_macro_token(self, macro_token):
         """Signature is `MACRO macro_name { BODY };`"""
@@ -2154,6 +2299,10 @@ class Parser:
             line_ast = self.build_loop_down_line_ast(processed_node)
         elif type(processed_node) == LoopFromKeywordNode:
             line_ast = self.build_loop_from_line_ast(processed_node)
+        elif type(processed_node) == FunctionReturnNode:
+            line_ast = self.build_return_statement(processed_node)
+        elif type(processed_node) == FunctionReferenceNode:
+            line_ast = self.build_func_reference(processed_node)
         else:
             line_ast = self.build_non_keyword_line_ast(processed_node)
             # TODO(map) Be aware of this warning.
@@ -2169,10 +2318,17 @@ class Parser:
         elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE:
             node = FunctionNode(self.curr_token, self.curr_token.value, [])
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
-            # Currently working on a function
+            # Currently working on keyword
             if self.get_prev_token().ttype == KEYWORD_TOKEN_TYPE and self.get_prev_token().value not in ["if", "else"]:
                 node = FunctionCallLeftParenNode(self.curr_token)
                 self.left_paren_func_call_set = True
+            # Working on a function call
+            elif self.get_prev_token().ttype == FUNCTION_REFERENCE_TOKEN_TYPE:
+                node = FunctionCallLeftParenNode(self.curr_token)
+                self.left_paren_func_call_set = True
+            # Working on a function declaration
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == FunctionNode:
+                node = FunctionDecLeftParenNode(self.curr_token)
             # Currently in an "if" block of logic.
             elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
                 node = ConditionalLeftParenNode(self.curr_token)
@@ -2185,6 +2341,10 @@ class Parser:
             if self.left_paren_func_call_set:
                 node = FunctionCallRightParenNode(self.curr_token)
                 self.left_paren_func_call_set = False
+            # Working on a function declaration
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == FunctionNode:
+                node = FunctionDecRightParenNode(self.curr_token)
+                self.if_else_list.pop()
             # Currently in an "if" block of logic.
             elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
                 node = ConditionalRightParenNode(self.curr_token)
@@ -2271,6 +2431,20 @@ class Parser:
             node = ArgSeparatorNode(self.curr_token)
         elif self.curr_token.ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
             node = FunctionDecSeparatorNode(self.curr_token)
+        elif self.curr_token.ttype == FUNCTION_ARG_TOKEN_TYPE:
+            node = FunctionArgNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_TYPE_TOKEN_TYPE:
+            node = FunctionArgTypeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE:
+            node = FunctionArgSeparatorNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_RETURN_TOKEN_TYPE:
+            node = FunctionReturnTypeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_RETURN_KEYWORD_TOKEN_TYPE:
+            node = FunctionReturnNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_REFERENCE_TOKEN_TYPE:
+            node = FunctionArgReferenceNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_REFERENCE_TOKEN_TYPE:
+            node = FunctionReferenceNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == EOL_TOKEN_TYPE:
             node = EndOfLineNode(self.curr_token)
         else:
@@ -2710,6 +2884,60 @@ class Parser:
 
         return loop_from_node
 
+    def build_return_statement(self, return_node):
+        
+        # Start by getting first node of the return statement
+        processed_node = self.process_token()
+
+        # TODO(map) https://trello.com/c/4RqOmPGH/36-explore-ability-to-return-something-other-than-literals-or-expressions-in-functions
+        # Call the build_line_ast method since a return statement does not have
+        # the ability to return anything else.
+        ret_statement = self.build_non_keyword_line_ast(processed_node)
+
+        return_node.return_body = ret_statement
+        ret_statement.parent_node = return_node
+        return return_node
+
+    def build_func_reference(self, func_reference_node):
+        # Get the left paren node
+        processed_node = self.process_token()
+        if type(processed_node) != FunctionCallLeftParenNode:
+            assert False, "TODO(map) Raise correct func reference exception"
+
+        func_ref_arg_list = []
+        while type(processed_node) != FunctionCallRightParenNode:
+            func_ref_arg_list.append(processed_node)
+            processed_node = self.process_token()
+
+        # Add the closing function call right paren node
+        func_ref_arg_list.append(processed_node)
+
+        line_of_lines = []
+        line_of_nodes = []
+        for node in func_ref_arg_list:
+            if type(node) in [ArgSeparatorNode, FunctionCallRightParenNode]:
+                line_of_lines.append(line_of_nodes)
+                line_of_nodes = []
+            elif type(node) == FunctionCallLeftParenNode:
+                pass
+            else:
+                line_of_nodes.append(node)
+
+        func_ref_args = []
+        for line_of_nodes in line_of_lines:
+            node = self.build_ast_from_node_list(line_of_nodes)
+            if node:
+                func_ref_args.append(node)
+
+        # TODO(map) Cover type checking of the args passed vs expected types
+
+        # Set the parent node and arg nodes appropriately.
+        for node in func_ref_args:
+            node.parent_node = func_reference_node
+        func_reference_node.function_args = func_ref_args
+              
+        return func_reference_node
+
     def build_var_dec_line_ast(self, var_node):
         # Set the flag for if the var is a const
         var_is_const = (type(var_node) == VariableKeywordNode and var_node.value == "const")
@@ -2732,6 +2960,9 @@ class Parser:
             if type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
                 char_at_node = self.build_char_at_line_ast(processed_node)
                 value_node_list.append(char_at_node)
+            elif type(processed_node) == FunctionReferenceNode:
+                fn_return_node = self.build_func_reference(processed_node)
+                value_node_list.append(fn_return_node)
             else:
                 value_node_list.append(processed_node)
             processed_node = self.process_token()
@@ -2740,16 +2971,21 @@ class Parser:
         # Set the value_node to the first node.
         value_node = value_node_list[0]
 
+        assigning_fn_return_value = type(value_node) == FunctionReferenceNode
         var_typing = var_type_node.value if var_is_const else var_node.value
-        if var_typing == "bool" and type(value_node) != BooleanNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        elif var_typing == "string" and type(value_node) != StringNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
-        elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-        elif var_typing == "int64" and type(value_node) != NumberNode:
-            raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        if assigning_fn_return_value :
+            if var_typing != self.fn_name_ret_type_map[value_node.value]:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+        else:
+            if var_typing == "bool" and type(value_node) != BooleanNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            elif var_typing == "string" and type(value_node) != StringNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
+            elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
+            elif var_typing == "int64" and type(value_node) != NumberNode:
+                raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
         
         type_to_max_val = {
             "int8": 255,
@@ -2940,7 +3176,7 @@ class Parser:
         # a conditional. Should be removed at some point but the assert is nice
         # to have as a safety check
         for node in line_of_nodes:
-            assert type(node) in [NumberNode, StringNode, CharNode, BooleanNode, PlusMinusNode, MultiplyDivideNode, CompareNode, VariableReferenceNode, AssignmentNode, FunctionKeywordNode, LeftParenNode, RightParenNode, FunctionCallLeftParenNode, FunctionCallRightParenNode, ArgSeparatorNode], f"Type {type(node)} not allowed in AST build."
+            assert type(node) in [NumberNode, StringNode, CharNode, BooleanNode, PlusMinusNode, MultiplyDivideNode, CompareNode, VariableReferenceNode, FunctionArgReferenceNode, AssignmentNode, FunctionKeywordNode, LeftParenNode, RightParenNode, FunctionCallLeftParenNode, FunctionCallRightParenNode, ArgSeparatorNode], f"Type {type(node)} not allowed in AST build."
 
         # Initialize ast and loop over the list of nodes that should be valid.
         ast = None
@@ -2979,7 +3215,7 @@ class Parser:
                 # Plus or minus as current op and root of AST is lower or equal prio
                 elif type(node) == PlusMinusNode and ast.priority < node.priority:
                     # AST is a primitive so we can just set the side appropriately
-                    if type(ast) in [NumberNode, VariableReferenceNode]:
+                    if type(ast) in [NumberNode, VariableReferenceNode, FunctionArgReferenceNode]:
                         node.left_side = ast
                         ast.parent_node = node
                         ast = node
@@ -3100,6 +3336,14 @@ class Parser:
                     node.parent_node = ast
                 # Function node and no right side side of the AST
                 elif type(node) == FunctionKeywordNode and not ast.right_side:
+                    ast.right_side = node
+                    node.parent_node = ast
+                # Function arg reference node and no left side side of the AST
+                elif type(node) == FunctionArgReferenceNode and not ast.left_side:
+                    ast.left_side = node
+                    node.parent_node = ast
+                # Function arg reference node and no right side side of the AST
+                elif type(node) == FunctionArgReferenceNode and not ast.right_side:
                     ast.right_side = node
                     node.parent_node = ast
                 else:
@@ -3335,6 +3579,9 @@ class Compiler:
         self.conditionals = {}
         self.loops = {}
         self.initialize_vars_asm = []
+        self.user_func_asm = {}
+        self.function_and_args_map = {}
+        self.curr_function_name = None
 
     def compile(self):
         self.create_empty_out_file()
@@ -3360,6 +3607,8 @@ class Compiler:
             if type(single_node) == StartNode:
                 for node in single_node.children_nodes:
                     asm.extend(self.traverse_tree(node))
+            elif type(single_node) == FunctionNode:
+                self.user_func_asm[single_node.function_name.value] = self.traverse_tree(single_node)
             else:
                 asm.extend(self.traverse_tree(single_node))
         return asm
@@ -3367,6 +3616,8 @@ class Compiler:
     def write_assembly(self):
         with open(self.output_path, 'a') as compiled_program:
             asm = self.get_assembly()
+            # Write any user defined functions in to the assembly file.
+            self.write_user_functions()
             # Write any raw strings that will be used that aren't assigned to a
             # variable in the code.
             for key in self.raw_strings:
@@ -3554,6 +3805,16 @@ class Compiler:
                 var_val = value_node.value
                 self.initialize_vars_asm.extend(self.traverse_tree(value_node))
                 self.initialize_vars_asm.extend(self.get_assign_char_at_value_to_var_asm(var_name))
+            elif type(value_node) == FunctionReferenceNode:
+                # TODO(map) Need to update the appropriate count based on the type of the function return
+                self.num_count += 1
+                var_name = f"number_{self.num_count}"
+                var_type = "num"
+                var_val = value_node.value
+                type_count = self.num_count
+                self.initialize_vars_asm.extend(self.traverse_tree(value_node))
+                # TODO(map) Again, this only works for ints right now
+                self.initialize_vars_asm.extend(self.get_assign_new_int_to_var_from_expression(var_name, "int64"))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
@@ -3561,6 +3822,7 @@ class Compiler:
                 asm = self.get_const_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
             else:
                 asm = self.get_var_creation_asm(self.var_count, type_count, var_val, type(value_node), node.parent_node.parent_node.value)
+            # TODO(map) The `var_len` may not be correct here.
             self.variables[node.value] = {
                 "section":  section_text,
                 "var_name": var_name,
@@ -3678,6 +3940,60 @@ class Compiler:
             # Don't need to return assembly here because the Parser already
             # subbed in the relevant nodes where the macro is referenced.
             return []
+        elif type(node) == FunctionNode:
+            # We need to walk through the function node and set it up as a label
+            # that can be referenced and re-used over and over.
+            node.visited = True
+            return [
+                    f"section .text\n",
+                    f"    {node.function_name.value}:\n",
+                    "        ;; Get return address\n",
+                    "        pop rcx\n",
+                    "        ;; Get pointer to the args\n",
+                    "        pop rdx\n",
+                    ] + self.traverse_function_node(node)
+        elif type(node) == FunctionReturnNode:
+            node.visited = True
+            return_body_asm = self.traverse_tree(node.return_body)
+            return [
+                    "        ;; Push return for this method onto the stack to save a reference\n",
+                    "        push rcx\n",
+                    ] + return_body_asm + [
+                    "        ;; Get return value before pointer reset\n",
+                    "        pop rax\n",
+                    "        ;; Get return address before pointer reset\n",
+                    "        pop rcx\n",
+                    "        ;; Reset the pointer to the clean part of the stack\n",
+                    "        mov rsp, r8\n",
+                    "        ;; Push return value onto stack\n",
+                    "        push rax\n",
+                    "        ;; Push return address onto stack\n",
+                    "        push rcx\n",
+                    "        ret\n",
+                    ]
+        elif type(node) == FunctionReferenceNode:
+            func_reference_asm = [
+                "    ;; Push pointer to current stack position onto stack\n",
+                "    push rsp\n",
+            ]
+            for idx, arg_node in enumerate(node.function_args):
+                func_reference_asm += [f"    ;; Push arg {idx + 1}\n"]
+                func_reference_asm += [f"    push {arg_node.value}\n"]
+            return func_reference_asm + [
+                "    ;; Push pointer to the start of the args\n",
+                "    push rsp\n",
+                "    ;; Call add function\n",
+                f"    call {node.value}\n",
+            ]
+        elif type(node) == FunctionArgReferenceNode:
+            node.visited = True
+            arg_loc = self.function_and_args_map[self.curr_function_name][node.value]
+            if type(node.parent_node) == AssignmentNode:
+                return [] + self.traverse_tree(node.parent_node)
+            elif node.can_traverse_to_parent():
+                return self.get_push_fn_arg_reference_onto_stack_asm(arg_loc) + self.traverse_tree(node.parent_node)
+            else:
+                return self.get_push_fn_arg_reference_onto_stack_asm(arg_loc)
         else:
             assert False, (f"This node type {type(node)} is not yet implemented.")
 
@@ -3718,6 +4034,43 @@ class Compiler:
                 child.visited = True
                 child_asm += self.traverse_tree(child)
         return child_asm
+
+    def traverse_function_node(self, node):
+        # TODO(map) Consider whether or not the language should prevent a user
+        # from passing more than some number of functions. This could be
+        # beneficial as it would make the ASM easier and potential limit the
+        # memory footprint but would also require people to use more complex
+        # data structures
+        assert len(node.function_args) < 4, "Function arg count greater than 4"
+
+        node.visited = True
+        function_body_asm = []
+
+        # Get the of args and pop those into the registers. This will assume
+        # for now that the number of args is less than some magical number
+        # because it's easier to initially implement but the assertion should
+        # go away eventually so you can pass any number of args.
+        function_body_asm.extend(["        ;; Get the pointer to the clean stack\n"])
+        function_body_asm.extend([f"        mov r8, [rdx + {8 * len(node.function_args)}]\n"])
+        reg_num = 9  # Start with r9 for loading args into registers
+        arg_to_reg_map = {}
+        for idx, arg in enumerate(node.function_args):
+            arg_to_reg_map[arg.fn_arg_name.value] = f"r{reg_num}"
+            function_body_asm.extend([f"        ;; Get a function argument\n",
+                                 f"        mov r{reg_num}, [rdx + {8 * idx}]\n"])
+            reg_num += 1
+
+        self.function_and_args_map[node.function_name.value] = arg_to_reg_map
+        self.curr_function_name = node.function_name.value
+
+        # TODO(map) This doesn't handle if other data is pushed on the stack
+        # before the function args are referenced. If there are a lot of args
+        # there's no way to hold them all in the register. Need a way to track
+        # the location of the args.
+        for body_line in node.function_body:
+            function_body_asm += self.traverse_tree(body_line)
+
+        return function_body_asm
 
     def process_op_node(self, node):
         if node.value == "+":
@@ -3791,6 +4144,12 @@ class Compiler:
         else:
             assert False, f"Unrecognized root node value {node.value}"
 
+    def write_user_functions(self):
+        with open(self.output_path, 'a') as compiled_program:
+            for asm in self.user_func_asm.values():
+                for line in asm:
+                    compiled_program.write(line)
+            
     def create_keyword_functions(self):
         self.create_constant_values()
         self.create_error_string_constants()
@@ -4281,6 +4640,12 @@ class Compiler:
             f"    push {num}\n"
             ]
 
+    def get_push_fn_arg_reference_onto_stack_asm(self, arg_loc):
+        return [
+            "    ;; Push number onto stack\n",
+            f"    push {arg_loc}\n"
+            ]
+
     def get_push_var_onto_stack_asm(self, node_value, val, is_const, need_str_len):
         if "string" in val and is_const:
             if need_str_len:
@@ -4363,9 +4728,10 @@ class Compiler:
         asm = ["    ;; Get the two values to add\n",
                 "    pop rax\n",
                 "    pop rbx\n",
-                "    ;; Push them onto the stack twice, once to do the overflow check and then again to do the addition\n",
+                "    ;; Push copy of values to be preserved after overflow check\n",
                 "    push rax\n",
                 "    push rbx\n",
+                "    ;; Push copy of values to be consumed in overflow check\n",
                 "    push rax\n",
                 "    push rbx\n",
         ]
@@ -4378,9 +4744,10 @@ class Compiler:
         elif int_type == "int64" or not int_type:
             asm.append("    call check_int_64_overflow\n")
         return asm + [
-                "    ;; Add\n",
+                "    ;; Get the values back off the stack\n",
                 "    pop rax\n",
                 "    pop rbx\n",
+                "    ;; Add\n",
                 "    add rax, rbx\n",
                 "    push rax\n"]
 
@@ -4746,6 +5113,14 @@ class Compiler:
             var_decl = [
                 f"    char_{type_count} db -1\n",
             ]
+        elif node_type == FunctionReferenceNode:
+            # TODO(map) This only works for int64 right now
+            if var_type == "int64":
+                var_decl = [
+                        f"    number_{type_count} dq -1\n",
+                    ]
+            else:
+                assert False, f"TODO(map) Implement the type {var_type}"
         elif node_type == StringNode:
             var_decl = [
                 f"    string_{type_count} dq 0\n",
@@ -4869,8 +5244,8 @@ if __name__ == "__main__":
         "--program", help="The program that should be parse.")
     arg_parser.add_argument("--verbose", action="store_true",
                             help="Adds verbosity output to the steps.")
-    arg_parser.add_argument("--no-raise", action="store_false",
-                            help="Avoids assertions in the __eq__ methods.")
+    arg_parser.add_argument("--raise-assertions", action="store_true",
+                            help="Will raise more verbose messages. For example like the assertions in the __eq__ methods.")
     arg_parser.add_argument("--lex", action="store_true",
                             help="Lex the program and return a token list.")
     arg_parser.add_argument("--parse", action="store_true",
@@ -4882,7 +5257,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     verbose_flag = args.verbose
-    raise_assertion_flag = args.no_raise
+    raise_assertion_flag = args.raise_assertions
     with open(args.program, 'r') as code:
         token_list = None
         ast = None

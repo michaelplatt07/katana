@@ -7,7 +7,15 @@ from katana.katana import (
     BooleanNode,
     CharNode,
     CompareNode,
+    FunctionNode,
+    FunctionArgNode,
+    FunctionArgReferenceNode,
+    FunctionArgTypeNode,
     FunctionKeywordNode,
+    FunctionNameNode,
+    FunctionReferenceNode,
+    FunctionReturnNode,
+    FunctionReturnTypeNode,
     LogicKeywordNode,
     LoopDownKeywordNode,
     LoopFromKeywordNode,
@@ -3704,7 +3712,58 @@ class TestParserFunctionKeyword:
             parser.parse()
         mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
 
-    @pytest.mark.skip
+    @patch("katana.katana.print_exception_message")
+    def test_function_invalid_syntax_no_second_separator_raises_error(self, mock_print):
+        """
+        Given a program like:
+        fn add :: (x: int64, y: int64) int64 {
+            return x + y;
+        }
+        main() {
+            add(3, 4);
+        }
+        Expected an error of InvalidFunctionDeclarationException to be raised.
+        """
+        token_list = [
+            Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
+            Token(FUNCTION_NAME_TOKEN_TYPE, 3, 0, "add", VERY_HIGH),
+            Token(FUNCTION_SEPARATOR_TOKEN_TYPE, 7, 0, "::", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 10, 0, "(", VERY_HIGH),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 11, 0, "x", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 14, 0, "int64", VERY_HIGH),
+            Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, 19, 0, ",", LOW),
+            Token(FUNCTION_ARG_TOKEN_TYPE, 21, 0, "y", VERY_HIGH),
+            Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, 24, 0, "int64", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 29, 0, ")", VERY_HIGH),
+            Token(FUNCTION_RETURN_TOKEN_TYPE, 31, 0, "int64", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 37, 0, "{", VERY_HIGH),
+            Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, 0, 1, "return", HIGH),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 7, 1, "x", HIGH),
+            Token(PLUS_TOKEN_TYPE, 9, 1, "+", MEDIUM),
+            Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, 11, 1, "y", HIGH),
+            Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 3, "main", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 3, "(", VERY_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 3, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 3, "{", VERY_HIGH),
+            Token(FUNCTION_REFERENCE_TOKEN_TYPE, 0, 4, "add", VERY_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 4, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 4, 4, "3", LOW),
+            Token(COMMA_TOKEN_TYPE, 5, 4, ",", LOW),
+            Token(NUM_TOKEN_TYPE, 7, 4, "4", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 4, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 9, 4, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
+        ]
+        parser = Parser(token_list)
+        with pytest.raises(SystemExit):
+            parser.parse()
+        mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
+
+
+    # @pytest.mark.skip
     def test_function_declaration_explicit_declare_everything(self):
         """
         Given a program like:
@@ -3715,7 +3774,7 @@ class TestParserFunctionKeyword:
             add(3, 4);
         }
         Expected an AST like:
-        [(fn(add[x, y], (int64), [], (x+y))), (main[(add[(3, 4)])]]
+        [(fn, add, int64, [(int64(x)),(int64(y)),], [(return, (x+y)),]), (main[(add[(3, 4)])]]
         """
         token_list = [
             Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
@@ -3751,8 +3810,23 @@ class TestParserFunctionKeyword:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", VERY_HIGH),
             Token(EOF_TOKEN_TYPE, 0, 6, "EOF", LOW),
         ]
+        x_ref = FunctionArgReferenceNode(token_list[14], token_list[14].value)
+        y_ref = FunctionArgReferenceNode(token_list[16], token_list[16].value)
+        func_body_plus = PlusMinusNode(token_list[15], token_list[15].value, x_ref, y_ref)
+        ret_node = FunctionReturnNode(token_list[13], token_list[13].value, func_body_plus)
+        ret_type_node = FunctionReturnTypeNode(token_list[11], token_list[11].value)
+        func_arg_1 = FunctionArgNode(token_list[4], token_list[4].value)
+        func_arg_1_type = FunctionArgTypeNode(token_list[5], token_list[5].value, func_arg_1)
+        func_arg_2 = FunctionArgNode(token_list[7], token_list[7].value)
+        func_arg_2_type = FunctionArgTypeNode(token_list[8], token_list[8].value, func_arg_2)
+        func_name_node = FunctionNameNode(token_list[1], token_list[1].value)
+        func_node = FunctionNode(token_list[0], token_list[0].value, func_name_node, [func_arg_1_type, func_arg_2_type], ret_type_node, [ret_node])
+        func_ref_arg_1 = NumberNode(token_list[25], token_list[25].value)
+        func_ref_arg_2 = NumberNode(token_list[27], token_list[27].value)
+        func_ref = FunctionReferenceNode(token_list[23], token_list[23].value, [func_ref_arg_1, func_ref_arg_2])
+        main_node = StartNode(token_list[19], "main", [func_ref])
+
         parser = Parser(token_list)
         parser.parse()
-        ast = StartNode(token_list[19], "main", [])
-        assert [ast] == parser.get_nodes()
+        assert [func_node, main_node] == parser.get_nodes()
 

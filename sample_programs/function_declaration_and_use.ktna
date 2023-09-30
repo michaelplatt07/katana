@@ -1,0 +1,9 @@
+fn add :: (x: int64, y: int64) :: int64 {
+    return x + y;
+}
+
+main() {
+    int64 z = add(3, 4);
+    print("The value of z is: ");
+    print(z);
+}
