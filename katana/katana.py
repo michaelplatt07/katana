@@ -72,14 +72,49 @@ EOF_TOKEN_TYPE = "EOF"
 VARIABLE_NAME_TOKEN_TYPE = "VARIABLE_NAME"
 VARIABLE_REFERENCE_TOKEN_TYPE = "VARIABLE_REFERENCE"
 
+###########
+# Var Types
+###########
+INT_8 = "int8"
+INT_16 = "int16"
+INT_32 = "int32"
+INT_64 = "int64"
+BOOL = "bool"
+CHAR = "char"
+STRING = "string"
+CONST = "const"
+
+
+###################
+# Function Keywords
+###################
+PRINT = "print"
+PRINTL = "printl"
+MAIN = "main"
+CHAR_AT = "charAt"
+UPDATE_CHAR = "updateChar"
+COPY_STR = "copyStr"
+FN = "fn"
+MACRO = "MACRO"
+
+
+################
+# Logic Keywords
+################
+IF = "if"
+ELSE = "else"
+LOOP_UP = "loopUp"
+LOOP_DOWN = "loopDown"
+LOOP_FROM = "loopFrom"
+
 
 ##############
 # Const tuples
 ##############
 TOP_LEVEL_TOKENS = (
-    "main",
-    "fn",
-    "MACRO"
+    MAIN,
+    FN,
+    MACRO
 )
 ALL_TOKENS = (
     ASSIGNMENT_TOKEN_TYPE,
@@ -113,15 +148,17 @@ IGNORE_OPS = (
     COMMENT_TOKEN_TYPE,
     NEW_LINE_TOKEN_TYPE,
 )
-FUNCTION_KEYWORDS = ("print", "printl", "main", "charAt", "updateChar", "copyStr")
-LOGIC_KEYWORDS = ("if", "else", "loopUp", "loopDown", "loopFrom")
-VARIABLE_KEYWORDS = ("const", "int8", "int16", "int32", "int64", "string", "bool", "char")
+FUNCTION_KEYWORDS = (PRINT, PRINTL, MAIN, CHAR_AT, UPDATE_CHAR, COPY_STR)
+LOGIC_KEYWORDS = (IF, ELSE, LOOP_UP, LOOP_DOWN, LOOP_FROM)
+VARIABLE_KEYWORDS = (CONST, INT_8, INT_16, INT_32, INT_64, STRING, BOOL, CHAR)
+INT_KEYWORDS = (INT_8, INT_16, INT_32, INT_64)
 
 ##################
 # Assignment Types
 ##################
 NUMERIC = "numeric"
 FUNCTION = "function"
+
 
 ###################
 # Method Signatures
@@ -135,6 +172,7 @@ LOOP_UP_SIGNATURE = "loopUp(VALUE) { BODY; }: Loops from 0 to VALUE executing BO
 LOOP_DOWN_SIGNATURE = "loopDown(VALUE) { BODY; }: Loops from VALUE to 0 executing BODY each time"
 LOOP_FROM_SIGNATURE = "loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time"
 MACRO_SIGNATURE = "MACRO macroName { BODY }: Creates a Macro that substitues any references for the BODY"
+
 
 ############
 # Exceptions
@@ -1778,7 +1816,7 @@ class Lexer:
                 left_paren_first = left_paren_first_token or left_paren_first_token_after_spaces
                 # Get the token before the left paren.
                 token = self.token_list[self.left_paren_idx_list[-1] - 1]
-                left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == "main"
+                left_paren_has_keyword = token.value in LOGIC_KEYWORDS or token.value == MAIN
                 if not terminator_present and not left_paren_first and not left_paren_has_keyword:
                     raise NoTerminatorError(self.program.curr_line, self.program.curr_col + 1)
         else:
@@ -1796,17 +1834,17 @@ class Lexer:
             keyword += self.program.get_curr_char()
 
         if keyword in FUNCTION_KEYWORDS + VARIABLE_KEYWORDS + LOGIC_KEYWORDS and not self.in_function_declaration:
-            if keyword == "if":
+            if keyword == IF:
                 self.if_idx_list.append(len(self.token_list))
-            elif keyword == "else":
+            elif keyword == ELSE:
                 self.else_idx_list.append(len(self.token_list))
             return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
-        elif keyword == "MACRO":
+        elif keyword == MACRO:
             return Token(MACRO_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
             self.variable_name_list.append(keyword)
             return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
-        elif len(self.token_list) > 0 and self.token_list[-1].value == "MACRO":
+        elif len(self.token_list) > 0 and self.token_list[-1].value == MACRO:
             self.macro_name_list.append(keyword)
             return Token(MACRO_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in self.macro_name_list:
@@ -1815,11 +1853,11 @@ class Lexer:
             return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
         elif keyword in ["true", "false"]:
             return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
-        elif keyword == "fn":
+        elif keyword == FN:
             return Token(FUNCTION_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
         elif keyword == "return":
             return Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
-        elif len(self.token_list) > 0 and self.token_list[-1].value == "fn":
+        elif len(self.token_list) > 0 and self.token_list[-1].value == FN:
             self.in_function_declaration = True
             self.curr_function_name = keyword
             self.function_args[self.curr_function_name] = {}
@@ -1944,7 +1982,7 @@ class Lexer:
         for idx, token in enumerate(filtered_token_list):
             # TODO(map) There's a fun bug here where if there is a string with
             # the value of "else" there will be an exception message raised.
-            if token.value == "else" and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            if token.value == ELSE and filtered_token_list[idx - 1].ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
                 print_exception_message(self.program.lines, token.row, BadFormattedLogicBlock(token.row, 0))
                 sys.exit()
 
@@ -1990,12 +2028,12 @@ class Parser:
             else:
                 self.advance_token()
             try:
-                if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "main":
+                if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == MAIN:
                     self.node_list.append(self.process_main_token(self.curr_token))
-                elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE and self.curr_token.value == "fn":
+                elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE and self.curr_token.value == FN:
                     self.node_list.append(self.process_fn_token(self.curr_token))
                     should_skip_advance = True
-                elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE and self.curr_token.value == "MACRO":
+                elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE and self.curr_token.value == MACRO:
                     self.node_list.append(self.process_macro_token(self.curr_token))
                     should_skip_advance = True
                 elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in VARIABLE_KEYWORDS:
@@ -2275,21 +2313,21 @@ class Parser:
         return macro_node
 
     def build_line_ast(self, processed_node):
-        if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+        if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
             line_ast = self.build_print_ast(processed_node)
-        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == CHAR_AT:
             line_ast = self.build_char_at_line_ast(processed_node)
-        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == UPDATE_CHAR:
             line_ast = self.build_update_char_line_ast(processed_node)
-        elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+        elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
             line_ast = self.build_copy_str_line_ast(processed_node)
         # "const" can only be declared on a variable right now. This
         # makes it safe to call the build var ast method even if const
         # is the value of the currently processed node as we know a var
         # declaration will follow
-        elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char", "bool"]:
+        elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
             line_ast = self.build_var_dec_line_ast(processed_node)
-        elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+        elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
             line_ast = self.build_if_conditional_line_ast(processed_node)
             # Mark the current if node so we can pair it with an else if needed
             self.current_if_node = processed_node
@@ -2311,7 +2349,7 @@ class Parser:
 
     def process_token(self):
         node = None
-        if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "main":
+        if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == MAIN:
             node = StartNode(self.curr_token, self.curr_token.value, [])
         elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
             node = MacroNode(self.curr_token, self.curr_token.value, children_nodes=[])
@@ -2319,7 +2357,7 @@ class Parser:
             node = FunctionNode(self.curr_token, self.curr_token.value, [])
         elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
             # Currently working on keyword
-            if self.get_prev_token().ttype == KEYWORD_TOKEN_TYPE and self.get_prev_token().value not in ["if", "else"]:
+            if self.get_prev_token().ttype == KEYWORD_TOKEN_TYPE and self.get_prev_token().value not in [IF, ELSE]:
                 node = FunctionCallLeftParenNode(self.curr_token)
                 self.left_paren_func_call_set = True
             # Working on a function call
@@ -2329,8 +2367,8 @@ class Parser:
             # Working on a function declaration
             elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == FunctionNode:
                 node = FunctionDecLeftParenNode(self.curr_token)
-            # Currently in an "if" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+            # Currently in an IF block of logic.
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
                 node = ConditionalLeftParenNode(self.curr_token)
             # This is a paren that is not linked to any key operations like an
             # if/else block or a function call.
@@ -2346,7 +2384,7 @@ class Parser:
                 node = FunctionDecRightParenNode(self.curr_token)
                 self.if_else_list.pop()
             # Currently in an "if" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
                 node = ConditionalRightParenNode(self.curr_token)
             # This is a paren that is not linked to any key operations like an
             # if/else block or a function call.
@@ -2357,10 +2395,10 @@ class Parser:
             if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
                 node = LoopBodyLeftCurlNode(self.curr_token)
             # Currently in an "if" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
                 node = IfBodyLeftCurlNode(self.curr_token)
             # Currently in an "else" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "else":
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == ELSE:
                 node = ElseBodyLeftCurlNode(self.curr_token)
             # There is no if/else combination we are currently processing
             else:
@@ -2371,12 +2409,12 @@ class Parser:
                 node = LoopBodyRightCurlNode(self.curr_token)
                 self.if_else_list.pop()
             # Currently in an "if" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "if":
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
                 node = IfBodyRightCurlNode(self.curr_token)
                 # Remove the "if" node because we have finished processing it.
                 self.if_else_list.pop()
             # Currently in an "else" block of logic.
-            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == "else":
+            elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == ELSE:
                 node = ElseBodyRightCurlNode(self.curr_token)
                 # Remove the "else" node because we have finished processing it.
                 self.if_else_list.pop()
@@ -2395,16 +2433,16 @@ class Parser:
             node = MultiplyDivideNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
             node = NoOpNode(self.curr_token)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["print", "printl", "charAt", "updateChar", "copyStr"]:
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in [PRINT, PRINTL, CHAR_AT, UPDATE_CHAR, COPY_STR]:
             node = FunctionKeywordNode(self.curr_token, self.curr_token.value, [])
         elif self.curr_token.ttype == MACRO_NAME_TOKEN_TYPE:
             node = MacroNameNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == FUNCTION_NAME_TOKEN_TYPE:
             node = FunctionNameNode(self.curr_token, self.curr_token.value)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["const", "int8", "int16", "int32", "int64", "string", "char", "bool"]:
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in VARIABLE_KEYWORDS:
             node = VariableKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
-            is_const = self.token_list[self.curr_token_pos - 2].value ==  "const"
+            is_const = self.token_list[self.curr_token_pos - 2].value ==  CONST
             node = VariableNode(self.curr_token, self.curr_token.value, is_const, None)
         elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
             node = VariableReferenceNode(self.curr_token, self.curr_token.value, None)
@@ -2415,13 +2453,13 @@ class Parser:
             node = AssignmentNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
             node = BooleanNode(self.curr_token, self.curr_token.value)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in ["if", "else"]:
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in [IF, ELSE]:
             node = LogicKeywordNode(self.curr_token, self.curr_token.value)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopUp":
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_UP:
             node = LoopUpKeywordNode(self.curr_token, self.curr_token.value)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopDown":
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_DOWN:
             node = LoopDownKeywordNode(self.curr_token, self.curr_token.value)
-        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == "loopFrom":
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_FROM:
             node = LoopFromKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
             node = RangeNode(self.curr_token, self.curr_token.value)
@@ -2458,7 +2496,7 @@ class Parser:
 
         processed_node = self.process_token()
         while type(processed_node) != EndOfLineNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["charAt", "updateChar"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [CHAR_AT, UPDATE_CHAR]:
                 node_list.append(self.build_char_at_line_ast(processed_node))
             else:
                 node_list.append(processed_node)
@@ -2478,7 +2516,7 @@ class Parser:
         while type(processed_node) != FunctionCallRightParenNode:
             # TODO(map) This should really be done in a better way.
             if type(processed_node) == list:
-                raise InvalidMacroDeclaration(print_node.token.row, print_node.token.col, "print", is_ref=True)
+                raise InvalidMacroDeclaration(print_node.token.row, print_node.token.col, PRINT, is_ref=True)
             else:
                 print_arg_node_list.append(processed_node)
             processed_node = self.process_token()
@@ -2589,11 +2627,11 @@ class Parser:
         # Check that params are the correct type.
         if type(char_at_args[0]) not in [StringNode, VariableReferenceNode]:
             raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, type(char_at_args[0]))
-        if type(char_at_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[0].value) != "string":
+        if type(char_at_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[0].value) != STRING:
             raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, self.variable_to_type_map.get(char_at_args[0].value))
         if type(char_at_args[1]) not in [NumberNode, VariableReferenceNode, PlusMinusNode]:
             raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, type(char_at_args[1]))
-        if type(char_at_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[1].value) not in ["int8", "int16", "int32", "int64"]:
+        if type(char_at_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(char_at_args[1].value) not in INT_KEYWORDS:
             raise InvalidArgsException(char_at_node.token.row, char_at_node.token.col, char_at_node.token.value, self.variable_to_type_map.get(char_at_args[1].value))
 
         # Set the parent node and arg nodes appropriately.
@@ -2640,11 +2678,11 @@ class Parser:
         # Check that params are the correct type.
         if type(copy_str_args[0]) not in [StringNode, VariableReferenceNode]:
             raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, type(copy_str_args[0]))
-        if type(copy_str_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[0].value) != "string":
+        if type(copy_str_args[0]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[0].value) != STRING:
             raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, self.variable_to_type_map.get(copy_str_args[0].value))
         if type(copy_str_args[1]) not in [StringNode, VariableReferenceNode]:
             raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, type(copy_str_args[1]))
-        if type(copy_str_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[1].value) != "string":
+        if type(copy_str_args[1]) == VariableReferenceNode and self.variable_to_type_map.get(copy_str_args[1].value) != STRING:
             raise InvalidArgsException(copy_str_node.token.row, copy_str_node.token.col, copy_str_node.token.value, self.variable_to_type_map.get(copy_str_args[1].value))
 
         # Set the parent node and arg nodes appropriately.
@@ -2680,18 +2718,18 @@ class Parser:
 
         # TODO(map) Also not good but we can have the validation here for now
         if len(loop_up_args) == 0:
-            raise KeywordMisuseException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", LOOP_UP_SIGNATURE)
+            raise KeywordMisuseException(loop_up_node.token.row, loop_up_node.token.col, LOOP_UP, LOOP_UP_SIGNATURE)
 
         loop_up_arg = loop_up_args[0]
         loop_arg_is_var = type(loop_up_arg) == VariableReferenceNode
         loop_arg_is_number = type(loop_up_arg) == NumberNode
-        loop_arg_is_num_var = type(loop_up_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_up_arg.value) in ["int8", "int16", "int32", "int64"]
+        loop_arg_is_num_var = type(loop_up_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_up_arg.value) in INT_KEYWORDS
         # Case where arg is not variable but is not correct node type
         if not loop_arg_is_var and not loop_arg_is_number:
-            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", type(loop_up_arg))
+            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, LOOP_UP, type(loop_up_arg))
         # Case of not number node and variable node and variable type not good
         if not loop_arg_is_number and loop_arg_is_var and not loop_arg_is_num_var:
-            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, "loopUp", self.variable_to_type_map.get(loop_up_arg.value))
+            raise InvalidArgsException(loop_up_node.token.row, loop_up_node.token.col, LOOP_UP, self.variable_to_type_map.get(loop_up_arg.value))
 
         # Set the parent node and arg nodes appropriately.
         loop_up_node.child_node = loop_up_arg
@@ -2709,15 +2747,15 @@ class Parser:
         if type(processed_node) == LoopBodyRightCurlNode:
             assert False, "TODO(map) Raise empty loop body exception"
         while type(processed_node) != LoopBodyRightCurlNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
-            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
                 line_ast = self.build_copy_str_line_ast(processed_node)
-            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
@@ -2768,16 +2806,16 @@ class Parser:
 
         # TODO(map) Also not good but we can have the validation here for now
         if len(loop_down_args) == 0:
-            raise KeywordMisuseException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", LOOP_DOWN_SIGNATURE)
+            raise KeywordMisuseException(loop_down_node.token.row, loop_down_node.token.col, LOOP_DOWN, LOOP_DOWN_SIGNATURE)
 
         loop_down_arg = loop_down_args[0]
         loop_arg_is_var = type(loop_down_arg) == VariableReferenceNode
         loop_arg_is_number = type(loop_down_arg) == NumberNode
-        loop_arg_is_num_var = type(loop_down_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_down_arg.value) in ["int8", "int16", "int32", "int64"]
+        loop_arg_is_num_var = type(loop_down_arg) == VariableReferenceNode and self.variable_to_type_map.get(loop_down_arg.value) in INT_KEYWORDS
         if not loop_arg_is_var and not loop_arg_is_number:
-            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", type(loop_down_arg))
+            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, LOOP_DOWN, type(loop_down_arg))
         if not loop_arg_is_number and loop_arg_is_var and not loop_arg_is_num_var:
-            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, "loopDown", self.variable_to_type_map.get(loop_down_arg.value))
+            raise InvalidArgsException(loop_down_node.token.row, loop_down_node.token.col, LOOP_DOWN, self.variable_to_type_map.get(loop_down_arg.value))
 
         # Set the parent node and arg nodes appropriately.
         loop_down_node.child_node = loop_down_arg
@@ -2795,13 +2833,13 @@ class Parser:
         if type(processed_node) == LoopBodyRightCurlNode:
             assert False, "TODO(map) Raise empty loop body exception"
         while type(processed_node) != LoopBodyRightCurlNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
-            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 self.build_if_conditional_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -2839,7 +2877,7 @@ class Parser:
 
         # TODO(map) Also not good but we can have the validation here for now
         if len(loop_from_args) == 0:
-            raise KeywordMisuseException(loop_from_node.token.row, loop_from_node.token.col, "loopFrom", LOOP_FROM_SIGNATURE)
+            raise KeywordMisuseException(loop_from_node.token.row, loop_from_node.token.col, LOOP_FROM, LOOP_FROM_SIGNATURE)
 
         loop_from_arg = loop_from_args[0]
         # Set the parent node and arg nodes appropriately.
@@ -2858,13 +2896,13 @@ class Parser:
         if type(processed_node) == LoopBodyRightCurlNode:
             assert False, "TODO(map) Raise empty loop body exception"
         while type(processed_node) != LoopBodyRightCurlNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
-            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 self.build_if_conditional_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -2940,7 +2978,7 @@ class Parser:
 
     def build_var_dec_line_ast(self, var_node):
         # Set the flag for if the var is a const
-        var_is_const = (type(var_node) == VariableKeywordNode and var_node.value == "const")
+        var_is_const = (type(var_node) == VariableKeywordNode and var_node.value == CONST)
 
         # The node passed to us was the keyword "const" so we still need to get
         # the type, unlike a variable that can be modified where the node that
@@ -2957,7 +2995,7 @@ class Parser:
         processed_node = self.process_token()
         while type(processed_node) != EndOfLineNode:
 
-            if type(processed_node) == FunctionKeywordNode and processed_node.value == "charAt":
+            if type(processed_node) == FunctionKeywordNode and processed_node.value == CHAR_AT:
                 char_at_node = self.build_char_at_line_ast(processed_node)
                 value_node_list.append(char_at_node)
             elif type(processed_node) == FunctionReferenceNode:
@@ -2977,21 +3015,21 @@ class Parser:
             if var_typing != self.fn_name_ret_type_map[value_node.value]:
                 raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
         else:
-            if var_typing == "bool" and type(value_node) != BooleanNode:
+            if var_typing == BOOL and type(value_node) != BooleanNode:
                 raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-            elif var_typing == "string" and type(value_node) != StringNode:
+            elif var_typing == STRING and type(value_node) != StringNode:
                 raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
             # TODO(map) This probably isn't great as it would pass for any function regardless of its return type
-            elif var_typing == "char" and type(value_node) not in [CharNode, FunctionKeywordNode]:
+            elif var_typing == CHAR and type(value_node) not in [CharNode, FunctionKeywordNode]:
                 raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
-            elif var_typing == "int64" and type(value_node) != NumberNode:
+            elif var_typing == INT_64 and type(value_node) != NumberNode:
                 raise InvalidTypeDeclarationException(var_name_node.token.row, var_name_node.token.col)
         
         type_to_max_val = {
-            "int8": 255,
-            "int16": 65536,
-            "int32": 4294967296,
-            "int64": 14294967296, # TODO(map) Get the right number
+            INT_8: 255,
+            INT_16: 65536,
+            INT_32: 4294967296,
+            INT_64: 14294967296, # TODO(map) Get the right number
             }
         # TODO(map) Need to make a method to walk the right side and calculate
         # the right side value to raise an error.
@@ -3060,15 +3098,15 @@ class Parser:
         if type(processed_node) == IfBodyRightCurlNode:
             assert False, "TODO(map) Raise empty if body exception"
         while type(processed_node) != IfBodyRightCurlNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
-            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == UPDATE_CHAR:
                 line_ast = self.build_update_char_line_ast(processed_node)
-            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
                 line_ast = self.build_copy_str_line_ast(processed_node)
-            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -3088,7 +3126,7 @@ class Parser:
 
         # We have an else paired with the if and need to add it on to the
         # current if node.
-        if self.curr_token.value == "else":
+        if self.curr_token.value == ELSE:
             # Process the else token itself
             else_node = self.process_token()
             self.build_else_conditional_line_ast(if_node, else_node)
@@ -3113,17 +3151,17 @@ class Parser:
         body_node_list = []
 
         while type(processed_node) != ElseBodyRightCurlNode:
-            if type(processed_node) == FunctionKeywordNode and processed_node.value in ["print", "printl"]:
+            if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
-            elif type(processed_node) == VariableKeywordNode and processed_node.value in ["const", "int8", "int16", "int32", "int64", "string", "char"]:
+            elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
-            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "updateChar":
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == UPDATE_CHAR:
                 line_ast = self.build_update_char_line_ast(processed_node)
-            elif type(processed_node) == FunctionKeywordNode and processed_node.value == "copyStr":
+            elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
                 line_ast = self.build_copy_str_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "if":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
-            elif type(processed_node) == LogicKeywordNode and processed_node.value == "else":
+            elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -3278,7 +3316,7 @@ class Parser:
                     if type(node) == VariableReferenceNode:
                         right_side_type = self.variable_to_type_map.get(ast.left_side.value)
                     elif type(node) == NumberNode and int(node.value) < 255:
-                        right_side_type = "int8"
+                        right_side_type = INT_8
                     else:
                         assert False, "In assignment and failed to determine type matching."
 
@@ -3287,14 +3325,14 @@ class Parser:
                         ast.right_side = node
                         node.parent_node = ast
                     # Both the left and right side types are int but they don't match so we have to make sure they fit.
-                    elif left_side_type in ["int8", "int16", "int32", "int64"] and right_side_type in ["int8", "int16", "int32", "int64"]:
-                        if right_side_type == "int8":
+                    elif left_side_type in INT_KEYWORDS and right_side_type in INT_KEYWORDS:
+                        if right_side_type == INT_8:
                             int_fits_in_var = True
-                        elif right_side_type == "int16" and left_side_type in ["int16", "int32", "int64"]:
+                        elif right_side_type == INT_16 and left_side_type in [INT_16, INT_32, INT_64]:
                             int_fits_in_var = True
-                        elif right_side_type == "int32" and left_side_type in ["int32", "int64"]:
+                        elif right_side_type == INT_32 and left_side_type in [INT_32, INT_64]:
                             int_fits_in_var = True
-                        elif right_side_type == "int64" and left_side_type == "int64":
+                        elif right_side_type == INT_64 and left_side_type == INT_64:
                             int_fits_in_var = True
                         if int_fits_in_var:
                             ast.right_side = node
@@ -3460,10 +3498,10 @@ class Parser:
 
         if type(ast) == AssignmentNode and type(ast.left_side) == VariableReferenceNode:
             if ast.right_side.value.isalpha():
-                assignment_type = "char"
+                assignment_type = CHAR
             elif ast.right_side.value.isnumeric():
                 if int(ast.right_side.value) < 255:
-                    assignment_type = "int8"
+                    assignment_type = INT_8
             else:
                 assert False, "Don't know how to handle assignment value"
         
@@ -3536,7 +3574,7 @@ class Parser:
         # numbers for the range, and the range node.
         if len(line_of_nodes) != 5:
             middle_idx = int(len(line_of_nodes) / 2)
-            raise InvalidArgsException(line_of_nodes[middle_idx].token.row, line_of_nodes[middle_idx].token.col, "loopFrom", type(line_of_nodes[middle_idx]))
+            raise InvalidArgsException(line_of_nodes[middle_idx].token.row, line_of_nodes[middle_idx].token.col, LOOP_FROM, type(line_of_nodes[middle_idx]))
 
         range_node = line_of_nodes[2]
         range_node.left_side = line_of_nodes[1]
@@ -3549,7 +3587,7 @@ class Parser:
     def check_if_valid_operation(self, op_type, left_node, right_node):
         # Checking for add operation being of the same type.
         if op_type == "+":
-            if type(left_node) == VariableReferenceNode and self.variable_to_type_map[left_node.value] == "string" and type(right_node) != CharNode:
+            if type(left_node) == VariableReferenceNode and self.variable_to_type_map[left_node.value] == STRING and type(right_node) != CharNode:
                 raise InvalidConcatenationException(left_node.token.row, left_node.token.col, self.variable_to_type_map[left_node.value], type(right_node))
         # TODO(map) Implement the checks for all the other op types.
         else:
@@ -3667,7 +3705,7 @@ class Compiler:
                 return self.get_push_number_onto_stack_asm(node.value)
         elif isinstance(node, FunctionKeywordNode):
             asm = []
-            if node.value == "print":
+            if node.value == PRINT:
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_print_string_keyword_asm()
                 elif type(node.arg_nodes[0]) == NumberNode:
@@ -3686,7 +3724,7 @@ class Compiler:
                         keyword_call_asm = self.get_print_num_keyword_asm()
                 else:
                     assert False, f"Unsure how to handle the arg {node.arg_nodes[0].value}"
-            elif node.value == "printl":
+            elif node.value == PRINTL:
                 if type(node.arg_nodes[0]) == StringNode:
                     keyword_call_asm = self.get_printl_string_keyword_asm()
                 elif type(node.arg_nodes[0]) == NumberNode:
@@ -3703,11 +3741,11 @@ class Compiler:
                         keyword_call_asm = self.get_printl_char_keyword_asm()
                     elif self.variables[node.arg_nodes[0].value]["var_type"] == "num":
                         keyword_call_asm = self.get_printl_num_keyword_asm()
-            elif node.value == "charAt":
+            elif node.value == CHAR_AT:
                 keyword_call_asm = self.get_char_at_keyword_asm()
-            elif node.value == "updateChar":
+            elif node.value == UPDATE_CHAR:
                 keyword_call_asm = self.get_update_char_asm()
-            elif node.value == "copyStr":
+            elif node.value == COPY_STR:
                 # NOTE(map) This will not work with strings with different lengths.
                 # Need to implement memory management for this to work.
                 keyword_call_asm = self.get_copy_str_asm(self.variables[node.arg_nodes[0].value]["var_len"])
@@ -3794,10 +3832,10 @@ class Compiler:
             elif type(value_node) == BooleanNode:
                 self.bool_count += 1
                 var_name = f"bool_{self.bool_count}"
-                var_type = "bool"
+                var_type = BOOL
                 type_count = self.bool_count
                 var_val = value_node.value
-            elif value_node.value == "charAt" and type(value_node) == FunctionKeywordNode:
+            elif value_node.value == CHAR_AT and type(value_node) == FunctionKeywordNode:
                 self.char_count += 1
                 var_name = f"char_{self.char_count}"
                 type_count = self.char_count
@@ -3814,7 +3852,7 @@ class Compiler:
                 type_count = self.num_count
                 self.initialize_vars_asm.extend(self.traverse_tree(value_node))
                 # TODO(map) Again, this only works for ints right now
-                self.initialize_vars_asm.extend(self.get_assign_new_int_to_var_from_expression(var_name, "int64"))
+                self.initialize_vars_asm.extend(self.get_assign_new_int_to_var_from_expression(var_name, INT_64))
             else:
                 assert False, f"Not sure how to handle Variable of type {type(value_node)} with value {value_node.value}"
             # Check if the variable has the const keyword associated with it.
@@ -3833,7 +3871,7 @@ class Compiler:
                 "asm": asm
             }
             # TODO(map) Add the other int types and make this better.
-            if node.parent_node.parent_node.value in ["int8", "int16", "int32", "int64"]:
+            if node.parent_node.parent_node.value in INT_KEYWORDS:
                 self.variables[node.value].update({"int_type": node.parent_node.parent_node.value})
 
             if not node.is_const:
@@ -3864,7 +3902,7 @@ class Compiler:
             # Case of referencing a node and needing it on the stack (ie print)
             var_ref = self.variables[node.value]["var_name"]
             is_const = self.variables[node.value]["is_const"]
-            need_str_len = type(node.parent_node) == FunctionKeywordNode and node.parent_node.value in ["print", "printl"]
+            need_str_len = type(node.parent_node) == FunctionKeywordNode and node.parent_node.value in [PRINT, PRINTL]
             if node.can_traverse_to_parent():
                 return self.get_push_var_onto_stack_asm(node.value, var_ref, is_const, need_str_len) + self.traverse_tree(node.parent_node)
             else:
@@ -4098,9 +4136,9 @@ class Compiler:
             self.conditional_count += 1
             self.conditionals[node] = self.conditional_count
             if type(node.left_side) == CharNode or type(node.right_side) == CharNode:
-                compare_types = "char"
+                compare_types = CHAR
             else:
-                compare_types = "int64"
+                compare_types = INT_64
             return self.get_conditional_equal_asm(self.conditional_count, compare_types)
         elif node.value == "=":
             print_verbose_message(f"Should be assigning for node {node}")
@@ -4120,7 +4158,7 @@ class Compiler:
                         return self.get_assign_new_int_to_var_from_expression(self.variables[node.left_side.value]["var_name"], self.variables[node.left_side.value]["int_type"])
                 elif type(node.right_side) == MultiplyDivideNode:
                     return self.get_assign_new_value_to_var_from_expression(self.variables[node.left_side.value]["var_name"])
-                elif node.right_side.value == "charAt":
+                elif node.right_side.value == CHAR_AT:
                     return self.get_assign_char_at_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
                 elif type(node.right_side) == CharNode:
                     return self.get_assign_char_value_to_var_asm(self.variables[node.left_side.value]["var_name"])
@@ -4647,7 +4685,7 @@ class Compiler:
             ]
 
     def get_push_var_onto_stack_asm(self, node_value, val, is_const, need_str_len):
-        if "string" in val and is_const:
+        if STRING in val and is_const:
             if need_str_len:
                 return [
                     "    ;; Calculate const string length and push onto stack with string\n",
@@ -4661,7 +4699,7 @@ class Compiler:
                     "    ;; Push const string onto stack without length\n",
                     f"    push {val}\n"
                 ]
-        if "string" in val and not is_const:
+        if STRING in val and not is_const:
             if need_str_len:
                 return [
                     "    ;; Calculate variable string length and push onto stack with string\n",
@@ -4675,13 +4713,13 @@ class Compiler:
                     "    ;; Push variable string onto stack without length\n",
                     f"    push qword [{val}]\n"
                 ]
-        elif "char" in val:
+        elif CHAR in val:
             return [
                 "    ;; Push char var onto stack\n",
                 f"    mov bl, [{val}]\n",
                 f"    push bx\n"
             ]
-        if self.variables[node_value].get("int_type") == "int8":
+        if self.variables[node_value].get("int_type") == INT_8:
             return [
                 "    ;; Push var val onto stack\n",
                 f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
@@ -4689,7 +4727,7 @@ class Compiler:
                 f"    movzx rbx, al\n",
                 f"    push rbx\n",
             ]
-        elif self.variables[node_value].get("int_type") == "int16":
+        elif self.variables[node_value].get("int_type") == INT_16:
             return [
                 "    ;; Push var val onto stack\n",
                 f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
@@ -4697,7 +4735,7 @@ class Compiler:
                 f"    movzx rbx, ax\n",
                 f"    push rbx\n",
             ]
-        elif self.variables[node_value].get("int_type") == "int32":
+        elif self.variables[node_value].get("int_type") == INT_32:
             return [
                 "    ;; Push var val onto stack\n",
                 f"    mov rax, 0 ;; Clear rax in case it is not empty\n",
@@ -4735,13 +4773,13 @@ class Compiler:
                 "    push rax\n",
                 "    push rbx\n",
         ]
-        if int_type == "int8":
+        if int_type == INT_8:
             asm.append("    call check_int_8_overflow\n")
-        elif int_type == "int16":
+        elif int_type == INT_16:
             asm.append("    call check_int_16_overflow\n")
-        elif int_type == "int32":
+        elif int_type == INT_32:
             asm.append("    call check_int_32_overflow\n")
-        elif int_type == "int64" or not int_type:
+        elif int_type == INT_64 or not int_type:
             asm.append("    call check_int_64_overflow\n")
         return asm + [
                 "    ;; Get the values back off the stack\n",
@@ -4986,7 +5024,7 @@ class Compiler:
         ]
 
     def get_conditional_equal_asm(self, conditional_count, compare_types):
-        if compare_types == "char":
+        if compare_types == CHAR:
             return [
                 "    ;; Pop values for comparing equal on char\n",
                 "    pop ax\n",
@@ -5056,20 +5094,20 @@ class Compiler:
                 ] if value == "false" else [
                     f"    bool_{type_count} dq 1\n",
                 ]
-        elif value == "charAt":
+        elif value == CHAR_AT:
             # Case where we are initializing a variable to the return of a
             # method. We should initialized to 0, then update in the assembly.
             var_decl = [
                 f"    char_{type_count} db 0\n",
             ]
         else:
-            if var_type == "int8":
+            if var_type == INT_8:
                 var_decl = [f"    number_{type_count} db {value}\n"]
-            if var_type == "int16":
+            if var_type == INT_16:
                 var_decl = [f"    number_{type_count} dw {value}\n"]
-            if var_type == "int32":
+            if var_type == INT_32:
                 var_decl = [f"    number_{type_count} dd {value}\n"]
-            if var_type == "int64":
+            if var_type == INT_64:
                 var_decl = [f"    number_{type_count} dq {value}\n"]
         return [
             f"section .var_{var_count}\n",
@@ -5081,19 +5119,19 @@ class Compiler:
                 f"    char_{type_count} db '{value}', 0\n",
             ]
         elif node_type == NumberNode:
-            if var_type == "int8":
+            if var_type == INT_8:
                 var_decl = [
                     f"    number_{type_count} db {value}\n",
                 ]
-            if var_type == "int16":
+            if var_type == INT_16:
                 var_decl = [
                     f"    number_{type_count} dw {value}\n",
                 ]
-            if var_type == "int32":
+            if var_type == INT_32:
                 var_decl = [
                     f"    number_{type_count} dd {value}\n",
                 ]
-            if var_type == "int64":
+            if var_type == INT_64:
                 var_decl = [
                     f"    number_{type_count} dq {value}\n",
                 ]
@@ -5107,7 +5145,7 @@ class Compiler:
             ] if value == "false" else [
                 f"    bool_{type_count} dq 1\n",
             ]
-        elif value == "charAt":
+        elif value == CHAR_AT:
             # Case where we are initializing a variable to the return of a
             # method. We should initialized to -1, then update in the assembly.
             var_decl = [
@@ -5115,7 +5153,7 @@ class Compiler:
             ]
         elif node_type == FunctionReferenceNode:
             # TODO(map) This only works for int64 right now
-            if var_type == "int64":
+            if var_type == INT_64:
                 var_decl = [
                         f"    number_{type_count} dq -1\n",
                     ]
@@ -5180,19 +5218,19 @@ class Compiler:
         ]
 
     def get_assign_new_int_to_var_from_expression(self, var_name, int_type):
-        if int_type == "int8":
+        if int_type == INT_8:
             return [
                 "    ;; Assign expression value to new var\n",
                 "    pop rax\n",
                 f"    mov byte [{var_name}], al\n",
             ]
-        elif int_type == "int16":
+        elif int_type == INT_16:
             return [
                 "    ;; Assign expression value to new var\n",
                 "    pop rax\n",
                 f"    mov word [{var_name}], ax\n",
             ]
-        elif int_type == "int32":
+        elif int_type == INT_32:
             return [
                 "    ;; Assign expression value to new var\n",
                 "    pop rax\n",
