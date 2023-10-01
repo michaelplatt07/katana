@@ -2213,7 +2213,6 @@ class Parser:
         if not isinstance(processed_node, FunctionDecSeparatorNode):
             raise InvalidFunctionDeclarationException(fn_token.row, fn_token.col)
 
-
         # Get the return type node from the function declaration
         return_type_node = self.process_token()
         if not isinstance(return_type_node, FunctionReturnTypeNode):
@@ -2232,6 +2231,13 @@ class Parser:
         processed_node = self.process_token()
         fn_body_list = []
         while not end_of_function:
+            # Ran into a NoOp so we just need to process the next node
+            if type(processed_node) == NoOpNode:
+                # Process the next token after the NoOp
+                processed_node = self.process_token()
+                end_of_function = type(processed_node) == FunctionBodyRightCurlNode
+                continue
+
             line_ast = self.build_line_ast(processed_node)
             fn_body_list.append(line_ast)
 
