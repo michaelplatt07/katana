@@ -1,0 +1,8 @@
+main() {
+    loopUp(2) {
+        printl("Looping Up");
+    }
+    loopDown(3) {
+        printl("Looping Down");
+    }
+}

@@ -1231,27 +1231,23 @@ class TestCompilerLoop:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
-                "    push 0\n",
-                "    ;; Push number onto stack\n",
-                "    push 3\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 3\n",
                 "    ;; Loop up\n",
-                "    loop_1:\n",
+                "    loop_0:\n",
                 "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    ;; Compare if counter is below loop end\n",
-                "    pop rbx\n",
-                "    pop rcx\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
                 "    inc rcx\n",
                 "    cmp rcx, rbx\n",
-                "    push rcx\n",
-                "    push rbx\n",
-                "    jl loop_1\n",
-                "    ;; Clean up loop vars\n",
-                "    pop rax\n",
-                "    pop rax\n"
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
             ]
 
     def test_loop_down(self):
@@ -1261,27 +1257,23 @@ class TestCompilerLoop:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
-                "    push 0\n",
-                "    ;; Push number onto stack\n",
-                "    push 3\n",
+                "    mov qword [loop_idx_0], 3\n",
+                "    mov qword [loop_end_0], 0\n",
                 "    ;; Loop down\n",
-                "    loop_1:\n",
+                "    loop_0:\n",
                 "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    ;; Compare if counter is above loop end\n",
-                "    pop rcx\n",
-                "    pop rbx\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
                 "    dec rcx\n",
                 "    cmp rcx, rbx\n",
-                "    push rbx\n",
-                "    push rcx\n",
-                "    jg loop_1\n",
-                "    ;; Clean up loop vars\n",
-                "    pop rax\n",
-                "    pop rax\n"
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jg loop_0\n",
             ]
 
     def test_loop_from_ascending(self):
@@ -1291,28 +1283,23 @@ class TestCompilerLoop:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
-                "    ;; Push number onto stack\n",
-                "    push 0\n",
-                "    ;; Push number onto stack\n",
-                "    push 3\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 3\n",
                 "    ;; Loop up\n",
-                "    loop_1:\n",
+                "    loop_0:\n",
                 "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    ;; Compare if counter is below loop end\n",
-                "    pop rbx\n",
-                "    pop rcx\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
                 "    inc rcx\n",
                 "    cmp rcx, rbx\n",
-                "    push rcx\n",
-                "    push rbx\n",
-                "    jl loop_1\n",
-                "    ;; Clean up loop vars\n",
-                "    pop rax\n",
-                "    pop rax\n"
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
             ]
 
     def test_loop_from_descending(self):
@@ -1322,28 +1309,235 @@ class TestCompilerLoop:
             assembly = compiler.get_assembly()
             assert assembly == [
                 "    ;; Push loop start and end on stack\n",
-                "    ;; Push number onto stack\n",
-                "    push 3\n",
-                "    ;; Push number onto stack\n",
-                "    push 0\n",
+                "    mov qword [loop_idx_0], 3\n",
+                "    mov qword [loop_end_0], 0\n",
                 "    ;; Loop down\n",
-                "    loop_1:\n",
+                "    loop_0:\n",
                 "    ;; Push a raw string and length onto stack\n",
                 "    push 7\n",
                 "    push raw_string_1\n",
                 "    ;; Keyword Func\n",
                 "    call print_string\n",
                 "    ;; Compare if counter is above loop end\n",
-                "    pop rbx\n",
-                "    pop rcx\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
                 "    dec rcx\n",
                 "    cmp rcx, rbx\n",
-                "    push rcx\n",
-                "    push rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jg loop_0\n",
+            ]
+
+    def test_loop_up_and_down_not_nested(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_up_down_not_nested.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 2\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 10\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 3\n",
+                "    mov qword [loop_end_0], 0\n",
+                "    ;; Loop down\n",
+                "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 12\n",
+                "    push raw_string_2\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
                 "    jg loop_1\n",
-                "    ;; Clean up loop vars\n",
-                "    pop rax\n",
-                "    pop rax\n"
+            ]
+
+    def test_loop_up_and_down_nested(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_up_and_down_nested.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 2\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_1], 3\n",
+                "    mov qword [loop_end_1], 0\n",
+                "    ;; Loop down\n",
+                "    loop_1:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 6\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_1]\n",
+                "    mov rbx, [loop_end_1]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_1], rcx\n",
+                "    mov qword [loop_end_1], rbx\n",
+                "    jg loop_1\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
+            ]
+
+    def test_loop_up_with_vars(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_up_with_vars.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov rax, [number_1]\n",
+                "    mov qword [loop_end_0], rax\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 6\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
+            ]
+
+    def test_loop_down_with_vars(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_down_with_vars.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov rax, [number_1]\n",
+                "    mov qword [loop_idx_0], rax\n",
+                "    mov qword [loop_end_0], 0\n",
+                "    ;; Loop down\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 8\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jg loop_0\n",
+            ]
+
+    def test_loop_from_with_var_first_param(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_with_var_first_param.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov rax, [number_1]\n",
+                "    mov qword [loop_idx_0], rax\n",
+                "    mov qword [loop_end_0], 0\n",
+                "    ;; Loop down\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 8\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jg loop_0\n",
+            ]
+
+    def test_loop_from_with_var_second_param(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_with_var_second_param.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov rax, [number_1]\n",
+                "    mov qword [loop_end_0], rax\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 8\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jl loop_0\n",
+            ]
+
+    def test_loop_access_index_setup(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_index_access.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            compiler.compile()
+            assert compiler.loop_idx_asm == [
+                "section .loop_indices write\n",
+                "    loop_idx_0 dq 0\n",
+                "    loop_end_0 dq 0\n",
+                "    loop_idx_1 dq 0\n",
+                "    loop_end_1 dq 0\n",
+            ]
+
+    @pytest.mark.skip
+    def test_loop_access_index_assembly(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_index_access.ktna") as f:
+            assembly = get_assembly_for_program(f.readlines())
+            assert assembly == [
             ]
 
 

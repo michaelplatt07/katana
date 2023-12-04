@@ -10,6 +10,7 @@ import sys
 verbose_flag = False
 raise_assertion_flag = False
 
+
 ###########
 # Constants
 ###########
@@ -49,6 +50,7 @@ KEYWORD_TOKEN_TYPE = "KEYWORD"
 LEFT_CURL_BRACE_TOKEN_TYPE = "LEFT_CURL_BRACE"
 LEFT_PAREN_TOKEN_TYPE = "LEFT_PAREN"
 LESS_THAN_TOKEN_TYPE = "LESS_THAN"
+LOOP_INDEX_KEYWORD_TOKEN_TYPE = "LOOP_INDEX_KEYWORD"
 FUNCTION_KEYWORD_TOKEN_TYPE = "FUNCTION_KEYWORD"
 FUNCTION_NAME_TOKEN_TYPE = "FUNCTION_NAME"
 FUNCTION_SEPARATOR_TOKEN_TYPE = "FUNCTION_SEPARATOR"
@@ -584,7 +586,7 @@ class Node:
     # TODO(map) Re-examine how this works. Need better rules around traversal
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode and type(self.parent_node) != LoopDownKeywordNode and type(self.parent_node) != LoopUpKeywordNode and type(self.parent_node) != LoopFromKeywordNode
         else:
             return False
 
@@ -1167,6 +1169,21 @@ class LoopFromKeywordNode(LoopKeywordNode):
         types_equal = type(self) == type(other)
         loop_body_equal = self.loop_body == other.loop_body
         return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+class LoopIdxKeywordNode(Node):
+    """
+    Specialized node for accessing the index of the current loop
+    """
+    def __init__(self, token, value, parent_node=None):
+        super().__init__(token, value, parent_node)
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        return types_equal and super().__eq__(other)
 
     def __hash__(self):
         return super().__hash__()
@@ -1764,7 +1781,6 @@ class Lexer:
                     raise InvalidFunctionDeclarationException(token.row, token.col)
                 else:
                     return token
-                # if token.ttype ==
             elif character == ':' and self.program.get_next_char() == ':':
                 return self.handle_function_separator()
             elif character == ':' and self.program.get_next_char() != ':':  # Do we care about a single colon by itself?
@@ -1876,6 +1892,8 @@ class Lexer:
             return Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
         elif keyword in self.function_args.keys():
             return Token(FUNCTION_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+        elif keyword == "idx":
+            return Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -2467,6 +2485,8 @@ class Parser:
             node = LoopDownKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_FROM:
             node = LoopFromKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == LOOP_INDEX_KEYWORD_TOKEN_TYPE:
+            node = LoopIdxKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
             node = RangeNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype in [EQUAL_TOKEN_TYPE, GREATER_THAN_TOKEN_TYPE, LESS_THAN_TOKEN_TYPE]:
@@ -2759,6 +2779,12 @@ class Parser:
                 line_ast = self.build_copy_str_line_ast(processed_node)
             elif type(processed_node) == VariableKeywordNode and processed_node.value in VARIABLE_KEYWORDS:
                 line_ast = self.build_var_dec_line_ast(processed_node)
+            elif type(processed_node) == LoopUpKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopDownKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
@@ -3220,7 +3246,7 @@ class Parser:
         # a conditional. Should be removed at some point but the assert is nice
         # to have as a safety check
         for node in line_of_nodes:
-            assert type(node) in [NumberNode, StringNode, CharNode, BooleanNode, PlusMinusNode, MultiplyDivideNode, CompareNode, VariableReferenceNode, FunctionArgReferenceNode, AssignmentNode, FunctionKeywordNode, LeftParenNode, RightParenNode, FunctionCallLeftParenNode, FunctionCallRightParenNode, ArgSeparatorNode], f"Type {type(node)} not allowed in AST build."
+            assert type(node) in [NumberNode, StringNode, CharNode, BooleanNode, PlusMinusNode, MultiplyDivideNode, CompareNode, VariableReferenceNode, FunctionArgReferenceNode, AssignmentNode, FunctionKeywordNode, LeftParenNode, RightParenNode, FunctionCallLeftParenNode, FunctionCallRightParenNode, ArgSeparatorNode, LoopIdxKeywordNode], f"Type {type(node)} not allowed in AST build."
 
         # Initialize ast and loop over the list of nodes that should be valid.
         ast = None
@@ -3622,6 +3648,9 @@ class Compiler:
         self.variables = {}
         self.conditionals = {}
         self.loops = {}
+        self.max_loop_count_depth = 0
+        self.curr_loop_count_depth = 0
+        self.loop_idx_asm = []
         self.initialize_vars_asm = []
         self.user_func_asm = {}
         self.function_and_args_map = {}
@@ -3651,8 +3680,14 @@ class Compiler:
             if type(single_node) == StartNode:
                 for node in single_node.children_nodes:
                     asm.extend(self.traverse_tree(node))
+                    if self.max_loop_count_depth < self.curr_loop_count_depth:
+                        self.max_loop_count_depth = self.curr_loop_count_depth
+                    self.curr_loop_count_depth = 0
             elif type(single_node) == FunctionNode:
                 self.user_func_asm[single_node.function_name.value] = self.traverse_tree(single_node)
+                if self.max_loop_count_depth < self.curr_loop_count_depth:
+                    self.max_loop_count_depth = self.curr_loop_count_depth
+                self.curr_loop_count_depth = 0
             else:
                 asm.extend(self.traverse_tree(single_node))
         return asm
@@ -3672,6 +3707,20 @@ class Compiler:
             for key in self.raw_chars:
                 for line in self.raw_chars[key]:
                     compiled_program.write(line)
+            # TODO(map) Order of operations isn't great here. Should consider
+            # making this a method or something
+            # Set up the loop index tracking information
+            if self.max_loop_count_depth > 0:
+                self.loop_idx_asm.append("section .loop_indices write\n")
+                for i in range(self.max_loop_count_depth):
+                    self.loop_idx_asm.append(f"    loop_idx_{i} dq 0\n")
+                    self.loop_idx_asm.append(f"    loop_end_{i} dq 0\n")
+            # Write the data for the max depth of the loops. If for instance,
+            # there is a max depth of nested loops of three, meaning there is a
+            # loop nested in a loop nested in a loop, we will only ever need
+            # to track a maximum of three loop indexes at any time.
+            for line in self.loop_idx_asm:
+                compiled_program.write(line)
             # Write the variables first, them move to assembly.
             for key in self.variables:
                 # Write the assembly for the string.
@@ -3739,6 +3788,8 @@ class Compiler:
                     keyword_call_asm = self.get_printl_char_keyword_asm()
                 elif type(node.arg_nodes[0]) == PlusMinusNode:
                     # TODO(map) https://trello.com/c/wRuStWqL/11-update-the-print-node-logic-for-the-plusminusnode-to-handle-addition-of-things-other-than-strings
+                    keyword_call_asm = self.get_printl_num_keyword_asm()
+                elif type(node.arg_nodes[0]) == LoopIdxKeywordNode:
                     keyword_call_asm = self.get_printl_num_keyword_asm()
                 elif self.variables[node.arg_nodes[0].value]:
                     if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
@@ -3926,46 +3977,70 @@ class Compiler:
                 return self.traverse_equal_body(conditional_mark_count, node) + self.get_end_of_conditional_asm(conditional_mark_count)
             else:
                 assert False, f"Conditional {node.child_nod.value} not understood."
+        # TODO(map) Passing the loop values as a tuple isn't great here. I should look for a way to map these to values to I can access them
+        # as I desire. This will probably be a problem as things get more complicated, but for now it'll do.
         elif isinstance(node, LoopKeywordNode):
             if type(node) == LoopUpKeywordNode:
                 node.visited = True
-                if not node.child_node.visited:
-                    return self.get_push_loop_start_val_asm(0) + self.traverse_tree(node.child_node)
-                if not node.loop_body[0].visited:
-                    self.loop_count += 1
-                    self.loops[node] = self.loop_count
-                    return  self.get_loop_up_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(self.loops[node])
-                return []
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_up_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(0, node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(*self.loops[node])
+                return asm
             elif type(node) == LoopDownKeywordNode:
                 node.visited = True
-                if not node.child_node.visited:
-                    return self.get_push_loop_end_val_asm(0) + self.traverse_tree(node.child_node)
-                if not node.loop_body[0].visited:
-                    self.loop_count += 1
-                    self.loops[node] = self.loop_count
-                    return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(self.loops[node])
-                return []
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                return asm
             elif type(node) == LoopFromKeywordNode:
                 node.visited = True
                 # NOTE(map) This assumes that either side of the loopFrom values are a variable or a number.
-                first_loop_value = int(node.child_node.left_side.value) if type(node.child_node.left_side) == NumberNode else int(self.variables.get(node.child_node.left_side.value)["var_val"])
-                second_loop_value = int(node.child_node.right_side.value) if type(node.child_node.right_side) == NumberNode else int(self.variables.get(node.child_node.right_side.value)["var_val"])
-                if first_loop_value < second_loop_value:
-                    if not node.child_node.visited:
-                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
-                    if not node.loop_body[0].visited:
-                        self.loop_count += 1
-                        self.loops[node] = self.loop_count
-                        return self.get_loop_up_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_ascending_asm(self.loops[node])
-                    return []
+                first_val_is_var = type(node.child_node.left_side) == VariableReferenceNode
+                second_val_is_var = type(node.child_node.right_side) == VariableReferenceNode
+                first_loop_value = int(node.child_node.left_side.value) if not first_val_is_var else int(self.variables.get(node.child_node.left_side.value)["var_val"])
+                second_loop_value = int(node.child_node.right_side.value) if not second_val_is_var else int(self.variables.get(node.child_node.right_side.value)["var_val"])
+                is_loop_ascending = first_loop_value < second_loop_value
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+
+                # There are no variable references in the loop from declaration
+                if not first_val_is_var and not second_val_is_var:
+                    asm = self.get_push_loop_indices_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node]) 
+                    if is_loop_ascending:  # Loop up
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(*self.loops[node])
+                    else:  # Loop down
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                # There is a variable reference
                 else:
-                    if not node.child_node.visited:
-                        return ["    ;; Push loop start and end on stack\n"] + self.traverse_tree(node.child_node)
-                    if not node.loop_body[0].visited:
-                        self.loop_count += 1
-                        self.loops[node] = self.loop_count
-                        return self.get_loop_down_asm_start(self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_from_descending_asm(self.loops[node])
-                    return []
+                    # Case of var in first param of loop from
+                    if first_val_is_var and not second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_first_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, self.curr_loop_count_depth)
+                    # Case of var in second param of loop from
+                    elif not first_val_is_var and second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_second_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, self.curr_loop_count_depth)
+                    # Case of var in first and second param of loop from
+                    elif first_val_is_var and second_val_is_var:
+                        assert False, "TODO(map) Implement loopFrom with both values being vars"
+                    # Catching everything else
+                    else:
+                        assert False, "There were no var references in loopFrom but logic triggered"
+
+                    if is_loop_ascending:
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(*self.loops[node])
+                    else:
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+
+                self.curr_loop_count_depth += 1
+                self.loop_count += 1
+                return asm
         elif type(node) == BooleanNode:
             node.visited = True
             if type(node.parent_node) == AssignmentNode:
@@ -4899,53 +4974,86 @@ class Compiler:
             f"    push {loop_start}\n"
         ]
 
-    def get_push_loop_end_val_asm(self, loop_end):
+    def get_push_loop_end_val_asm(self, loop_start, loop_end, loop_count):
         return [
             "    ;; Push loop start and end on stack\n",
             f"    push {loop_end}\n"
         ]
 
+    def get_push_loop_up_indices_with_var_asm(self, var_ref, loop_level, loop_count):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    mov qword [loop_idx_{loop_level}], 0\n",
+            f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
+            f"    mov qword [loop_end_{loop_level}], rax\n",
+        ]
 
-    def get_loop_up_asm_start(self, loop_count):
+    def get_push_loop_down_indices_with_var_asm(self, var_ref, loop_level, loop_count):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
+            f"    mov qword [loop_idx_{loop_level}], rax\n",
+            f"    mov qword [loop_end_{loop_level}], 0\n",
+        ]
+
+    def get_push_loop_from_indices_with_var_first_param_asm(self, var_ref, loop_end, loop_count):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
+            f"    mov qword [loop_idx_{loop_count}], rax\n",
+            f"    mov qword [loop_end_{loop_count}], {loop_end}\n",
+        ]
+
+    def get_push_loop_from_indices_with_var_second_param_asm(self, loop_start, var_ref, loop_count):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    mov qword [loop_idx_{loop_count}], {loop_start}\n",
+            f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
+            f"    mov qword [loop_end_{loop_count}], rax\n",
+        ]
+
+    def get_push_loop_indices_asm(self, loop_start, loop_end, loop_level, loop_count):
+        return [
+            "    ;; Push loop start and end on stack\n",
+            f"    mov qword [loop_idx_{loop_level}], {loop_start}\n",
+            f"    mov qword [loop_end_{loop_level}], {loop_end}\n",
+        ]
+
+
+    def get_loop_up_asm_start(self, loop_level, loop_count):
         return [
             "    ;; Loop up\n",
             f"    loop_{loop_count}:\n",
         ]
 
-    def get_loop_down_asm_start(self, loop_count):
+    def get_loop_down_asm_start(self, loop_level, loop_count):
         return [
             "    ;; Loop down\n",
             f"    loop_{loop_count}:\n",
         ]
 
-    def get_loop_up_asm_end(self, loop_count):
+    def get_loop_up_asm_end(self, loop_level, loop_count):
         return [
             "    ;; Compare if counter is below loop end\n",
-            "    pop rbx\n",
-            "    pop rcx\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
             "    inc rcx\n",
             "    cmp rcx, rbx\n",
-            "    push rcx\n",
-            "    push rbx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
             f"    jl loop_{loop_count}\n",
-            "    ;; Clean up loop vars\n",
-            "    pop rax\n",
-            "    pop rax\n"
         ]
 
-    def get_loop_down_asm_end(self, loop_count):
+    def get_loop_down_asm_end(self, loop_level, loop_count):
         return [
             "    ;; Compare if counter is above loop end\n",
-            "    pop rcx\n",
-            "    pop rbx\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
             "    dec rcx\n",
             "    cmp rcx, rbx\n",
-            "    push rbx\n",
-            "    push rcx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
             f"    jg loop_{loop_count}\n",
-            "    ;; Clean up loop vars\n",
-            "    pop rax\n",
-            "    pop rax\n"
         ]
 
     def get_loop_from_ascending_asm(self, loop_count):

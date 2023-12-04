@@ -1,0 +1,7 @@
+main() {
+    loopUp(2) {
+        loopDown(3) {
+            printl("Nested");
+        }
+    }
+}
