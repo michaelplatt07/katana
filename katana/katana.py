@@ -1179,7 +1179,8 @@ class LoopIdxKeywordNode(Node):
     Specialized node for accessing the index of the current loop
     """
     def __init__(self, token, value, parent_node=None):
-        super().__init__(token, value, parent_node)
+        super().__init__(token, parent_node)
+        self.value = value
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -1187,6 +1188,9 @@ class LoopIdxKeywordNode(Node):
 
     def __hash__(self):
         return super().__hash__()
+
+    def __repr__(self):
+        return f"({self.value})"
 
 
 class StartNode(Node):
