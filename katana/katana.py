@@ -2877,6 +2877,12 @@ class Parser:
                 self.build_if_conditional_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
+            elif type(processed_node) == LoopUpKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopDownKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
@@ -4045,6 +4051,11 @@ class Compiler:
                 self.curr_loop_count_depth += 1
                 self.loop_count += 1
                 return asm
+        elif type(node) == LoopIdxKeywordNode:
+            loop_node = node
+            while not isinstance(loop_node, LoopKeywordNode):
+                loop_node = loop_node.parent_node
+            return self.get_push_current_loop_idx_onto_stack(*self.loops[loop_node])
         elif type(node) == BooleanNode:
             node.visited = True
             if type(node.parent_node) == AssignmentNode:
@@ -4473,6 +4484,10 @@ class Compiler:
             compiled_program.write("        ;; Push the remainder onto the stack (value to print)\n")
             compiled_program.write("        add rdx, 48\n")
             compiled_program.write("        push rdx\n")
+            compiled_program.write("        ;; If there is no need to loop go straight to printing\n")
+            compiled_program.write("        cmp r8, 0\n")
+            compiled_program.write("        ;; If no numbers remain\n")
+            compiled_program.write("        je print_printl_num\n")
             compiled_program.write("        l1_printl_num:\n")
             compiled_program.write("        mov rax, r8\n")
             compiled_program.write("        ;; Put the divisor into the register\n")
@@ -4520,6 +4535,8 @@ class Compiler:
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Clean up line feed print\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("        ;; Add return carriage.\n")
             compiled_program.write("        push 13\n")
             compiled_program.write("        mov rsi, rsp\n")
@@ -4527,6 +4544,8 @@ class Compiler:
             compiled_program.write("        mov rax, 1\n")
             compiled_program.write("        mov rdi, 1\n")
             compiled_program.write("        syscall\n")
+            compiled_program.write("        ;; Clean up line return carriage print\n")
+            compiled_program.write("        pop rax\n")
             compiled_program.write("        ;; Push return address back.\n")
             compiled_program.write("        push rbx\n")
             compiled_program.write("        ret\n")
@@ -5023,7 +5042,6 @@ class Compiler:
             f"    mov qword [loop_end_{loop_level}], {loop_end}\n",
         ]
 
-
     def get_loop_up_asm_start(self, loop_level, loop_count):
         return [
             "    ;; Loop up\n",
@@ -5048,6 +5066,8 @@ class Compiler:
             f"    jl loop_{loop_count}\n",
         ]
 
+    # TODO(map) This loops from the current value down to 1.
+    # It should loop from start value - 1 down to 0 so the laguage is 0 indexed
     def get_loop_down_asm_end(self, loop_level, loop_count):
         return [
             "    ;; Compare if counter is above loop end\n",
@@ -5088,6 +5108,13 @@ class Compiler:
             "    ;; Clean up loop vars\n",
             "    pop rax\n",
             "    pop rax\n"
+        ]
+
+    def get_push_current_loop_idx_onto_stack(self, loop_level, loop_count):
+        return [
+            f"    ;; Push loop idx {loop_level} onto stack\n",
+            f"    mov rax, [loop_idx_{loop_level}]\n",
+            "    push rax\n",
         ]
 
     def get_true_side_asm(self, conditional_count):
