@@ -2946,6 +2946,12 @@ class Parser:
                 self.build_if_conditional_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
+            elif type(processed_node) == LoopUpKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopDownKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
@@ -4020,6 +4026,8 @@ class Compiler:
                 is_loop_ascending = first_loop_value < second_loop_value
                 node.visited = True
                 self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
 
                 # There are no variable references in the loop from declaration
                 if not first_val_is_var and not second_val_is_var:
@@ -4032,10 +4040,10 @@ class Compiler:
                 else:
                     # Case of var in first param of loop from
                     if first_val_is_var and not second_val_is_var:
-                        asm = self.get_push_loop_from_indices_with_var_first_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, self.curr_loop_count_depth)
+                        asm = self.get_push_loop_from_indices_with_var_first_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
                     # Case of var in second param of loop from
                     elif not first_val_is_var and second_val_is_var:
-                        asm = self.get_push_loop_from_indices_with_var_second_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, self.curr_loop_count_depth)
+                        asm = self.get_push_loop_from_indices_with_var_second_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
                     # Case of var in first and second param of loop from
                     elif first_val_is_var and second_val_is_var:
                         assert False, "TODO(map) Implement loopFrom with both values being vars"
@@ -5019,20 +5027,20 @@ class Compiler:
             f"    mov qword [loop_end_{loop_level}], 0\n",
         ]
 
-    def get_push_loop_from_indices_with_var_first_param_asm(self, var_ref, loop_end, loop_count):
+    def get_push_loop_from_indices_with_var_first_param_asm(self, var_ref, loop_end, loop_level, loop_count):
         return [
             "    ;; Push loop start and end on stack\n",
             f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
-            f"    mov qword [loop_idx_{loop_count}], rax\n",
-            f"    mov qword [loop_end_{loop_count}], {loop_end}\n",
+            f"    mov qword [loop_idx_{loop_level}], rax\n",
+            f"    mov qword [loop_end_{loop_level}], {loop_end}\n",
         ]
 
-    def get_push_loop_from_indices_with_var_second_param_asm(self, loop_start, var_ref, loop_count):
+    def get_push_loop_from_indices_with_var_second_param_asm(self, loop_start, var_ref, loop_level, loop_count):
         return [
             "    ;; Push loop start and end on stack\n",
-            f"    mov qword [loop_idx_{loop_count}], {loop_start}\n",
+            f"    mov qword [loop_idx_{loop_level}], {loop_start}\n",
             f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
-            f"    mov qword [loop_end_{loop_count}], rax\n",
+            f"    mov qword [loop_end_{loop_level}], rax\n",
         ]
 
     def get_push_loop_indices_asm(self, loop_start, loop_end, loop_level, loop_count):
