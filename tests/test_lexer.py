@@ -1169,6 +1169,72 @@ class TestLoopIdx:
         assert token_list == lexer.lex()
 
 
+class TestLexerLoopInclusiveKeyword:
+    """
+    All tests related to the various inclusive loops and how they work.
+    """
+
+    def test_basic_loop_up_inclusive_keyword(self):
+        program = Program(["main() {\n", "iLoopUp(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "iLoopUp", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 7, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 8, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 9, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 11, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_basic_loop_down_inclusive_keyword(self):
+        program = Program(["main() {\n", "iLoopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "iLoopDown", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 11, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 13, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_basic_loop_from_inclusive_keyword(self):
+        program = Program(["main() {\n", "iLoopFrom(0..3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "iLoopFrom", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 9, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 10, 1, "0", LOW),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 11, 1, "..", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 13, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 14, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 16, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 5, 2, "(", VERY_HIGH),
+            Token(STRING_TOKEN_TYPE, 6, 2, "looping", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 16, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
 
 
 class TestLexerCharAt:
