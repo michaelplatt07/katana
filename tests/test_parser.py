@@ -19,6 +19,7 @@ from katana.katana import (
     LogicKeywordNode,
     LoopDownKeywordNode,
     LoopFromKeywordNode,
+    LoopIdxKeywordNode,
     LoopUpKeywordNode,
     MacroNameNode,
     MacroNode,
@@ -58,6 +59,7 @@ from katana.katana import (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
+    LOOP_INDEX_KEYWORD_TOKEN_TYPE,
     GREATER_THAN_TOKEN_TYPE,
     FUNCTION_ARG_TOKEN_TYPE,
     FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
@@ -2933,6 +2935,139 @@ class TestParserLoopKeyword:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopFrom", LOOP_FROM_SIGNATURE))
+
+
+class TestParserLoopIdxKeyword:
+    """
+    All tests related to accessing the loop index of any loop.
+    """
+
+    def test_loop_up_access_index(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopUp(3) {
+                print(idx);
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(loopUp((0<3), [(print(idx))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 11, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 14, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 2, 14, "idx", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        idx_node = LoopIdxKeywordNode(token_list[11], "idx")
+        print_node = FunctionKeywordNode(token_list[9], "print", [idx_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_down_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopDown(3) {
+                print(idx);
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(loopDown((0<3), [(print(idx))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 14, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 16, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 2, 14, "idx", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        idx_node = LoopIdxKeywordNode(token_list[11], "idx")
+        print_node = FunctionKeywordNode(token_list[9], "print", [idx_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_from_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            loopFrom(0..3) {
+                print(idx);
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(loopFrom((0..3), [(print(idx))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 13, "0", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 1, 14, "..", 0),
+            Token(NUM_TOKEN_TYPE, 1, 16, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 17, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 18, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 2, 14, "idx", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+        ]
+        idx_node = StringNode(token_list[13], "idx")
+        print_node = FunctionKeywordNode(token_list[11], "print", [idx_node])
+        zero_node = NumberNode(token_list[6], "0")
+        three_node = NumberNode(token_list[8], "3")
+        range_node = RangeNode(token_list[7], "..", zero_node, three_node)
+        loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
 
 
 class TestKeywordAdvanced:

@@ -1,0 +1,6 @@
+main() {
+    loopUp(3) {
+        print("Loop idx = ");
+        printl(idx);
+    }
+}

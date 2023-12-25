@@ -1,0 +1,14 @@
+main() {
+    loopUp(3) {
+        loopDown(2) {
+            print("Down idx = ");
+            printl(idx);
+            loopFrom(4..8) {
+                print("From idx = ");
+                printl(idx);
+            }
+        }
+        print("Up idx = ");
+        printl(idx);
+    }
+}

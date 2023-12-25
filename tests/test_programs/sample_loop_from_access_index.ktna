@@ -1,0 +1,6 @@
+main() {
+    loopFrom(0..3) {
+        print("Loop idx = ");
+        printl(idx);
+    }
+}

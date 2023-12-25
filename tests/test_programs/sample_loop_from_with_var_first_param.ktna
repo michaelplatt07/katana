@@ -1,0 +1,6 @@
+main() {
+    int64 x = 4;
+    loopFrom(x..0) {
+        printl("loopFrom");
+    }
+}

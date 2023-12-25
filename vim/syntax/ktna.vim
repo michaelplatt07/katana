@@ -1,13 +1,14 @@
 " Vim Syntax File
 " Language: Katana
 " Maintainer: Michael Platt
-" Latest Revision: 2023-05-29
+" Latest Revision: 2023-12-30
 
 hi KatanaMain ctermfg=94
 hi KatanaVarDecKeyword ctermfg=29
 hi KatanaBuiltinMethods ctermfg=130
 hi KatanaLogic ctermfg=140
 hi KatanaComment ctermfg=202
+hi KatanaConst ctermfg=180
 hi KatanaString ctermfg=191
 hi KatanaVar ctermfg=191
 hi KatanaChar ctermfg=191
@@ -31,8 +32,8 @@ match katanaBuiltinFuncKeyword /fn/
 highlight link katanaBuiltinFuncKeyword KatanaBuiltinMethods
 
 " Builtin constant var values
-syn keyword katanaBuiltinVarsKeyword true false
-highlight link katanaBuiltinVarsKeyword KatanaVar
+syn keyword katanaBuiltinVarsKeyword true false idx
+highlight link katanaBuiltinVarsKeyword KatanaConst
 
 " Logic keywords
 syn keyword katanaLogicKeyword if else loopUp loopDown loopFrom

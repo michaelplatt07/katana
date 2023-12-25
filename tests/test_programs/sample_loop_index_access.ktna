@@ -1,0 +1,8 @@
+main() {
+    loopUp(2) {
+        loopDown(3) {
+            print("Loop index = ");
+            printl("x");
+        }
+    }
+}

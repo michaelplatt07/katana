@@ -19,6 +19,7 @@ from katana.katana import (
     LEFT_CURL_BRACE_TOKEN_TYPE,
     LEFT_PAREN_TOKEN_TYPE,
     LESS_THAN_TOKEN_TYPE,
+    LOOP_INDEX_KEYWORD_TOKEN_TYPE,
     FUNCTION_ARG_TOKEN_TYPE,
     FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
     FUNCTION_ARG_TYPE_TOKEN_TYPE,
@@ -1097,6 +1098,79 @@ class TestLexerLoopKeyword:
         assert token_list == lexer.lex()
 
 
+class TestLoopIdx:
+    """
+    All tests related to accessing the loop index inside the loop keyword.
+
+    Separate from testing the loop keywords themselves as that is more syntax
+    focused and this assumes the loop is declared correctly.
+    """
+
+    def test_loop_up_access_index(self):
+        program = Program(["main() {\n", "loopUp(3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "loopUp", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 7, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 8, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 10, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "printl", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 2, "(", VERY_HIGH),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 7, 2, "idx", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_loop_down_access_index(self):
+        program = Program(["main() {\n", "loopDown(3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "loopDown", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 8, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 12, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "printl", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 2, "(", VERY_HIGH),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 7, 2, "idx", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+    def test_loop_from_access_index(self):
+        program = Program(["main() {\n", "loopFrom(0..3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        token_list = get_main_tokens() + [
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "loopFrom", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 8, 1, "(", VERY_HIGH),
+            Token(NUM_TOKEN_TYPE, 9, 1, "0", LOW),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 10, 1, "..", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 12, 1, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 13, 1, ")", VERY_HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 15, 1, "{", VERY_HIGH),
+            Token(KEYWORD_TOKEN_TYPE, 0, 2, "printl", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 2, "(", VERY_HIGH),
+            Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, 7, 2, "idx", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 10, 2, ")", VERY_HIGH),
+            Token(EOL_TOKEN_TYPE, 11, 2, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", VERY_HIGH),
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", LOW),
+        ]
+        lexer = Lexer(program)
+        assert token_list == lexer.lex()
+
+
+
+
 class TestLexerCharAt:
     """
     All tests related to the charAt function.
@@ -1486,4 +1560,3 @@ class TestLexerFunction:
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
-
