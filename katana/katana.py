@@ -1177,6 +1177,84 @@ class LoopFromKeywordNode(LoopKeywordNode):
         return super().__hash__()
 
 
+class LoopUpInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopUp` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = 0
+        if self.child_node:
+            self.end_value = child_node.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+class LoopDownInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopDown` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        if self.child_node:
+            self.start_value = child_node.value
+        self.end_value = 0
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+class LoopFromInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopFrom` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        if child_node:
+            self.start_value = child_node.left_side.value
+            self.end_value = child_node.right_side.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        if not loop_body_equal:
+            assert False, f"Loop bodies not equal for {self}"
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+
 class LoopIdxKeywordNode(Node):
     """
     Specialized node for accessing the index of the current loop
@@ -2364,9 +2442,15 @@ class Parser:
             self.current_if_node = processed_node
         elif type(processed_node) == LoopUpKeywordNode:
             line_ast = self.build_loop_up_line_ast(processed_node)
+        elif type(processed_node) == LoopUpInclusiveKeywordNode:
+            line_ast = self.build_loop_up_line_ast(processed_node)
         elif type(processed_node) == LoopDownKeywordNode:
             line_ast = self.build_loop_down_line_ast(processed_node)
+        elif type(processed_node) == LoopDownInclusiveKeywordNode:
+            line_ast = self.build_loop_down_line_ast(processed_node)
         elif type(processed_node) == LoopFromKeywordNode:
+            line_ast = self.build_loop_from_line_ast(processed_node)
+        elif type(processed_node) == LoopFromInclusiveKeywordNode:
             line_ast = self.build_loop_from_line_ast(processed_node)
         elif type(processed_node) == FunctionReturnNode:
             line_ast = self.build_return_statement(processed_node)
@@ -2423,7 +2507,7 @@ class Parser:
                 node = RightParenNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
             # Currently working on a loop block
-            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode, LoopUpInclusiveKeywordNode, LoopDownInclusiveKeywordNode, LoopFromInclusiveKeywordNode]:
                 node = LoopBodyLeftCurlNode(self.curr_token)
             # Currently in an "if" block of logic.
             elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
@@ -2436,7 +2520,7 @@ class Parser:
                 node = FunctionBodyLeftCurlNode(self.curr_token)
         elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
             # Currently working on a loop block
-            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode, LoopUpInclusiveKeywordNode, LoopDownInclusiveKeywordNode, LoopFromInclusiveKeywordNode]:
                 node = LoopBodyRightCurlNode(self.curr_token)
                 self.if_else_list.pop()
             # Currently in an "if" block of logic.
@@ -2488,10 +2572,16 @@ class Parser:
             node = LogicKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_UP:
             node = LoopUpKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_UP:
+            node = LoopUpInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_DOWN:
             node = LoopDownKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_DOWN:
+            node = LoopDownInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_FROM:
             node = LoopFromKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_FROM:
+            node = LoopFromInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == LOOP_INDEX_KEYWORD_TOKEN_TYPE:
             node = LoopIdxKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
@@ -2780,6 +2870,11 @@ class Parser:
         if type(processed_node) == LoopBodyRightCurlNode:
             assert False, "TODO(map) Raise empty loop body exception"
         while type(processed_node) != LoopBodyRightCurlNode:
+            # TODO(map) Should figure out a way to catch going out of the loop
+            # The problem is when processing a token, if we don't update the
+            # code to ensure that the closing curl brace is also a function body
+            # closing brace we will thrown an error that isn't quite correct.
+            # This applies to all the loops that are being built up
             if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
             elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
@@ -2788,16 +2883,20 @@ class Parser:
                 line_ast = self.build_var_dec_line_ast(processed_node)
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
-            elif type(processed_node) == LoopUpKeywordNode:
-                line_ast = self.build_loop_up_line_ast(processed_node)
             # We don't want to do anything on a NoOpNode because that means the
             # comment is the only thing on the line.
             elif type(processed_node) == NoOpNode:
@@ -2813,9 +2912,6 @@ class Parser:
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_up_node
         loop_up_node.loop_body = body_node_list
@@ -2882,9 +2978,15 @@ class Parser:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -2895,9 +2997,6 @@ class Parser:
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_down_node
         loop_down_node.loop_body = body_node_list
@@ -2951,9 +3050,15 @@ class Parser:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
@@ -2964,9 +3069,6 @@ class Parser:
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_from_node
         loop_from_node.loop_body = body_node_list
@@ -4062,6 +4164,8 @@ class Compiler:
                 self.curr_loop_count_depth += 1
                 self.loop_count += 1
                 return asm
+            else:
+                assert False, f"Not sure how to handle the loop node of type {type(node)}"
         elif type(node) == LoopIdxKeywordNode:
             loop_node = node
             while not isinstance(loop_node, LoopKeywordNode):
