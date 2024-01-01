@@ -1,0 +1,5 @@
+main() {
+    iLoopUp(3) {  // This will loop from 0-3 inclusive
+        printl("Looping up inclusively");
+    }
+}

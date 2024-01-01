@@ -589,7 +589,7 @@ class Node:
     # TODO(map) Re-examine how this works. Need better rules around traversal
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode and type(self.parent_node) != LoopDownKeywordNode and type(self.parent_node) != LoopUpKeywordNode and type(self.parent_node) != LoopFromKeywordNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode and type(self.parent_node) != LoopDownKeywordNode and type(self.parent_node) != LoopDownInclusiveKeywordNode and type(self.parent_node) != LoopUpKeywordNode and type(self.parent_node) != LoopUpInclusiveKeywordNode and type(self.parent_node) != LoopFromKeywordNode and type(self.parent_node) != LoopFromInclusiveKeywordNode
         else:
             return False
 
@@ -2988,11 +2988,17 @@ class Parser:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
+            # We don't want to do anything on a NoOpNode because that means the
+            # comment is the only thing on the line.
+            elif type(processed_node) == NoOpNode:
+                line_ast = processed_node
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
                 # print("WARNING: There may be a problem in the loop body.")
-            body_node_list.append(line_ast)
+
+            if type(processed_node) != NoOpNode:
+                body_node_list.append(line_ast)
 
             # Process the next node
             processed_node = self.process_token()
@@ -3060,11 +3066,17 @@ class Parser:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
+            # We don't want to do anything on a NoOpNode because that means the
+            # comment is the only thing on the line.
+            elif type(processed_node) == NoOpNode:
+                line_ast = processed_node
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
                 # print("WARNING: There may be a problem in the loop body.")
-            body_node_list.append(line_ast)
+
+            if type(processed_node) != NoOpNode:
+                body_node_list.append(line_ast)
 
             # Process the next node
             processed_node = self.process_token()
@@ -4120,6 +4132,36 @@ class Compiler:
                     asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
                 else:
                     asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                return asm            
+            elif type(node) == LoopUpInclusiveKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_up_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(0, node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                return asm
+            elif type(node) == LoopDownKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                return asm
+            elif type(node) == LoopDownInclusiveKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
                 return asm
             elif type(node) == LoopFromKeywordNode:
                 node.visited = True
@@ -4160,6 +4202,49 @@ class Compiler:
                         asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_asm_end(*self.loops[node])
                     else:
                         asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+
+                self.curr_loop_count_depth += 1
+                self.loop_count += 1
+                return asm
+            elif type(node) == LoopFromInclusiveKeywordNode:
+                node.visited = True
+                # NOTE(map) This assumes that either side of the loopFrom values are a variable or a number.
+                first_val_is_var = type(node.child_node.left_side) == VariableReferenceNode
+                second_val_is_var = type(node.child_node.right_side) == VariableReferenceNode
+                first_loop_value = int(node.child_node.left_side.value) if not first_val_is_var else int(self.variables.get(node.child_node.left_side.value)["var_val"])
+                second_loop_value = int(node.child_node.right_side.value) if not second_val_is_var else int(self.variables.get(node.child_node.right_side.value)["var_val"])
+                is_loop_ascending = first_loop_value < second_loop_value
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+
+                # There are no variable references in the loop from declaration
+                if not first_val_is_var and not second_val_is_var:
+                    asm = self.get_push_loop_indices_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node]) 
+                    if is_loop_ascending:  # Loop up
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                    else:  # Loop down
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
+                # There is a variable reference
+                else:
+                    # Case of var in first param of loop from
+                    if first_val_is_var and not second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_first_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
+                    # Case of var in second param of loop from
+                    elif not first_val_is_var and second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_second_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
+                    # Case of var in first and second param of loop from
+                    elif first_val_is_var and second_val_is_var:
+                        assert False, "TODO(map) Implement loopFrom with both values being vars"
+                    # Catching everything else
+                    else:
+                        assert False, "There were no var references in loopFrom but logic triggered"
+
+                    if is_loop_ascending:
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                    else:
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
 
                 self.curr_loop_count_depth += 1
                 self.loop_count += 1
@@ -5181,8 +5266,19 @@ class Compiler:
             f"    jl loop_{loop_count}\n",
         ]
 
-    # TODO(map) This loops from the current value down to 1.
-    # It should loop from start value - 1 down to 0 so the laguage is 0 indexed
+    def get_loop_up_inclusive_asm_end(self, loop_level, loop_count):
+        return [
+            "    ;; Compare if counter is below loop end\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
+            f"    jle loop_{loop_count}\n",
+        ]
+
+
     def get_loop_down_asm_end(self, loop_level, loop_count):
         return [
             "    ;; Compare if counter is above loop end\n",
@@ -5193,6 +5289,18 @@ class Compiler:
             f"    mov qword [loop_idx_{loop_level}], rcx\n",
             f"    mov qword [loop_end_{loop_level}], rbx\n",
             f"    jg loop_{loop_count}\n",
+        ]
+
+    def get_loop_down_inclusive_asm_end(self, loop_level, loop_count):
+        return [
+            "    ;; Compare if counter is above loop end\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
+            f"    jge loop_{loop_count}\n",
         ]
 
     def get_loop_from_ascending_asm(self, loop_count):

@@ -1632,6 +1632,116 @@ class TestCompilerLoopIdx:
             ]
 
 
+class TestCompilerLoopInclusive:
+    """
+    All tests related to inclusive loops.
+    """
+
+    def test_loop_up_inclusive(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_up_inclusive.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 3\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 7\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jle loop_0\n",
+            ]
+
+    def test_loop_down_inclusive(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_down_inclusive.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 3\n",
+                "    mov qword [loop_end_0], 0\n",
+                "    ;; Loop down\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 7\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jge loop_0\n",
+            ]
+
+    def test_loop_from_inclusive_ascending(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_inclusive_ascending.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 0\n",
+                "    mov qword [loop_end_0], 3\n",
+                "    ;; Loop up\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 7\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is below loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    inc rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jle loop_0\n",
+            ]
+
+    def test_loop_from_inclusive_descending(self):
+        curr_dir = os.getcwd()
+        with open(curr_dir + "/tests/test_programs/sample_loop_from_inclusive_descending.ktna") as f:
+            compiler = get_compiler_class(f.readlines())
+            assembly = compiler.get_assembly()
+            assert assembly == [
+                "    ;; Push loop start and end on stack\n",
+                "    mov qword [loop_idx_0], 3\n",
+                "    mov qword [loop_end_0], 0\n",
+                "    ;; Loop down\n",
+                "    loop_0:\n",
+                "    ;; Push a raw string and length onto stack\n",
+                "    push 7\n",
+                "    push raw_string_1\n",
+                "    ;; Keyword Func\n",
+                "    call printl_string\n",
+                "    ;; Compare if counter is above loop end\n",
+                "    mov rcx, [loop_idx_0]\n",
+                "    mov rbx, [loop_end_0]\n",
+                "    dec rcx\n",
+                "    cmp rcx, rbx\n",
+                "    mov qword [loop_idx_0], rcx\n",
+                "    mov qword [loop_end_0], rbx\n",
+                "    jge loop_0\n",
+            ]
+
+
 class TestCompilerMultipleVarDeclarations:
 
     def test_multiple_var_type_declarations(self):

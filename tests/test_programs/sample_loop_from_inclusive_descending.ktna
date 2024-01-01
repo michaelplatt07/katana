@@ -1,0 +1,5 @@
+main() {
+    iLoopFrom(3..0) {
+        printl("looping");
+    }
+}
