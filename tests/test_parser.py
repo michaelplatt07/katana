@@ -21,6 +21,9 @@ from katana.katana import (
     LoopFromKeywordNode,
     LoopIdxKeywordNode,
     LoopUpKeywordNode,
+    LoopUpInclusiveKeywordNode,
+    LoopDownInclusiveKeywordNode,
+    LoopFromInclusiveKeywordNode,
     MacroNameNode,
     MacroNode,
     MultiplyDivideNode,
@@ -101,7 +104,6 @@ from katana.katana import (
 
 
 class TestParserLiterals:
-
     def test_parser_single_digit_literal(self):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -111,7 +113,7 @@ class TestParserLiterals:
             Token(NUM_TOKEN_TYPE, 0, 1, "1", LOW),
             Token(EOL_TOKEN_TYPE, 1, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         one_node = NumberNode(token_list[4], "1")
         ast = StartNode(token_list[0], "main", [one_node])
@@ -128,7 +130,7 @@ class TestParserLiterals:
             Token(NUM_TOKEN_TYPE, 0, 1, "123", LOW),
             Token(EOL_TOKEN_TYPE, 3, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         num_node = NumberNode(token_list[4], "123")
         ast = StartNode(token_list[0], "main", [num_node])
@@ -196,8 +198,7 @@ class TestParserAddition:
         ]
         left_node_1 = NumberNode(token_list[4], "1")
         right_node_1 = NumberNode(token_list[6], "2")
-        first_plus = PlusMinusNode(
-            token_list[5], "+", left_node_1, right_node_1)
+        first_plus = PlusMinusNode(token_list[5], "+", left_node_1, right_node_1)
         right_node_2 = NumberNode(token_list[8], "3")
         second_plus = PlusMinusNode(token_list[7], "+", first_plus, right_node_2)
         ast = StartNode(token_list[0], "main", [second_plus])
@@ -265,8 +266,7 @@ class TestParserSubtraction:
         ]
         left_node_1 = NumberNode(token_list[4], "1")
         right_node_1 = NumberNode(token_list[6], "2")
-        first_minus = PlusMinusNode(
-            token_list[5], "-", left_node_1, right_node_1)
+        first_minus = PlusMinusNode(token_list[5], "-", left_node_1, right_node_1)
         right_node_2 = NumberNode(token_list[8], "3")
         second_minus = PlusMinusNode(token_list[7], "-", first_minus, right_node_2)
         ast = StartNode(token_list[0], "main", [second_minus])
@@ -413,9 +413,9 @@ class TestParserArithmetic:
         left_node_multiply = NumberNode(token_list[6], "3")
         right_node_multiply = NumberNode(token_list[8], "4")
         multiply_node = MultiplyDivideNode(
-            token_list[7], "*", left_node_multiply, right_node_multiply)
-        add_node = PlusMinusNode(
-            token_list[5], "+", left_node_add, multiply_node)
+            token_list[7], "*", left_node_multiply, right_node_multiply
+        )
+        add_node = PlusMinusNode(token_list[5], "+", left_node_add, multiply_node)
         ast = StartNode(token_list[0], "main", [add_node])
         parser = Parser(token_list)
         parser.parse()
@@ -450,8 +450,7 @@ class TestParserArithmetic:
         three_node = NumberNode(token_list[6], "3")
         four_node = NumberNode(token_list[8], "4")
         five_node = NumberNode(token_list[10], "5")
-        multiply_node = MultiplyDivideNode(
-            token_list[5], "*", two_node, three_node)
+        multiply_node = MultiplyDivideNode(token_list[5], "*", two_node, three_node)
         sub_node = PlusMinusNode(token_list[7], "-", multiply_node, four_node)
         plus_node = PlusMinusNode(token_list[9], "+", sub_node, five_node)
         ast = StartNode(token_list[0], "main", [plus_node])
@@ -488,8 +487,7 @@ class TestParserArithmetic:
         three_node = NumberNode(token_list[6], "3")
         four_node = NumberNode(token_list[8], "4")
         five_node = NumberNode(token_list[10], "5")
-        multiply_node = MultiplyDivideNode(
-            token_list[9], "*", four_node, five_node)
+        multiply_node = MultiplyDivideNode(token_list[9], "*", four_node, five_node)
         plus_node = PlusMinusNode(token_list[5], "+", two_node, three_node)
         sub_node = PlusMinusNode(token_list[7], "-", plus_node, multiply_node)
         ast = StartNode(token_list[0], "main", [sub_node])
@@ -526,8 +524,7 @@ class TestParserArithmetic:
         three_node = NumberNode(token_list[6], "3")
         four_node = NumberNode(token_list[8], "4")
         five_node = NumberNode(token_list[10], "5")
-        multiply_node = MultiplyDivideNode(
-            token_list[7], "*", three_node, four_node)
+        multiply_node = MultiplyDivideNode(token_list[7], "*", three_node, four_node)
         plus_node = PlusMinusNode(token_list[5], "+", two_node, multiply_node)
         sub_node = PlusMinusNode(token_list[9], "-", plus_node, five_node)
         ast = StartNode(token_list[0], "main", [sub_node])
@@ -566,11 +563,10 @@ class TestParserArithmetic:
         three_node = NumberNode(token_list[8], "3")
         two_node = NumberNode(token_list[10], "2")
         divide_node = MultiplyDivideNode(
-            token_list[5], "/", first_eight_node, second_eight_node)
-        multiply_node = MultiplyDivideNode(
-            token_list[9], "*", three_node, two_node)
-        add_node = PlusMinusNode(
-            token_list[7], "+", divide_node, multiply_node)
+            token_list[5], "/", first_eight_node, second_eight_node
+        )
+        multiply_node = MultiplyDivideNode(token_list[9], "*", three_node, two_node)
+        add_node = PlusMinusNode(token_list[7], "+", divide_node, multiply_node)
         ast = StartNode(token_list[0], "main", [add_node])
         parser = Parser(token_list)
         parser.parse()
@@ -610,8 +606,7 @@ class TestParserParenthesis:
         one_node = NumberNode(token_list[4], "1")
         two_node = NumberNode(token_list[7], "2")
         three_node = NumberNode(token_list[9], "3")
-        first_plus = PlusMinusNode(
-            token_list[8], "+", two_node, three_node)
+        first_plus = PlusMinusNode(token_list[8], "+", two_node, three_node)
         # Promote priority because of parenthesis
         first_plus.priority += 1
         other_plus = PlusMinusNode(token_list[5], "+", one_node, first_plus)
@@ -648,8 +643,7 @@ class TestParserParenthesis:
         one_node = NumberNode(token_list[5], "1")
         two_node = NumberNode(token_list[7], "2")
         three_node = NumberNode(token_list[10], "3")
-        first_plus = PlusMinusNode(
-            token_list[6], "+", one_node, two_node)
+        first_plus = PlusMinusNode(token_list[6], "+", one_node, two_node)
         # Promote priority of plus node due to parenthesis
         first_plus.priority += 1
         mult_node = MultiplyDivideNode(token_list[9], "*", first_plus, three_node)
@@ -713,7 +707,7 @@ class TestParserPrint:
             Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
             Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         three_node = NumberNode(token_list[6], "3")
         printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
@@ -741,12 +735,14 @@ class TestParserPrint:
             Token(RIGHT_PAREN_TOKEN_TYPE, 10, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, 'print', PRINT_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(1, 4, "print", PRINT_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_print_with_multiple_args_raises_exception(self, mock_print):
@@ -832,7 +828,7 @@ class TestParserMain:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         three_node = NumberNode(token_list[4], "3")
         ast = StartNode(token_list[0], "main", [three_node])
@@ -857,12 +853,14 @@ class TestParserMain:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_method_params_raises_exception(self, mock_print):
@@ -881,12 +879,14 @@ class TestParserMain:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_no_right_paren_raises_exception(self, mock_print):
@@ -905,12 +905,14 @@ class TestParserMain:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_main_with_no_left_curl_brace_raises_exception(self, mock_print):
@@ -929,12 +931,14 @@ class TestParserMain:
             Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
+        )
 
 
 class TestParserInt:
@@ -964,7 +968,7 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 14, 1, "4", LOW),
             Token(EOL_TOKEN_TYPE, 15, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         three_node = NumberNode(token_list[7], "3")
         four_node = NumberNode(token_list[9], "4")
@@ -997,7 +1001,7 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 10, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 11, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x", False)
@@ -1028,7 +1032,7 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 16, 1, "3", LOW),
             Token(EOL_TOKEN_TYPE, 17, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW),
         ]
         three_node = NumberNode(token_list[8], "3")
         x_node = VariableNode(token_list[6], "x", True)
@@ -1066,7 +1070,7 @@ class TestParserInt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW),
         ]
         three_node = NumberNode(token_list[7], "3")
         x_node = VariableNode(token_list[5], "x", False)
@@ -1092,7 +1096,7 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 13, 1, "288", 0),
             Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1112,7 +1116,7 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 14, 1, "65538", 0),
             Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1132,13 +1136,12 @@ class TestParserInt:
             Token(NUM_TOKEN_TYPE, 14, 1, "4294967298", 0),
             Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with([], 10, BufferOverflowException(1, 10))
-
 
 
 class TestParserCharAt:
@@ -1203,15 +1206,19 @@ class TestParserCharAt:
             Token(EOL_TOKEN_TYPE, 6, 24, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[7], "Hello, Katana!")
         x_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
-        string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        string_declare_node = VariableKeywordNode(
+            token_list[4], "string", x_assign_node
+        )
         two_node = NumberNode(token_list[16], "2")
         x_ref_node = VariableReferenceNode(token_list[14], "x")
-        char_at_node = FunctionKeywordNode(token_list[12], "charAt", [x_ref_node, two_node])
+        char_at_node = FunctionKeywordNode(
+            token_list[12], "charAt", [x_ref_node, two_node]
+        )
         y_node = VariableNode(token_list[10], "y", False)
         y_assign_node = AssignmentNode(token_list[11], "=", y_node, char_at_node)
         char_declare_node = VariableKeywordNode(token_list[9], "char", y_assign_node)
@@ -1220,10 +1227,24 @@ class TestParserCharAt:
         compare_node = CompareNode(token_list[22], "==", y_ref_node, char_l_node)
         equal_string_node = StringNode(token_list[28], "equal")
         unequal_string_node = StringNode(token_list[36], "unequal")
-        print_equal_node = FunctionKeywordNode(token_list[26], "print", [equal_string_node])
-        print_unequal_node = FunctionKeywordNode(token_list[34], "print", [unequal_string_node])
-        conditional_node = LogicKeywordNode(token_list[19], "if", compare_node, true_side=[print_equal_node], false_side=[print_unequal_node])
-        ast = StartNode(token_list[0], "main", [string_declare_node, char_declare_node, conditional_node])
+        print_equal_node = FunctionKeywordNode(
+            token_list[26], "print", [equal_string_node]
+        )
+        print_unequal_node = FunctionKeywordNode(
+            token_list[34], "print", [unequal_string_node]
+        )
+        conditional_node = LogicKeywordNode(
+            token_list[19],
+            "if",
+            compare_node,
+            true_side=[print_equal_node],
+            false_side=[print_unequal_node],
+        )
+        ast = StartNode(
+            token_list[0],
+            "main",
+            [string_declare_node, char_declare_node, conditional_node],
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -1250,12 +1271,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 20, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 21, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_no_left_paren_raises_error(self, mock_print):
@@ -1279,12 +1302,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 20, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 21, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_not_enough_params_raises_error(self, mock_print):
@@ -1309,7 +1334,7 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 21, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1341,12 +1366,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 25, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 26, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, InvalidArgsException(1, 13, "charAt", NumberNode))
+        mock_print.assert_called_with(
+            [], 13, InvalidArgsException(1, 13, "charAt", NumberNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_second_param(self, mock_print):
@@ -1373,12 +1400,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 32, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 33, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, InvalidArgsException(1, 13, "charAt", CharNode))
+        mock_print.assert_called_with(
+            [], 13, InvalidArgsException(1, 13, "charAt", CharNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_first_param_as_var(self, mock_print):
@@ -1411,12 +1440,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 24, 2, ")", 3),
             Token(EOL_TOKEN_TYPE, 25, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, InvalidArgsException(2, 13, "charAt", "int64"))
+        mock_print.assert_called_with(
+            [], 13, InvalidArgsException(2, 13, "charAt", "int64")
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_char_at_invalid_type_second_param_as_var(self, mock_print):
@@ -1449,12 +1480,14 @@ class TestParserCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 30, 2, ")", 3),
             Token(EOL_TOKEN_TYPE, 31, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, InvalidArgsException(2, 13, "charAt", "char"))
+        mock_print.assert_called_with(
+            [], 13, InvalidArgsException(2, 13, "charAt", "char")
+        )
 
 
 class TestUpdateChar:
@@ -1492,16 +1525,20 @@ class TestUpdateChar:
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 24, ")", 3),
             Token(EOL_TOKEN_TYPE, 2, 25, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[7], "Hello")
         x_node = VariableNode(token_list[5], "x", False)
         x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
-        string_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        string_declare_node = VariableKeywordNode(
+            token_list[4], "string", x_assign_node
+        )
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         zero_node = NumberNode(token_list[13], "0")
         q_char_node = CharNode(token_list[15], "Q")
-        update_char_node = FunctionKeywordNode(token_list[9], "updateChar", [x_ref_node, zero_node, q_char_node])
+        update_char_node = FunctionKeywordNode(
+            token_list[9], "updateChar", [x_ref_node, zero_node, q_char_node]
+        )
         ast = StartNode(token_list[0], "main", [string_declare_node, update_char_node])
         parser = Parser(token_list)
         parser.parse()
@@ -1532,12 +1569,14 @@ class TestUpdateChar:
             Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", 3),
             Token(EOL_TOKEN_TYPE, 16, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_update_char_function_no_left_paren_raises_error(self, mock_print):
@@ -1564,13 +1603,14 @@ class TestUpdateChar:
             Token(RIGHT_PAREN_TOKEN_TYPE, 15, 2, ")", 3),
             Token(EOL_TOKEN_TYPE, 16, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE))
-
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE)
+        )
 
 
 class TestParserCopyString:
@@ -1621,11 +1661,19 @@ class TestParserCopyString:
         katana_node = StringNode(token_list[12], "Katana")
         y_node = VariableNode(token_list[10], "y", False)
         y_assign_node = AssignmentNode(token_list[11], "=", y_node, katana_node)
-        katana_declare_node = VariableKeywordNode(token_list[9], "string", y_assign_node)
+        katana_declare_node = VariableKeywordNode(
+            token_list[9], "string", y_assign_node
+        )
         x_ref_node = VariableReferenceNode(token_list[16], "x")
         y_ref_node = VariableReferenceNode(token_list[18], "y")
-        copy_str_node = FunctionKeywordNode(token_list[14], "copyStr", [x_ref_node, y_ref_node])
-        ast = StartNode(token_list[0], "main", [hello_declare_node, katana_declare_node, copy_str_node])
+        copy_str_node = FunctionKeywordNode(
+            token_list[14], "copyStr", [x_ref_node, y_ref_node]
+        )
+        ast = StartNode(
+            token_list[0],
+            "main",
+            [hello_declare_node, katana_declare_node, copy_str_node],
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -1655,7 +1703,9 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_function_no_left_paren_raises_error(self, mock_print):
@@ -1682,7 +1732,9 @@ class TestParserCopyString:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_first_arg_not_string(self, mock_print):
@@ -1706,12 +1758,14 @@ class TestParserCopyString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 23, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(1, 4, "copyStr", NumberNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_second_arg_not_string(self, mock_print):
@@ -1728,12 +1782,14 @@ class TestParserCopyString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 22, 1, ")", 3),
             Token(EOL_TOKEN_TYPE, 23, 1, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "copyStr", NumberNode))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(1, 4, "copyStr", NumberNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_first_arg_var_not_string(self, mock_print):
@@ -1760,12 +1816,14 @@ class TestParserCopyString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
             Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
-                ]
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(3, 4, "copyStr", "int64")
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_copy_str_second_arg_var_not_string(self, mock_print):
@@ -1792,12 +1850,14 @@ class TestParserCopyString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
             Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
-                ]
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+        ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(3, 4, "copyStr", "int64")
+        )
 
 
 class TestParserString:
@@ -1825,7 +1885,7 @@ class TestParserString:
             Token(STRING_TOKEN_TYPE, 12, 1, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 13, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         string_node = StringNode(token_list[7], "hello")
         x_node = VariableNode(token_list[5], "x", False)
@@ -1862,12 +1922,14 @@ class TestParserString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 7, 2, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 8, 2, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", LOW),
         ]
         string_node = StringNode(token_list[7], "hello")
         x_node = VariableNode(token_list[5], "x", False)
         assignment_node = AssignmentNode(token_list[6], "=", x_node, string_node)
-        variable_dec_node = VariableKeywordNode(token_list[4], "string", assignment_node)
+        variable_dec_node = VariableKeywordNode(
+            token_list[4], "string", assignment_node
+        )
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
@@ -1901,7 +1963,7 @@ class TestParserChar:
             Token(CHARACTER_TOKEN_TYPE, 10, 1, "h", LOW),
             Token(EOL_TOKEN_TYPE, 12, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         char_node = CharNode(token_list[7], "h")
         x_node = VariableNode(token_list[5], "x", True)
@@ -1937,13 +1999,15 @@ class TestParserChar:
             Token(NUM_TOKEN_TYPE, 8, 2, "12", 0),
             Token(EOL_TOKEN_TYPE, 10, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
         # mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
-        mock_print.assert_called_with([], 4, InvalidAssignmentException(2, 4, "char", "int8"))
+        mock_print.assert_called_with(
+            [], 4, InvalidAssignmentException(2, 4, "char", "int8")
+        )
 
 
 class TestParserBool:
@@ -1971,7 +2035,7 @@ class TestParserBool:
             Token(BOOLEAN_TOKEN_TYPE, 9, 1, "false", LOW),
             Token(EOL_TOKEN_TYPE, 14, 1, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", LOW),
         ]
         boolean_node = BooleanNode(token_list[7], "false")
         x_node = VariableNode(token_list[5], "x", False)
@@ -2024,16 +2088,22 @@ class TestParserIfElse:
             Token(RIGHT_PAREN_TOKEN_TYPE, 17, 4, ")", 3),
             Token(EOL_TOKEN_TYPE, 18, 4, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[19], "lower")
-        second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[17], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[13], "greater")
-        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[11], "print", [greater_string_node]
+        )
         one_node = NumberNode(token_list[6], "1")
         zero_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], ">", one_node, zero_node)
-        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], None)
+        if_node = LogicKeywordNode(
+            token_list[4], "if", greater_than_node, None, [first_print_node], None
+        )
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2075,16 +2145,22 @@ class TestParserIfElse:
             Token(RIGHT_PAREN_TOKEN_TYPE, 17, 4, ")", 3),
             Token(EOL_TOKEN_TYPE, 18, 4, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[19], "lower")
-        second_print_node = FunctionKeywordNode(token_list[17], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[17], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[13], "greater")
-        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[11], "print", [greater_string_node]
+        )
         zero_node = NumberNode(token_list[6], "0")
         one_node = NumberNode(token_list[8], "1")
         greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node], None)
+        if_node = LogicKeywordNode(
+            token_list[4], "if", greater_than_node, None, [first_print_node], None
+        )
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2136,18 +2212,31 @@ class TestParserIfElse:
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[26], "lower")
-        second_print_node = FunctionKeywordNode(token_list[24], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[24], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[13], "greater")
-        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[11], "print", [greater_string_node]
+        )
         greater_still_string_node = StringNode(token_list[18], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        second_first_print_node = FunctionKeywordNode(
+            token_list[16], "print", [greater_still_string_node]
+        )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node], [second_print_node])
+        if_node = LogicKeywordNode(
+            token_list[4],
+            "if",
+            greater_than_node,
+            None,
+            [first_print_node, second_first_print_node],
+            [second_print_node],
+        )
         ast = StartNode(token_list[0], "main", [if_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2195,18 +2284,30 @@ class TestParserIfElse:
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 18, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[24], "lower")
-        second_print_node = FunctionKeywordNode(token_list[22], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[22], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[13], "greater")
-        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[11], "print", [greater_string_node]
+        )
         greater_still_string_node = StringNode(token_list[18], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        second_first_print_node = FunctionKeywordNode(
+            token_list[16], "print", [greater_still_string_node]
+        )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
         greater_than_node = CompareNode(token_list[7], "<", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[4], "if", greater_than_node, None, [first_print_node, second_first_print_node])
+        if_node = LogicKeywordNode(
+            token_list[4],
+            "if",
+            greater_than_node,
+            None,
+            [first_print_node, second_first_print_node],
+        )
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2254,18 +2355,30 @@ class TestParserIfElse:
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 17, ")", 3),
             Token(EOL_TOKEN_TYPE, 5, 18, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 7, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[24], "lower")
-        second_print_node = FunctionKeywordNode(token_list[22], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[22], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[13], "greater")
-        first_print_node = FunctionKeywordNode(token_list[11], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[11], "print", [greater_string_node]
+        )
         greater_still_string_node = StringNode(token_list[18], "greater still")
-        second_first_print_node = FunctionKeywordNode(token_list[16], "print", [greater_still_string_node])
+        second_first_print_node = FunctionKeywordNode(
+            token_list[16], "print", [greater_still_string_node]
+        )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
         equal_node = CompareNode(token_list[7], "==", zero_node, one_node)
-        if_node = LogicKeywordNode(token_list[4], "if", equal_node, None, [first_print_node, second_first_print_node])
+        if_node = LogicKeywordNode(
+            token_list[4],
+            "if",
+            equal_node,
+            None,
+            [first_print_node, second_first_print_node],
+        )
         ast = StartNode(token_list[0], "main", [if_node, second_print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2307,12 +2420,14 @@ class TestParserLoopKeyword:
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[11], "looping")
         print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
         three_node = NumberNode(token_list[6], "3")
-        loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
+        loop_node = LoopUpKeywordNode(
+            token_list[4], "loopUp", three_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2363,7 +2478,9 @@ class TestParserLoopKeyword:
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, five_node)
         x_int_dec_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
-        loop_node = LoopUpKeywordNode(token_list[9], "loopUp", x_ref_node, loop_body=[print_node])
+        loop_node = LoopUpKeywordNode(
+            token_list[9], "loopUp", x_ref_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2410,7 +2527,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 2, InvalidArgsException(4, 2, "loopUp", "string"))
+        mock_print.assert_called_with(
+            [], 2, InvalidArgsException(4, 2, "loopUp", "string")
+        )
 
     def test_loop_down_keyword(self):
         """
@@ -2442,12 +2561,14 @@ class TestParserLoopKeyword:
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[11], "looping")
         print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
         three_node = NumberNode(token_list[6], "3")
-        loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
+        loop_node = LoopDownKeywordNode(
+            token_list[4], "loopDown", three_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2498,7 +2619,9 @@ class TestParserLoopKeyword:
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, seven_node)
         x_int_dec_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
-        loop_node = LoopDownKeywordNode(token_list[9], "loopDown", x_ref_node, loop_body=[print_node])
+        loop_node = LoopDownKeywordNode(
+            token_list[9], "loopDown", x_ref_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [x_int_dec_node, loop_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2545,7 +2668,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 2, InvalidArgsException(4, 2, "loopDown", "string"))
+        mock_print.assert_called_with(
+            [], 2, InvalidArgsException(4, 2, "loopDown", "string")
+        )
 
     def test_loop_from_keyword(self):
         """
@@ -2579,14 +2704,16 @@ class TestParserLoopKeyword:
             Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[13], "looping")
         print_node = FunctionKeywordNode(token_list[11], "print", [string_node])
         zero_node = NumberNode(token_list[6], "0")
         three_node = NumberNode(token_list[8], "3")
         range_node = RangeNode(token_list[7], "..", zero_node, three_node)
-        loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
+        loop_node = LoopFromKeywordNode(
+            token_list[4], "loopFrom", range_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
@@ -2622,12 +2749,14 @@ class TestParserLoopKeyword:
             Token(EOL_TOKEN_TYPE, 24, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 13, InvalidArgsException(1, 13, "loopFrom", NumberNode))
+        mock_print.assert_called_with(
+            [], 13, InvalidArgsException(1, 13, "loopFrom", NumberNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_string_in_params_raises_error(self, mock_print):
@@ -2664,7 +2793,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopUp", StringNode))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(1, 4, "loopUp", StringNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_string_in_params_raises_error(self, mock_print):
@@ -2701,7 +2832,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, InvalidArgsException(1, 4, "loopDown", StringNode))
+        mock_print.assert_called_with(
+            [], 4, InvalidArgsException(1, 4, "loopDown", StringNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_dot_operator_raises_error(self, mock_print):
@@ -2740,7 +2873,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 12, InvalidArgsException(1, 12, "loop", RangeNode))
+        mock_print.assert_called_with(
+            [], 12, InvalidArgsException(1, 12, "loop", RangeNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_loop_up_with_multiple_args_raises_error(self, mock_print):
@@ -2820,7 +2955,6 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with([], 4, TooManyArgsException(1, 4))
 
-
     @patch("katana.katana.print_exception_message")
     def test_loop_down_with_dot_operator_raises_error(self, mock_print):
         """
@@ -2858,7 +2992,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 12, InvalidArgsException(1, 12, "loop", RangeNode))
+        mock_print.assert_called_with(
+            [], 12, InvalidArgsException(1, 12, "loop", RangeNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_up_invalid_syntax(self, mock_print):
@@ -2883,8 +3019,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE))
-
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_down_invalid_syntax(self, mock_print):
@@ -2909,7 +3046,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopDown", LOOP_DOWN_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(1, 4, "loopDown", LOOP_DOWN_SIGNATURE)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_basic_loop_from_invalid_syntax(self, mock_print):
@@ -2934,7 +3073,9 @@ class TestParserLoopKeyword:
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 4, KeywordMisuseException(1, 4, "loopFrom", LOOP_FROM_SIGNATURE))
+        mock_print.assert_called_with(
+            [], 4, KeywordMisuseException(1, 4, "loopFrom", LOOP_FROM_SIGNATURE)
+        )
 
 
 class TestParserLoopIdxKeyword:
@@ -2972,18 +3113,20 @@ class TestParserLoopIdxKeyword:
             Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         idx_node = LoopIdxKeywordNode(token_list[11], "idx")
         print_node = FunctionKeywordNode(token_list[9], "print", [idx_node])
         three_node = NumberNode(token_list[6], "3")
-        loop_node = LoopUpKeywordNode(token_list[4], "loopUp", three_node, loop_body=[print_node])
+        loop_node = LoopUpKeywordNode(
+            token_list[4], "loopUp", three_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    def test_loop_down_keyword(self):
+    def test_loop_down_access_index(self):
         """
         Given a program like:
         ```
@@ -3013,18 +3156,20 @@ class TestParserLoopIdxKeyword:
             Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         idx_node = LoopIdxKeywordNode(token_list[11], "idx")
         print_node = FunctionKeywordNode(token_list[9], "print", [idx_node])
         three_node = NumberNode(token_list[6], "3")
-        loop_node = LoopDownKeywordNode(token_list[4], "loopDown", three_node, loop_body=[print_node])
+        loop_node = LoopDownKeywordNode(
+            token_list[4], "loopDown", three_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    def test_loop_from_keyword(self):
+    def test_loop_from_access_index(self):
         """
         Given a program like:
         ```
@@ -3056,22 +3201,378 @@ class TestParserLoopIdxKeyword:
             Token(EOL_TOKEN_TYPE, 2, 18, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         idx_node = StringNode(token_list[13], "idx")
         print_node = FunctionKeywordNode(token_list[11], "print", [idx_node])
         zero_node = NumberNode(token_list[6], "0")
         three_node = NumberNode(token_list[8], "3")
         range_node = RangeNode(token_list[7], "..", zero_node, three_node)
-        loop_node = LoopFromKeywordNode(token_list[4], "loopFrom", range_node, loop_body=[print_node])
+        loop_node = LoopFromKeywordNode(
+            token_list[4], "loopFrom", range_node, loop_body=[print_node]
+        )
         ast = StartNode(token_list[0], "main", [loop_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
 
 
-class TestKeywordAdvanced:
+class TestParserLoopInclusiveKeyword:
+    """
+    All tests related to the inclusive versions of the loop keywords.
+    """
 
+    def test_loop_up_inclusive_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopUp(3) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopUp((0<3), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 11, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 12, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        string_node = StringNode(token_list[11], "looping")
+        print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopUpInclusiveKeywordNode(
+            token_list[4], "iLoopUp", three_node, loop_body=[print_node]
+        )
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_up_nested_inclusive_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopUp(3) {
+                printl("Loop 1");
+                iLoopUp(2) {
+                    printl("Loop 2");
+                }
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopUp((0<3), [(printl("Loop 1")), (iLoopUp((0<2), [(printl("Loop 2")),]))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 11, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 12, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 15, "Loop 1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "iLoopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 15, "(", 3),
+            Token(NUM_TOKEN_TYPE, 3, 16, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 17, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 19, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 8, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 14, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 15, "Loop 2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 8, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
+        ]
+        string_node_two = StringNode(token_list[21], "Loop 2")
+        print_node_two = FunctionKeywordNode(
+            token_list[19], "printl", [string_node_two]
+        )
+        two_node = NumberNode(token_list[16], "2")
+        loop_node_two = LoopUpInclusiveKeywordNode(
+            token_list[14], "iLoopUp", two_node, loop_body=[print_node_two]
+        )
+        string_node_one = StringNode(token_list[11], "Loop 1")
+        print_node_one = FunctionKeywordNode(token_list[9], "printl", [string_node_one])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node_one = LoopUpInclusiveKeywordNode(
+            token_list[4],
+            "iLoopUp",
+            three_node,
+            loop_body=[print_node_one, loop_node_two],
+        )
+        ast = StartNode(token_list[0], "main", [loop_node_one])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_down_inclusive_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopDown(3) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopDown((0<3), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 13, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 15, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 16, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 17, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        string_node = StringNode(token_list[11], "looping")
+        print_node = FunctionKeywordNode(token_list[9], "print", [string_node])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node = LoopDownInclusiveKeywordNode(
+            token_list[4], "iLoopDown", three_node, loop_body=[print_node]
+        )
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_down_nested_inclusive_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopDown(3) {
+                printl("Loop 1");
+                iLoopDown(2) {
+                    printl("Loop 2");
+                }
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopDown((0<3), [(printl("Loop 1")), (iLoopDown((0<2), [(printl("Loop 2")),]))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 13, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 14, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 15, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 17, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 15, "Loop 1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "iLoopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 17, "(", 3),
+            Token(NUM_TOKEN_TYPE, 3, 18, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 19, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 21, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 8, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 14, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 15, "Loop 2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 8, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
+        ]
+        string_node_two = StringNode(token_list[21], "Loop 2")
+        print_node_two = FunctionKeywordNode(
+            token_list[19], "printl", [string_node_two]
+        )
+        two_node = NumberNode(token_list[16], "2")
+        loop_node_two = LoopDownInclusiveKeywordNode(
+            token_list[14], "iLoopDown", two_node, loop_body=[print_node_two]
+        )
+        string_node_one = StringNode(token_list[11], "Loop 1")
+        print_node_one = FunctionKeywordNode(token_list[9], "printl", [string_node_one])
+        three_node = NumberNode(token_list[6], "3")
+        loop_node_one = LoopDownInclusiveKeywordNode(
+            token_list[4],
+            "iLoopDown",
+            three_node,
+            loop_body=[print_node_one, loop_node_two],
+        )
+        ast = StartNode(token_list[0], "main", [loop_node_one])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_from_inclusive_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopFrom(0..3) {
+                print("looping");
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopFrom((0..3), [(print("looping"))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 13, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 14, "0", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 1, 15, "..", 0),
+            Token(NUM_TOKEN_TYPE, 1, 17, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 18, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 19, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "looping", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+        ]
+        string_node = StringNode(token_list[13], "looping")
+        print_node = FunctionKeywordNode(
+            token_list[11], "print", arg_nodes=[string_node]
+        )
+        zero_node = NumberNode(token_list[6], "0")
+        three_node = NumberNode(token_list[8], "3")
+        range_node = RangeNode(token_list[7], "..", zero_node, three_node)
+        loop_node = LoopFromInclusiveKeywordNode(
+            token_list[4], "iLoopFrom", range_node, loop_body=[print_node]
+        )
+        ast = StartNode(token_list[0], "main", [loop_node])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+    def test_loop_from_inclusive_nested_keyword(self):
+        """
+        Given a program like:
+        ```
+        main() {
+            iLoopFrom(0..3) {
+                printl("Loop 1");
+                iLoopFrom(2..1) {
+                    printl("Loop 2");
+                }
+            }
+        }
+        ```
+        Expected to return an AST like:
+        (main[(iLoopFrom((0..3), [(print("Loop 1")), (iLoopFrom((2..0), [(printl("Loop 2")),]))]))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "iLoopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 13, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 14, "0", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 1, 15, "..", 1),
+            Token(NUM_TOKEN_TYPE, 1, 17, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 18, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 20, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 15, "Loop 1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "iLoopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 17, "(", 3),
+            Token(NUM_TOKEN_TYPE, 3, 18, "2", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 3, 19, "..", 1),
+            Token(NUM_TOKEN_TYPE, 3, 21, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 22, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 24, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 12, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 18, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 19, "Loop 2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 27, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 28, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 8, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
+        ]
+        string_node_two = StringNode(token_list[25], "Loop 2")
+        print_node_two = FunctionKeywordNode(
+            token_list[23], "printl", arg_nodes=[string_node_two]
+        )
+        one_node = NumberNode(token_list[20], "1")
+        two_node = NumberNode(token_list[18], "2")
+        range_node_two = RangeNode(token_list[19], "..", two_node, one_node)
+        loop_node_two = LoopFromInclusiveKeywordNode(
+            token_list[16], "iLoopFrom", range_node_two, loop_body=[print_node_two]
+        )
+        string_node_one = StringNode(token_list[13], "Loop 1")
+        print_node_one = FunctionKeywordNode(
+            token_list[11], "printl", arg_nodes=[string_node_one]
+        )
+        zero_node = NumberNode(token_list[6], "0")
+        three_node = NumberNode(token_list[8], "3")
+        range_node_one = RangeNode(token_list[7], "..", zero_node, three_node)
+        loop_node_one = LoopFromInclusiveKeywordNode(
+            token_list[4],
+            "iLoopFrom",
+            range_node_one,
+            loop_body=[print_node_one, loop_node_two],
+        )
+        ast = StartNode(token_list[0], "main", [loop_node_one])
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
+
+class TestKeywordAdvanced:
     def test_if_keyword_with_var_reference_in_conditional(self):
         """
         Given a program like:
@@ -3120,12 +3621,16 @@ class TestKeywordAdvanced:
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[28], "false")
-        second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[26], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[20], "true")
-        first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[18], "print", [greater_string_node]
+        )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
@@ -3135,7 +3640,14 @@ class TestKeywordAdvanced:
         subtract_node = PlusMinusNode(token_list[12], "-", x_ref_node, one_minus_node)
         zero_node = NumberNode(token_list[7], "0")
         compare_node = CompareNode(token_list[14], ">", subtract_node, zero_node)
-        if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
+        if_node = LogicKeywordNode(
+            token_list[9],
+            "if",
+            compare_node,
+            None,
+            [first_print_node],
+            [second_print_node],
+        )
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
         parser.parse()
@@ -3189,12 +3701,16 @@ class TestKeywordAdvanced:
             Token(EOL_TOKEN_TYPE, 5, 22, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 6, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 8, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[28], "false")
-        second_print_node = FunctionKeywordNode(token_list[26], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[26], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[20], "true")
-        first_print_node = FunctionKeywordNode(token_list[18], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[18], "print", [greater_string_node]
+        )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
@@ -3204,7 +3720,14 @@ class TestKeywordAdvanced:
         subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
         zero_node = NumberNode(token_list[11], "0")
         compare_node = CompareNode(token_list[12], ">", zero_node, subtract_node)
-        if_node = LogicKeywordNode(token_list[9], "if", compare_node, None, [first_print_node], [second_print_node])
+        if_node = LogicKeywordNode(
+            token_list[9],
+            "if",
+            compare_node,
+            None,
+            [first_print_node],
+            [second_print_node],
+        )
         ast = StartNode(token_list[0], "main", [keyword_node, if_node])
         parser = Parser(token_list)
         parser.parse()
@@ -3266,12 +3789,16 @@ class TestKeywordAdvanced:
             Token(EOL_TOKEN_TYPE, 6, 22, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[35], "false")
-        second_print_node = FunctionKeywordNode(token_list[33], "print", [lower_string_node])
+        second_print_node = FunctionKeywordNode(
+            token_list[33], "print", [lower_string_node]
+        )
         greater_string_node = StringNode(token_list[27], "true")
-        first_print_node = FunctionKeywordNode(token_list[25], "print", [greater_string_node])
+        first_print_node = FunctionKeywordNode(
+            token_list[25], "print", [greater_string_node]
+        )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
         x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
@@ -3285,10 +3812,23 @@ class TestKeywordAdvanced:
         subtract_node = PlusMinusNode(token_list[21], "-", x_ref_node, one_minus_node)
         y_ref_node = VariableReferenceNode(token_list[16], "y")
         two_minus_node = NumberNode(token_list[18], "2")
-        subtract_node_two = PlusMinusNode(token_list[17], "-", y_ref_node, two_minus_node)
-        compare_node = CompareNode(token_list[19], ">", subtract_node_two, subtract_node)
-        if_node = LogicKeywordNode(token_list[14], "if", compare_node, None, [first_print_node], [second_print_node])
-        ast = StartNode(token_list[0], "main", [keyword_node_x, keyword_node_y, if_node])
+        subtract_node_two = PlusMinusNode(
+            token_list[17], "-", y_ref_node, two_minus_node
+        )
+        compare_node = CompareNode(
+            token_list[19], ">", subtract_node_two, subtract_node
+        )
+        if_node = LogicKeywordNode(
+            token_list[14],
+            "if",
+            compare_node,
+            None,
+            [first_print_node],
+            [second_print_node],
+        )
+        ast = StartNode(
+            token_list[0], "main", [keyword_node_x, keyword_node_y, if_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -3320,7 +3860,7 @@ class TestKeywordAdvanced:
             Token(NUM_TOKEN_TYPE, 2, 12, "3", 0),
             Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0),
         ]
         one_node = NumberNode(token_list[7], "1")
         x_var_node = VariableNode(token_list[5], "x", False)
@@ -3330,7 +3870,9 @@ class TestKeywordAdvanced:
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, three_node)
         x_left_assignmet_ref_node = VariableReferenceNode(token_list[9], "x")
-        reassign_node = AssignmentNode(token_list[10], "=", x_left_assignmet_ref_node, plus_node)
+        reassign_node = AssignmentNode(
+            token_list[10], "=", x_left_assignmet_ref_node, plus_node
+        )
         ast = StartNode(token_list[0], "main", [int_keyword_node, reassign_node])
         parser = Parser(token_list)
         parser.parse()
@@ -3371,7 +3913,7 @@ class TestConcatenation:
             Token(CHARACTER_TOKEN_TYPE, 2, 13, "!", 0),
             Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0),
         ]
         string_node = StringNode(token_list[7], "Hello")
         x_dec_node = VariableNode(token_list[5], "x", False)
@@ -3381,7 +3923,9 @@ class TestConcatenation:
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, char_node)
         x_reassign_ref = VariableReferenceNode(token_list[9], "x")
-        x_reassign_val_node = AssignmentNode(token_list[10], "=", x_reassign_ref, plus_node)
+        x_reassign_val_node = AssignmentNode(
+            token_list[10], "=", x_reassign_ref, plus_node
+        )
         ast = StartNode(token_list[0], "main", [keyword_node, x_reassign_val_node])
         parser = Parser(token_list)
         parser.parse()
@@ -3416,12 +3960,14 @@ class TestConcatenation:
             Token(STRING_TOKEN_TYPE, 13, 2, ", Katana!", 0),
             Token(EOL_TOKEN_TYPE, 23, 2, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0)
+            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 8, InvalidConcatenationException(2, 8, "string", StringNode))
+        mock_print.assert_called_with(
+            [], 8, InvalidConcatenationException(2, 8, "string", StringNode)
+        )
 
 
 class TestParserTypeChecking:
@@ -3581,7 +4127,7 @@ class TestParserMacro:
             print("Hello");
         }
         Expected to return a node list like:
-        [(MACRO, myMacro, [(3+4)]), (main, main, [(print(3+4))])]    
+        [(MACRO, myMacro, [(3+4)]), (main, main, [(print(3+4))])]
         """
         token_list = [
             Token(MACRO_KEYWORD_TOKEN_TYPE, 4, 0, "MACRO", 4),
@@ -3626,7 +4172,7 @@ class TestParserMacro:
             printSeven;
         }
         Expected to return a node list like:
-        [(MACRO, myMacro, [(3+4)]), (main, main, [(print(3+4))])]    
+        [(MACRO, myMacro, [(3+4)]), (main, main, [(print(3+4))])]
         """
         token_list = [
             Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 0, "MACRO", 4),
@@ -3897,7 +4443,6 @@ class TestParserFunctionKeyword:
             parser.parse()
         mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
 
-
     # @pytest.mark.skip
     def test_function_declaration_explicit_declare_everything(self):
         """
@@ -3947,21 +4492,37 @@ class TestParserFunctionKeyword:
         ]
         x_ref = FunctionArgReferenceNode(token_list[14], token_list[14].value)
         y_ref = FunctionArgReferenceNode(token_list[16], token_list[16].value)
-        func_body_plus = PlusMinusNode(token_list[15], token_list[15].value, x_ref, y_ref)
-        ret_node = FunctionReturnNode(token_list[13], token_list[13].value, func_body_plus)
+        func_body_plus = PlusMinusNode(
+            token_list[15], token_list[15].value, x_ref, y_ref
+        )
+        ret_node = FunctionReturnNode(
+            token_list[13], token_list[13].value, func_body_plus
+        )
         ret_type_node = FunctionReturnTypeNode(token_list[11], token_list[11].value)
         func_arg_1 = FunctionArgNode(token_list[4], token_list[4].value)
-        func_arg_1_type = FunctionArgTypeNode(token_list[5], token_list[5].value, func_arg_1)
+        func_arg_1_type = FunctionArgTypeNode(
+            token_list[5], token_list[5].value, func_arg_1
+        )
         func_arg_2 = FunctionArgNode(token_list[7], token_list[7].value)
-        func_arg_2_type = FunctionArgTypeNode(token_list[8], token_list[8].value, func_arg_2)
+        func_arg_2_type = FunctionArgTypeNode(
+            token_list[8], token_list[8].value, func_arg_2
+        )
         func_name_node = FunctionNameNode(token_list[1], token_list[1].value)
-        func_node = FunctionNode(token_list[0], token_list[0].value, func_name_node, [func_arg_1_type, func_arg_2_type], ret_type_node, [ret_node])
+        func_node = FunctionNode(
+            token_list[0],
+            token_list[0].value,
+            func_name_node,
+            [func_arg_1_type, func_arg_2_type],
+            ret_type_node,
+            [ret_node],
+        )
         func_ref_arg_1 = NumberNode(token_list[25], token_list[25].value)
         func_ref_arg_2 = NumberNode(token_list[27], token_list[27].value)
-        func_ref = FunctionReferenceNode(token_list[23], token_list[23].value, [func_ref_arg_1, func_ref_arg_2])
+        func_ref = FunctionReferenceNode(
+            token_list[23], token_list[23].value, [func_ref_arg_1, func_ref_arg_2]
+        )
         main_node = StartNode(token_list[19], "main", [func_ref])
 
         parser = Parser(token_list)
         parser.parse()
         assert [func_node, main_node] == parser.get_nodes()
-

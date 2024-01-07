@@ -36,7 +36,7 @@ syn keyword katanaBuiltinVarsKeyword true false idx
 highlight link katanaBuiltinVarsKeyword KatanaConst
 
 " Logic keywords
-syn keyword katanaLogicKeyword if else loopUp loopDown loopFrom
+syn keyword katanaLogicKeyword if else loopUp loopDown loopFrom iLoopUp iLoopDown iLoopFrom
 highlight link katanaLogicKeyword KatanaLogic
 
 " Comments

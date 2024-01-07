@@ -106,8 +106,11 @@ MACRO = "MACRO"
 IF = "if"
 ELSE = "else"
 LOOP_UP = "loopUp"
+I_LOOP_UP = "iLoopUp"
 LOOP_DOWN = "loopDown"
+I_LOOP_DOWN = "iLoopDown"
 LOOP_FROM = "loopFrom"
+I_LOOP_FROM = "iLoopFrom"
 
 
 ##############
@@ -151,7 +154,7 @@ IGNORE_OPS = (
     NEW_LINE_TOKEN_TYPE,
 )
 FUNCTION_KEYWORDS = (PRINT, PRINTL, MAIN, CHAR_AT, UPDATE_CHAR, COPY_STR)
-LOGIC_KEYWORDS = (IF, ELSE, LOOP_UP, LOOP_DOWN, LOOP_FROM)
+LOGIC_KEYWORDS = (IF, ELSE, I_LOOP_UP, I_LOOP_DOWN, I_LOOP_FROM, LOOP_UP, LOOP_DOWN, LOOP_FROM)
 VARIABLE_KEYWORDS = (CONST, INT_8, INT_16, INT_32, INT_64, STRING, BOOL, CHAR)
 INT_KEYWORDS = (INT_8, INT_16, INT_32, INT_64)
 
@@ -586,7 +589,7 @@ class Node:
     # TODO(map) Re-examine how this works. Need better rules around traversal
     def can_traverse_to_parent(self):
         if self.parent_node:
-            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode and type(self.parent_node) != LoopDownKeywordNode and type(self.parent_node) != LoopUpKeywordNode and type(self.parent_node) != LoopFromKeywordNode
+            return type(self.parent_node) != LogicKeywordNode and type(self.parent_node) != FunctionKeywordNode and type(self.parent_node) != FunctionReturnNode and type(self.parent_node) != LoopDownKeywordNode and type(self.parent_node) != LoopDownInclusiveKeywordNode and type(self.parent_node) != LoopUpKeywordNode and type(self.parent_node) != LoopUpInclusiveKeywordNode and type(self.parent_node) != LoopFromKeywordNode and type(self.parent_node) != LoopFromInclusiveKeywordNode
         else:
             return False
 
@@ -1172,6 +1175,84 @@ class LoopFromKeywordNode(LoopKeywordNode):
 
     def __hash__(self):
         return super().__hash__()
+
+
+class LoopUpInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopUp` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        self.start_value = 0
+        if self.child_node:
+            self.end_value = child_node.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+class LoopDownInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopDown` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        if self.child_node:
+            self.start_value = child_node.value
+        self.end_value = 0
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+class LoopFromInclusiveKeywordNode(LoopKeywordNode):
+    """
+    Specialized node for the `iLoopFrom` keyword specifically.
+    """
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+        super().__init__(token, value, child_node, parent_node, loop_body)
+
+        # Because this is loop up we will always loop from 0 to the end value.
+        if child_node:
+            self.start_value = child_node.left_side.value
+            self.end_value = child_node.right_side.value
+
+        if loop_body:
+            for node in loop_body:
+                node.parent_node = self
+
+    def __eq__(self, other):
+        types_equal = type(self) == type(other)
+        loop_body_equal = self.loop_body == other.loop_body
+        if not loop_body_equal:
+            assert False, f"Loop bodies not equal for {self}"
+        return types_equal and loop_body_equal and super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
 
 
 class LoopIdxKeywordNode(Node):
@@ -2361,9 +2442,15 @@ class Parser:
             self.current_if_node = processed_node
         elif type(processed_node) == LoopUpKeywordNode:
             line_ast = self.build_loop_up_line_ast(processed_node)
+        elif type(processed_node) == LoopUpInclusiveKeywordNode:
+            line_ast = self.build_loop_up_line_ast(processed_node)
         elif type(processed_node) == LoopDownKeywordNode:
             line_ast = self.build_loop_down_line_ast(processed_node)
+        elif type(processed_node) == LoopDownInclusiveKeywordNode:
+            line_ast = self.build_loop_down_line_ast(processed_node)
         elif type(processed_node) == LoopFromKeywordNode:
+            line_ast = self.build_loop_from_line_ast(processed_node)
+        elif type(processed_node) == LoopFromInclusiveKeywordNode:
             line_ast = self.build_loop_from_line_ast(processed_node)
         elif type(processed_node) == FunctionReturnNode:
             line_ast = self.build_return_statement(processed_node)
@@ -2420,7 +2507,7 @@ class Parser:
                 node = RightParenNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
             # Currently working on a loop block
-            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode, LoopUpInclusiveKeywordNode, LoopDownInclusiveKeywordNode, LoopFromInclusiveKeywordNode]:
                 node = LoopBodyLeftCurlNode(self.curr_token)
             # Currently in an "if" block of logic.
             elif len(self.if_else_list) > 0 and type(self.if_else_list[-1]) == LogicKeywordNode and self.if_else_list[-1].value == IF:
@@ -2433,7 +2520,7 @@ class Parser:
                 node = FunctionBodyLeftCurlNode(self.curr_token)
         elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
             # Currently working on a loop block
-            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode]:
+            if len(self.if_else_list) > 0 and type(self.if_else_list[-1]) in [LoopUpKeywordNode, LoopDownKeywordNode, LoopFromKeywordNode, LoopUpInclusiveKeywordNode, LoopDownInclusiveKeywordNode, LoopFromInclusiveKeywordNode]:
                 node = LoopBodyRightCurlNode(self.curr_token)
                 self.if_else_list.pop()
             # Currently in an "if" block of logic.
@@ -2485,10 +2572,16 @@ class Parser:
             node = LogicKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_UP:
             node = LoopUpKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_UP:
+            node = LoopUpInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_DOWN:
             node = LoopDownKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_DOWN:
+            node = LoopDownInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_FROM:
             node = LoopFromKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_FROM:
+            node = LoopFromInclusiveKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == LOOP_INDEX_KEYWORD_TOKEN_TYPE:
             node = LoopIdxKeywordNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
@@ -2777,6 +2870,11 @@ class Parser:
         if type(processed_node) == LoopBodyRightCurlNode:
             assert False, "TODO(map) Raise empty loop body exception"
         while type(processed_node) != LoopBodyRightCurlNode:
+            # TODO(map) Should figure out a way to catch going out of the loop
+            # The problem is when processing a token, if we don't update the
+            # code to ensure that the closing curl brace is also a function body
+            # closing brace we will thrown an error that isn't quite correct.
+            # This applies to all the loops that are being built up
             if type(processed_node) == FunctionKeywordNode and processed_node.value in [PRINT, PRINTL]:
                 line_ast = self.build_print_ast(processed_node)
             elif type(processed_node) == FunctionKeywordNode and processed_node.value == COPY_STR:
@@ -2785,16 +2883,20 @@ class Parser:
                 line_ast = self.build_var_dec_line_ast(processed_node)
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == IF:
                 line_ast = self.build_if_conditional_line_ast(processed_node)
             elif type(processed_node) == LogicKeywordNode and processed_node.value == ELSE:
                 assert False, "WRITE ME ELSE"
-            elif type(processed_node) == LoopUpKeywordNode:
-                line_ast = self.build_loop_up_line_ast(processed_node)
             # We don't want to do anything on a NoOpNode because that means the
             # comment is the only thing on the line.
             elif type(processed_node) == NoOpNode:
@@ -2810,9 +2912,6 @@ class Parser:
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_up_node
         loop_up_node.loop_body = body_node_list
@@ -2879,22 +2978,31 @@ class Parser:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            # We don't want to do anything on a NoOpNode because that means the
+            # comment is the only thing on the line.
+            elif type(processed_node) == NoOpNode:
+                line_ast = processed_node
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
                 # print("WARNING: There may be a problem in the loop body.")
-            body_node_list.append(line_ast)
+
+            if type(processed_node) != NoOpNode:
+                body_node_list.append(line_ast)
 
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_down_node
         loop_down_node.loop_body = body_node_list
@@ -2948,22 +3056,31 @@ class Parser:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
+            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+                line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
+                line_ast = self.build_loop_down_line_ast(processed_node)
+            elif type(processed_node) == LoopDownInclusiveKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
             elif type(processed_node) == LoopFromKeywordNode:
                 line_ast = self.build_loop_from_line_ast(processed_node)
+            elif type(processed_node) == LoopFromInclusiveKeywordNode:
+                line_ast = self.build_loop_from_line_ast(processed_node)
+            # We don't want to do anything on a NoOpNode because that means the
+            # comment is the only thing on the line.
+            elif type(processed_node) == NoOpNode:
+                line_ast = processed_node
             else:
                 line_ast = self.build_non_keyword_line_ast(processed_node)
                 # TODO(map) Be aware of this warning.
                 # print("WARNING: There may be a problem in the loop body.")
-            body_node_list.append(line_ast)
+
+            if type(processed_node) != NoOpNode:
+                body_node_list.append(line_ast)
 
             # Process the next node
             processed_node = self.process_token()
        
-        # Move past the closing right brace
-        self.process_token
-        
         for node in body_node_list:
             node.parent_node = loop_from_node
         loop_from_node.loop_body = body_node_list
@@ -4015,6 +4132,36 @@ class Compiler:
                     asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
                 else:
                     asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                return asm            
+            elif type(node) == LoopUpInclusiveKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_up_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(0, node.child_node.value, *self.loops[node]) + self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                return asm
+            elif type(node) == LoopDownKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_asm_end(*self.loops[node])
+                return asm
+            elif type(node) == LoopDownInclusiveKeywordNode:
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+                if type(node.child_node) == VariableReferenceNode:
+                    asm = self.get_push_loop_down_indices_with_var_asm(node.child_node.value, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
+                else:
+                    asm = self.get_push_loop_indices_asm(node.child_node.value, 0, *self.loops[node]) + self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
                 return asm
             elif type(node) == LoopFromKeywordNode:
                 node.visited = True
@@ -4059,6 +4206,51 @@ class Compiler:
                 self.curr_loop_count_depth += 1
                 self.loop_count += 1
                 return asm
+            elif type(node) == LoopFromInclusiveKeywordNode:
+                node.visited = True
+                # NOTE(map) This assumes that either side of the loopFrom values are a variable or a number.
+                first_val_is_var = type(node.child_node.left_side) == VariableReferenceNode
+                second_val_is_var = type(node.child_node.right_side) == VariableReferenceNode
+                first_loop_value = int(node.child_node.left_side.value) if not first_val_is_var else int(self.variables.get(node.child_node.left_side.value)["var_val"])
+                second_loop_value = int(node.child_node.right_side.value) if not second_val_is_var else int(self.variables.get(node.child_node.right_side.value)["var_val"])
+                is_loop_ascending = first_loop_value < second_loop_value
+                node.visited = True
+                self.loops[node] = (self.curr_loop_count_depth, self.loop_count)
+                self.loop_count += 1
+                self.curr_loop_count_depth += 1
+
+                # There are no variable references in the loop from declaration
+                if not first_val_is_var and not second_val_is_var:
+                    asm = self.get_push_loop_indices_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node]) 
+                    if is_loop_ascending:  # Loop up
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                    else:  # Loop down
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
+                # There is a variable reference
+                else:
+                    # Case of var in first param of loop from
+                    if first_val_is_var and not second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_first_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
+                    # Case of var in second param of loop from
+                    elif not first_val_is_var and second_val_is_var:
+                        asm = self.get_push_loop_from_indices_with_var_second_param_asm(node.child_node.left_side.value, node.child_node.right_side.value, *self.loops[node])
+                    # Case of var in first and second param of loop from
+                    elif first_val_is_var and second_val_is_var:
+                        assert False, "TODO(map) Implement loopFrom with both values being vars"
+                    # Catching everything else
+                    else:
+                        assert False, "There were no var references in loopFrom but logic triggered"
+
+                    if is_loop_ascending:
+                        asm += self.get_loop_up_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_up_inclusive_asm_end(*self.loops[node])
+                    else:
+                        asm += self.get_loop_down_asm_start(*self.loops[node]) + self.traverse_logic_node_children(node.loop_body) + self.get_loop_down_inclusive_asm_end(*self.loops[node])
+
+                self.curr_loop_count_depth += 1
+                self.loop_count += 1
+                return asm
+            else:
+                assert False, f"Not sure how to handle the loop node of type {type(node)}"
         elif type(node) == LoopIdxKeywordNode:
             loop_node = node
             while not isinstance(loop_node, LoopKeywordNode):
@@ -5074,8 +5266,19 @@ class Compiler:
             f"    jl loop_{loop_count}\n",
         ]
 
-    # TODO(map) This loops from the current value down to 1.
-    # It should loop from start value - 1 down to 0 so the laguage is 0 indexed
+    def get_loop_up_inclusive_asm_end(self, loop_level, loop_count):
+        return [
+            "    ;; Compare if counter is below loop end\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
+            "    inc rcx\n",
+            "    cmp rcx, rbx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
+            f"    jle loop_{loop_count}\n",
+        ]
+
+
     def get_loop_down_asm_end(self, loop_level, loop_count):
         return [
             "    ;; Compare if counter is above loop end\n",
@@ -5086,6 +5289,18 @@ class Compiler:
             f"    mov qword [loop_idx_{loop_level}], rcx\n",
             f"    mov qword [loop_end_{loop_level}], rbx\n",
             f"    jg loop_{loop_count}\n",
+        ]
+
+    def get_loop_down_inclusive_asm_end(self, loop_level, loop_count):
+        return [
+            "    ;; Compare if counter is above loop end\n",
+            f"    mov rcx, [loop_idx_{loop_level}]\n",
+            f"    mov rbx, [loop_end_{loop_level}]\n",
+            "    dec rcx\n",
+            "    cmp rcx, rbx\n",
+            f"    mov qword [loop_idx_{loop_level}], rcx\n",
+            f"    mov qword [loop_end_{loop_level}], rbx\n",
+            f"    jge loop_{loop_count}\n",
         ]
 
     def get_loop_from_ascending_asm(self, loop_count):
