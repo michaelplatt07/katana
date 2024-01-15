@@ -2097,7 +2097,10 @@ class Parser:
     def __init__(self, token_list):
         self.token_list = token_list
         self.has_next_token = True
-        self.curr_token_pos = -1
+        self.curr_token_pos = 0
+        self.curr_token = self.token_list[self.curr_token_pos]
+        self.is_working_on_line = False
+
         self.main_node = None
         self.variable_to_type_map = {}
         self.macros = {}
@@ -2115,6 +2118,124 @@ class Parser:
         if self.main_node:
             ret_nodes.append(self.main_node)
         return ret_nodes
+
+    def parse_block(self):
+        # Method for parsing a single block of code. A block of code can be
+        # defined as a single line of code that ends in a semicolon, or code
+        # that is wrapped in curl braces. The method requires setting a flag
+        # so the parser knows what kind of block of code is being parsed.
+
+        # Get the first node so we can determine if we are working with a base
+        # unit of work like a single line of code or if we are going to have a
+        # block with a body
+        first_node = self.process_token_rewrite()
+
+        # Determine the flag for the block type that is being parsed.
+        if type(first_node) == VariableKeywordNode:
+            self.is_working_on_line = True
+        else:
+            assert False, f"Unsure how to process block defined by {type(first_node)}"
+
+        self.read_full_block()
+
+    def read_full_block(self):
+        block = []
+
+        # Loop until we hit the semicolon that defines the end of the block
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+        self.curr_block = block
+
+    def process_token_rewrite(self):
+        if self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == MAIN:
+            return StartNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == MACRO_KEYWORD_TOKEN_TYPE:
+            return MacroNode(self.curr_token, self.curr_token.value, children_nodes=[])
+        elif self.curr_token.ttype == FUNCTION_KEYWORD_TOKEN_TYPE:
+            return FunctionNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == LEFT_PAREN_TOKEN_TYPE:
+            return LeftParenNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+            return RightParenNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == LEFT_CURL_BRACE_TOKEN_TYPE:
+            return FunctionBodyLeftCurlNode(self.curr_token)
+        elif self.curr_token.ttype == RIGHT_CURL_BRACE_TOKEN_TYPE:
+            return FunctionBodyRightCurlNode(self.curr_token)
+        elif self.curr_token.ttype == NUM_TOKEN_TYPE:
+            return NumberNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype == CHARACTER_TOKEN_TYPE:
+            return CharNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == STRING_TOKEN_TYPE:
+            return StringNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype in [PLUS_TOKEN_TYPE, MINUS_TOKEN_TYPE]:
+            return PlusMinusNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype in [MULTIPLY_TOKEN_TYPE, DIVIDE_TOKEN_TYPE]:
+            return MultiplyDivideNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == COMMENT_TOKEN_TYPE:
+            return NoOpNode(self.curr_token)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in [PRINT, PRINTL, CHAR_AT, UPDATE_CHAR, COPY_STR]:
+            return FunctionKeywordNode(self.curr_token, self.curr_token.value, [])
+        elif self.curr_token.ttype == MACRO_NAME_TOKEN_TYPE:
+            return MacroNameNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_NAME_TOKEN_TYPE:
+            return FunctionNameNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in VARIABLE_KEYWORDS:
+            return VariableKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == VARIABLE_NAME_TOKEN_TYPE:
+            # TODO(map) What should I be doing here?
+            return VariableNode(self.curr_token, self.curr_token.value, False, None)
+        elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
+            return VariableReferenceNode(self.curr_token, self.curr_token.value, None)
+        elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
+            return copy.deepcopy(self.macros[self.curr_token.value])
+        elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
+            return AssignmentNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
+            return BooleanNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value in [IF, ELSE]:
+            return LogicKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_UP:
+            return LoopUpKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_UP:
+            return LoopUpInclusiveKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_DOWN:
+            return LoopDownKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_DOWN:
+            return LoopDownInclusiveKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == LOOP_FROM:
+            return LoopFromKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == KEYWORD_TOKEN_TYPE and self.curr_token.value == I_LOOP_FROM:
+            return LoopFromInclusiveKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == LOOP_INDEX_KEYWORD_TOKEN_TYPE:
+            return LoopIdxKeywordNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == RANGE_INDICATION_TOKEN_TYPE:
+            return RangeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype in [EQUAL_TOKEN_TYPE, GREATER_THAN_TOKEN_TYPE, LESS_THAN_TOKEN_TYPE]:
+            return CompareNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == COMMA_TOKEN_TYPE:
+            return ArgSeparatorNode(self.curr_token)
+        elif self.curr_token.ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
+            return FunctionDecSeparatorNode(self.curr_token)
+        elif self.curr_token.ttype == FUNCTION_ARG_TOKEN_TYPE:
+            return FunctionArgNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_TYPE_TOKEN_TYPE:
+            return FunctionArgTypeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE:
+            return FunctionArgSeparatorNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_RETURN_TOKEN_TYPE:
+            return FunctionReturnTypeNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_RETURN_KEYWORD_TOKEN_TYPE:
+            return FunctionReturnNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_ARG_REFERENCE_TOKEN_TYPE:
+            return FunctionArgReferenceNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == FUNCTION_REFERENCE_TOKEN_TYPE:
+            return FunctionReferenceNode(self.curr_token, self.curr_token.value)
+        elif self.curr_token.ttype == EOL_TOKEN_TYPE:
+            return EndOfLineNode(self.curr_token)
+        else:
+            assert False, f"Unknown token type {self.curr_token.ttype}"
 
     def parse(self):
         root_node = None
