@@ -57,7 +57,7 @@ from katana.katana import (
     UnclosedParenthesisError,
     UnclosedQuotationException,
     UnknownKeywordError,
-    UnpairedElseError
+    UnpairedElseError,
 )
 
 
@@ -75,41 +75,49 @@ class TestLexerComments:
 
     def test_single_line_comment(self):
         program = Program(["// Comment\n"])
-        token_list = [Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
-                      Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)]
+        token_list = [
+            Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
+            Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
+        ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
     def test_comment_after_line(self):
         program = Program(["1 + 2; // Comment\n"])
-        token_list = [Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
-                      Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
-                      Token(NUM_TOKEN_TYPE, 0, 4, "2", LOW),
-                      Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
-                      Token(COMMENT_TOKEN_TYPE, 0, 7, "// Comment", LOW),
-                      Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)]
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 0, 4, "2", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+            Token(COMMENT_TOKEN_TYPE, 0, 7, "// Comment", LOW),
+            Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
+        ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
     def test_comment_before_program(self):
         program = Program(["// Comment\n", "1 + 2;\n"])
-        token_list = [Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
-                      Token(NUM_TOKEN_TYPE, 1, 0, "1", LOW),
-                      Token(PLUS_TOKEN_TYPE, 1, 2, "+", MEDIUM),
-                      Token(NUM_TOKEN_TYPE, 1, 4, "2", LOW),
-                      Token(EOL_TOKEN_TYPE, 1, 5, ";", LOW),
-                      Token(EOF_TOKEN_TYPE, 2, 0, "EOF", LOW)]
+        token_list = [
+            Token(COMMENT_TOKEN_TYPE, 0, 0, "// Comment", LOW),
+            Token(NUM_TOKEN_TYPE, 1, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 1, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 1, 4, "2", LOW),
+            Token(EOL_TOKEN_TYPE, 1, 5, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 2, 0, "EOF", LOW),
+        ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
     def test_comment_after_program(self):
         program = Program(["1 + 2;\n", "// Comment\n"])
-        token_list = [Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
-                      Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
-                      Token(NUM_TOKEN_TYPE, 0, 4, "2", LOW),
-                      Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
-                      Token(COMMENT_TOKEN_TYPE, 1, 0, "// Comment", LOW),
-                      Token(EOF_TOKEN_TYPE, 2, 0, "EOF", LOW)]
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "1", LOW),
+            Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 0, 4, "2", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+            Token(COMMENT_TOKEN_TYPE, 1, 0, "// Comment", LOW),
+            Token(EOF_TOKEN_TYPE, 2, 0, "EOF", LOW),
+        ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
@@ -123,21 +131,33 @@ class TestLexerBasicLexingAbilities:
 
     def test_lex_single_digit_number(self):
         program = Program(["3;\n"])
-        token_list = [Token(NUM_TOKEN_TYPE, 0, 0, "3", LOW),
-                      Token(EOL_TOKEN_TYPE, 0, 1, ";", LOW),
-                      Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)]
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "3", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 1, ";", LOW),
+            Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
+        ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
     @pytest.mark.parametrize(
         "lines,token_list",
         [
-            (["12;\n"], [Token(NUM_TOKEN_TYPE, 0, 0, "12", LOW),
-             Token(EOL_TOKEN_TYPE, 0, 2, ";", LOW),
-             Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)]),
-            (["345;\n"], [Token(NUM_TOKEN_TYPE, 0, 0, "345", LOW),
-             Token(EOL_TOKEN_TYPE, 0, 3, ";", LOW),
-             Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)]),
+            (
+                ["12;\n"],
+                [
+                    Token(NUM_TOKEN_TYPE, 0, 0, "12", LOW),
+                    Token(EOL_TOKEN_TYPE, 0, 2, ";", LOW),
+                    Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
+                ],
+            ),
+            (
+                ["345;\n"],
+                [
+                    Token(NUM_TOKEN_TYPE, 0, 0, "345", LOW),
+                    Token(EOL_TOKEN_TYPE, 0, 3, ";", LOW),
+                    Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
+                ],
+            ),
         ],
     )
     def test_lex_multi_digit_number(self, lines, token_list):
@@ -145,7 +165,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (
@@ -175,7 +195,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (
@@ -205,7 +225,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (
@@ -239,7 +259,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (
@@ -259,7 +279,7 @@ class TestLexerBasicLexingAbilities:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @ pytest.mark.parametrize(
+    @pytest.mark.parametrize(
         "lines,token_list",
         [
             (
@@ -343,7 +363,9 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(["1 + (2 + 3;\n"], 4, UnclosedParenthesisError(0, 4))
+        mock_print.assert_called_with(
+            ["1 + (2 + 3;\n"], 4, UnclosedParenthesisError(0, 4)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_unclosed_paren_error_other_side(self, mock_print):
@@ -351,7 +373,10 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(["1 + 2) + 3;\n"], 5, UnclosedParenthesisError(0, 5))
+        mock_print.assert_called_with(
+            ["1 + 2) + 3;\n"], 5, UnclosedParenthesisError(0, 5)
+        )
+
 
 class TestLexerEndOfLineSemicolon:
     """
@@ -387,8 +412,8 @@ class TestLexerEndOfLineSemicolon:
             lexer.lex()
         mock_print.assert_called_with(code, 7, NoTerminatorError(2, 8))
 
-class TestLexerInvalidTokenException:
 
+class TestLexerInvalidTokenException:
     @patch("katana.katana.print_exception_message")
     def test_invalid_token_raises_exception(self, mock_print):
         """
@@ -415,7 +440,9 @@ class TestLexerInvalidKeyword:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(["foo(3+4);\n"], 2, UnknownKeywordError(0, 0, "foo"))
+        mock_print.assert_called_with(
+            ["foo(3+4);\n"], 2, UnknownKeywordError(0, 0, "foo")
+        )
 
 
 class TestLexerPrintKeyword:
@@ -455,7 +482,7 @@ class TestLexerPrintKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 10, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 1, 11, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -482,7 +509,7 @@ class TestLexerMainKeyword:
             Token(EOL_TOKEN_TYPE, 0, 18, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 19, "}", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 0, 20, ";", LOW),
-            Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 1, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -501,7 +528,7 @@ class TestLexerMainKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 9, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 1, 10, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -525,7 +552,7 @@ class TestLexerIntKeyword:
             Token(NUM_TOKEN_TYPE, 1, 10, "3", LOW),
             Token(EOL_TOKEN_TYPE, 1, 11, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -548,7 +575,7 @@ class TestLexerIntKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 7, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 2, 8, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -593,7 +620,7 @@ class TestLexerIntKeyword:
             Token(NUM_TOKEN_TYPE, 1, 16, "0", LOW),
             Token(EOL_TOKEN_TYPE, 1, 17, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert lexer.lex() == token_list
@@ -607,7 +634,7 @@ class TestLexerIntKeyword:
             Token(NUM_TOKEN_TYPE, 1, 9, "3", LOW),
             Token(EOL_TOKEN_TYPE, 1, 10, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -621,7 +648,7 @@ class TestLexerIntKeyword:
             Token(NUM_TOKEN_TYPE, 1, 10, "3", LOW),
             Token(EOL_TOKEN_TYPE, 1, 11, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -635,7 +662,7 @@ class TestLexerIntKeyword:
             Token(NUM_TOKEN_TYPE, 1, 10, "3", LOW),
             Token(EOL_TOKEN_TYPE, 1, 11, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -659,7 +686,7 @@ class TestLexerCharKeyword:
             Token(CHARACTER_TOKEN_TYPE, 1, 10, "h", LOW),
             Token(EOL_TOKEN_TYPE, 1, 12, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -680,7 +707,9 @@ class TestLexerCharKeyword:
         """
         Tests the referencing a char is correctly lexed.
         """
-        program = Program(["main() {\n", "    const char x = 'A';\n", "    print(x);\n", "}\n"])
+        program = Program(
+            ["main() {\n", "    const char x = 'A';\n", "    print(x);\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 4, "const", 4),
             Token(KEYWORD_TOKEN_TYPE, 1, 10, "char", 4),
@@ -710,7 +739,7 @@ class TestLexerString:
         Tests that declaring a string variable correctly declares the
         appropriate tokens to be parsed.
         """
-        program = Program(["main() {\n", "string x = \"hello\";\n", "}\n"])
+        program = Program(["main() {\n", 'string x = "hello";\n', "}\n"])
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "x", LOW),
@@ -718,7 +747,7 @@ class TestLexerString:
             Token(STRING_TOKEN_TYPE, 1, 11, "hello", LOW),
             Token(EOL_TOKEN_TYPE, 1, 18, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -727,7 +756,7 @@ class TestLexerString:
         """
         Confirms that referencing the string appropriately works.
         """
-        program = Program(["main() {\n", "string x = \"hello\";\n", "print(x);\n", "}\n"])
+        program = Program(["main() {\n", 'string x = "hello";\n', "print(x);\n", "}\n"])
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "x", LOW),
@@ -740,7 +769,7 @@ class TestLexerString:
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 7, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 2, 8, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -764,7 +793,7 @@ class TestLexerBoolKeyword:
             Token(BOOLEAN_TOKEN_TYPE, 1, 9, "false", LOW),
             Token(EOL_TOKEN_TYPE, 1, 14, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -783,7 +812,7 @@ class TestLexerBoolKeyword:
             Token(RIGHT_PAREN_TOKEN_TYPE, 2, 7, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 2, 8, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -798,7 +827,9 @@ class TestLexerIfElseKeyword:
         """
         Test to make sure the `if` keyword by itself correctly lexes.
         """
-        program = Program(["main() {\n", "if (1 > 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "if (1 > 0) {\n", 'print("low");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 3, "(", VERY_HIGH),
@@ -823,7 +854,9 @@ class TestLexerIfElseKeyword:
         """
         Test to make sure the less than operator works and is lexed.
         """
-        program = Program(["main() {\n", "if (1 < 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "if (1 < 0) {\n", 'print("low");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 3, "(", VERY_HIGH),
@@ -848,7 +881,9 @@ class TestLexerIfElseKeyword:
         """
         Test to make sure equal operator works and is lexed.
         """
-        program = Program(["main() {\n", "if (0 == 0) {\n", "print(\"low\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "if (0 == 0) {\n", 'print("low");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 3, "(", VERY_HIGH),
@@ -875,7 +910,7 @@ class TestLexerIfElseKeyword:
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        code = ["main() {\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        code = ["main() {\n", "else {\n", 'print("low");\n', "}\n", "}\n"]
         program = Program(code)
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
@@ -888,7 +923,17 @@ class TestLexerIfElseKeyword:
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        code = ["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "print(\"really bad\");\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        code = [
+            "main() {\n",
+            "if (1 > 2) {\n",
+            'print("high");\n',
+            "}\n",
+            'print("really bad");\n',
+            "else {\n",
+            'print("low");\n',
+            "}\n",
+            "}\n",
+        ]
         program = Program(code)
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
@@ -901,7 +946,16 @@ class TestLexerIfElseKeyword:
         If the `else` keyword is present without the `if` keyword we get an
         exception in the lexer.
         """
-        code = ["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n",  "print(\"really bad\");else {\n", "print(\"low\");\n", "}\n", "}\n"]
+        code = [
+            "main() {\n",
+            "if (1 > 2) {\n",
+            'print("high");\n',
+            "}\n",
+            'print("really bad");else {\n',
+            'print("low");\n',
+            "}\n",
+            "}\n",
+        ]
         program = Program(code)
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
@@ -917,19 +971,19 @@ class TestLexerIfElseKeyword:
         code = [
             "main() {\n",
             "if (1 == 2) {\n",
-            "print(\"first if\");\n",
+            'print("first if");\n',
             "if (2 == 3){\n",
-            "print(\"second if\");\n",
+            'print("second if");\n',
             "}\n",
-            "print(\"bad line\");\n",
+            'print("bad line");\n',
             "else {\n",
-            "print(\"second else\");\n",
+            'print("second else");\n',
             "}\n",
             "else {\n",
-            "print(\"first else\");\n",
+            'print("first else");\n',
             "}\n",
             "}\n",
-            "}\n"
+            "}\n",
         ]
         program = Program(code)
         lexer = Lexer(program)
@@ -946,14 +1000,14 @@ class TestLexerIfElseKeyword:
         code = [
             "main() {\n",
             "if (1 == 2) {\n",
-            "print(\"first if\");\n",
+            'print("first if");\n',
             "else {\n",
-            "print(\"second else\");\n",
+            'print("second else");\n',
             "}\n",
             "else {\n",
-            "print(\"first else\");\n",
+            'print("first else");\n',
             "}\n",
-            "}\n"
+            "}\n",
         ]
         program = Program(code)
         lexer = Lexer(program)
@@ -965,7 +1019,18 @@ class TestLexerIfElseKeyword:
         """
         If there is an `if` paired with an `else` the lexer succeeds.
         """
-        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "}\n", "else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        program = Program(
+            [
+                "main() {\n",
+                "if (1 > 2) {\n",
+                'print("high");\n',
+                "}\n",
+                "else {\n",
+                'print("low");\n',
+                "}\n",
+                "}\n",
+            ]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 3, "(", VERY_HIGH),
@@ -998,7 +1063,17 @@ class TestLexerIfElseKeyword:
         """
         If there is an `if` paired with an `else` the lexer succeeds.
         """
-        program = Program(["main() {\n", "if (1 > 2) {\n", "print(\"high\");\n", "} else {\n", "print(\"low\");\n", "}\n", "}\n"])
+        program = Program(
+            [
+                "main() {\n",
+                "if (1 > 2) {\n",
+                'print("high");\n',
+                "} else {\n",
+                'print("low");\n',
+                "}\n",
+                "}\n",
+            ]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "if", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 3, "(", VERY_HIGH),
@@ -1034,7 +1109,9 @@ class TestLexerLoopKeyword:
     """
 
     def test_basic_loop_up_keyword(self):
-        program = Program(["main() {\n", "loopUp(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopUp(3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopUp", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 6, "(", VERY_HIGH),
@@ -1054,7 +1131,9 @@ class TestLexerLoopKeyword:
         assert token_list == lexer.lex()
 
     def test_basic_loop_down_keyword(self):
-        program = Program(["main() {\n", "loopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopDown(3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopDown", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 8, "(", VERY_HIGH),
@@ -1074,7 +1153,9 @@ class TestLexerLoopKeyword:
         assert token_list == lexer.lex()
 
     def test_basic_loop_from_keyword(self):
-        program = Program(["main() {\n", "loopFrom(0..3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopFrom(0..3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopFrom", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 8, "(", VERY_HIGH),
@@ -1105,7 +1186,9 @@ class TestLoopIdx:
     """
 
     def test_loop_up_access_index(self):
-        program = Program(["main() {\n", "loopUp(3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopUp(3) {\n", "printl(idx);\n", "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopUp", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 6, "(", VERY_HIGH),
@@ -1125,7 +1208,9 @@ class TestLoopIdx:
         assert token_list == lexer.lex()
 
     def test_loop_down_access_index(self):
-        program = Program(["main() {\n", "loopDown(3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopDown(3) {\n", "printl(idx);\n", "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopDown", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 8, "(", VERY_HIGH),
@@ -1145,7 +1230,9 @@ class TestLoopIdx:
         assert token_list == lexer.lex()
 
     def test_loop_from_access_index(self):
-        program = Program(["main() {\n", "loopFrom(0..3) {\n",  "printl(idx);\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "loopFrom(0..3) {\n", "printl(idx);\n", "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "loopFrom", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 8, "(", VERY_HIGH),
@@ -1173,7 +1260,9 @@ class TestLexerLoopInclusiveKeyword:
     """
 
     def test_basic_loop_up_inclusive_keyword(self):
-        program = Program(["main() {\n", "iLoopUp(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "iLoopUp(3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "iLoopUp", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", VERY_HIGH),
@@ -1193,7 +1282,9 @@ class TestLexerLoopInclusiveKeyword:
         assert token_list == lexer.lex()
 
     def test_basic_loop_down_inclusive_keyword(self):
-        program = Program(["main() {\n", "iLoopDown(3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "iLoopDown(3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "iLoopDown", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", VERY_HIGH),
@@ -1213,7 +1304,9 @@ class TestLexerLoopInclusiveKeyword:
         assert token_list == lexer.lex()
 
     def test_basic_loop_from_inclusive_keyword(self):
-        program = Program(["main() {\n", "iLoopFrom(0..3) {\n",  "print(\"looping\");\n", "}\n", "}\n"])
+        program = Program(
+            ["main() {\n", "iLoopFrom(0..3) {\n", 'print("looping");\n', "}\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "iLoopFrom", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 9, "(", VERY_HIGH),
@@ -1241,7 +1334,7 @@ class TestLexerCharAt:
     """
 
     def test_char_at_function(self):
-        program = Program(["main() {\n", "charAt(\"Hello\", 3);\n", "}\n"])
+        program = Program(["main() {\n", 'charAt("Hello", 3);\n', "}\n"])
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "charAt", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 6, "(", VERY_HIGH),
@@ -1251,7 +1344,7 @@ class TestLexerCharAt:
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 17, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 1, 18, ";", LOW),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", VERY_HIGH),
-            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW)
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
         lexer = Lexer(program)
         assert token_list == lexer.lex()
@@ -1263,7 +1356,7 @@ class TestLexerQuotationCharacter:
     """
 
     def test_quote_character(self):
-        program = Program(["\"test string\";\n"])
+        program = Program(['"test string";\n'])
         token_list = [
             Token(STRING_TOKEN_TYPE, 0, 0, "test string", LOW),
             Token(EOL_TOKEN_TYPE, 0, 13, ";", LOW),
@@ -1274,27 +1367,34 @@ class TestLexerQuotationCharacter:
 
     @patch("katana.katana.print_exception_message")
     def test_exception_raised_with_no_closing_quote_eol(self, mock_print):
-        program = Program(["\"test string;\n"])
+        program = Program(['"test string;\n'])
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(["\"test string;\n"], 12, UnclosedQuotationException(0, 12, "test string"))
+        mock_print.assert_called_with(
+            ['"test string;\n'], 12, UnclosedQuotationException(0, 12, "test string")
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_exception_raised_with_no_closing_quote_new_line(self, mock_print):
-        program = Program(["\"test string\n"])
+        program = Program(['"test string\n'])
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(["\"test string\n"], 12, UnclosedQuotationException(0, 12, "test string"))
+        mock_print.assert_called_with(
+            ['"test string\n'], 12, UnclosedQuotationException(0, 12, "test string")
+        )
 
 
 class TestLexerUpdateCharKeyword:
     """
     All tests related to updating a char through the updateChar method.
     """
+
     def test_update_char_can_be_parsed(self):
-        program = Program(["main() {\n", "string x = \"Hello\";\n", "updateChar(x, 0, 'Q');\n", "}\n"])
+        program = Program(
+            ["main() {\n", 'string x = "Hello";\n', "updateChar(x, 0, 'Q');\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "x", LOW),
@@ -1323,7 +1423,15 @@ class TestCopyString:
     """
 
     def test_keyword_str_copy(self):
-        program = Program(["main() {\n", "string x = \"Hello\";\n", "string y = \"Katana\";\n", "copyStr(x, y);\n", "}\n"])
+        program = Program(
+            [
+                "main() {\n",
+                'string x = "Hello";\n',
+                'string y = "Katana";\n',
+                "copyStr(x, y);\n",
+                "}\n",
+            ]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "x", LOW),
@@ -1355,7 +1463,9 @@ class TestLexerStringConcatenation:
     """
 
     def test_string_concatenation_with_char(self):
-        program = Program(["main() {\n", "string x = \"Hello\";\n", "x = x + '!';\n", "}\n"])
+        program = Program(
+            ["main() {\n", 'string x = "Hello";\n', "x = x + '!';\n", "}\n"]
+        )
         token_list = get_main_tokens() + [
             Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", ULTRA_HIGH),
             Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "x", LOW),
@@ -1396,7 +1506,16 @@ class TestLexerMacroKeyword:
     """
 
     def test_macro_successfully_lexes(self):
-        program = Program(["MACRO myMacro {\n", "3 + 4;\n", "}\n", "main() {\n", "print(myMacro);\n", "}\n"])
+        program = Program(
+            [
+                "MACRO myMacro {\n",
+                "3 + 4;\n",
+                "}\n",
+                "main() {\n",
+                "print(myMacro);\n",
+                "}\n",
+            ]
+        )
         token_list = [
             Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 0, "MACRO", 4),
             Token(MACRO_NAME_TOKEN_TYPE, 0, 6, "myMacro", 0),
@@ -1444,7 +1563,9 @@ class TestLexerFunction:
         lexer = Lexer(program)
         with pytest.raises(SystemExit):
             lexer.lex()
-        mock_print.assert_called_with(code, 10, InvalidFunctionDeclarationException(0, 10))
+        mock_print.assert_called_with(
+            code, 10, InvalidFunctionDeclarationException(0, 10)
+        )
 
     def test_function_declaration_explicit_declare_everything(self):
         code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n"]
@@ -1586,7 +1707,14 @@ class TestLexerFunction:
         assert token_list == lexer.lex()
 
     def test_function_declaration_called_in_main(self):
-        code = ["fn add :: (x: int64, y: int64) :: int64 {\n", "return x + y;\n", "}\n", "main() {\n", "add(3, 4);\n", "}\n"]
+        code = [
+            "fn add :: (x: int64, y: int64) :: int64 {\n",
+            "return x + y;\n",
+            "}\n",
+            "main() {\n",
+            "add(3, 4);\n",
+            "}\n",
+        ]
         program = Program(code)
         token_list = [
             Token(FUNCTION_KEYWORD_TOKEN_TYPE, 0, 0, "fn", VERY_HIGH),
