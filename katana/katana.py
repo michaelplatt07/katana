@@ -541,7 +541,7 @@ class EmptyMacroException(Exception):
 # TOKENS
 ########
 class Token:
-    def __init__(self, ttype, col, row, value, priority):
+    def __init__(self, ttype, row, col, value, priority):
         self.ttype = ttype
         self.col = col
         self.row = row
@@ -1824,7 +1824,7 @@ class Lexer:
             # There is only a comment on this line and nothing else.
             if self.comment_index == 0:
                 if self.comment_index == 0:
-                    token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, self.program.get_curr_line()[:-1], LOW)
+                    token = Token(COMMENT_TOKEN_TYPE,  self.program.curr_line, self.program.curr_col,self.program.get_curr_line()[:-1], LOW)
                     if token.ttype not in IGNORE_TOKENS:
                         self.token_list.append(token)
                     token = Token(NEW_LINE_TOKEN_TYPE, len(self.program.get_curr_line()) - 1, self.program.curr_line, self.program.get_curr_line()[-1:], LOW)
@@ -1833,10 +1833,10 @@ class Lexer:
                     self.program.advance_line()
                     self.comment_index = -1
             elif self.comment_index > 0 and self.program.curr_col == self.comment_index:
-                token = Token(COMMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, self.program.get_curr_line()[self.comment_index:-1], LOW)
+                token = Token(COMMENT_TOKEN_TYPE, self.program.curr_line,self.program.curr_col,  self.program.get_curr_line()[self.comment_index:-1], LOW)
                 if token.ttype not in IGNORE_TOKENS:
                     self.token_list.append(token)
-                token = Token(NEW_LINE_TOKEN_TYPE, len(self.program.get_curr_line()) - 1, self.program.curr_line, self.program.get_curr_line()[-1:], LOW)
+                token = Token(NEW_LINE_TOKEN_TYPE, self.program.curr_line,len(self.program.get_curr_line()) - 1,  self.program.get_curr_line()[-1:], LOW)
                 if token.ttype not in IGNORE_TOKENS:
                     self.token_list.append(token)
                 self.program.advance_line()
@@ -1862,7 +1862,7 @@ class Lexer:
                     self.token_list.append(token)
 
         # Always add end of file token to list
-        self.token_list.append(Token(EOF_TOKEN_TYPE, 0, self.program.curr_line, EOF, LOW))
+        self.token_list.append(Token(EOF_TOKEN_TYPE, self.program.curr_line, 0,  EOF, LOW))
 
         # Do checking to make sure the tokens make sense to be parsed.
         self.check_paren_pairing()
@@ -1883,41 +1883,41 @@ class Lexer:
                 if len(self.token_list) > 0 and not self.token_list[-1].ttype != KEYWORD_TOKEN_TYPE:
                     raise InvalidVariableNameError(self.program.curr_line, self.program.curr_col)
                 else:
-                    return Token(NUM_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                    return Token(NUM_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character == '+':
-                return Token(PLUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
+                return Token(PLUS_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, MEDIUM)
             elif character == '-':
-                return Token(MINUS_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, MEDIUM)
+                return Token(MINUS_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, MEDIUM)
             elif character == '*':
-                return Token(MULTIPLY_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+                return Token(MULTIPLY_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, HIGH)
             elif character == '/':
-                return Token(DIVIDE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+                return Token(DIVIDE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, HIGH)
             elif character == '=' and self.program.get_next_char() != '=':
-                return Token(ASSIGNMENT_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+                return Token(ASSIGNMENT_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, HIGH)
             elif character == '=' and self.program.get_next_char() == '=':
                 return self.handle_equal_operator()
             elif character == '>':
-                return Token(GREATER_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+                return Token(GREATER_THAN_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, HIGH)
             elif character == '<':
-                return Token(LESS_THAN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, HIGH)
+                return Token(LESS_THAN_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, HIGH)
             elif character == '{':
                 # No longer in function declaration so alphas are variables again.
                 self.in_function_declaration = False
-                return Token(LEFT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
+                return Token(LEFT_CURL_BRACE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, VERY_HIGH)
             elif character == '(':
                 if self.in_function_declaration:
                     self.fn_left_paren_set = True
-                return Token(LEFT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
+                return Token(LEFT_PAREN_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, VERY_HIGH)
             elif character == '}':
-                return Token(RIGHT_CURL_BRACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
+                return Token(RIGHT_CURL_BRACE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, VERY_HIGH)
             elif character == ')':
                 if not self.in_function_declaration:
                     self.check_for_valid_termination(character)
                 if self.in_function_declaration:
                     self.fn_left_paren_set = False
-                return Token(RIGHT_PAREN_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, VERY_HIGH)
+                return Token(RIGHT_PAREN_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, VERY_HIGH)
             elif character == ';':
-                return Token(EOL_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(EOL_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character == '\'':
                 return self.generate_char_token()
             elif character == '"':
@@ -1925,9 +1925,9 @@ class Lexer:
             elif character == ".":
                 return self.handle_dot_character()
             elif character == "," and not self.in_function_declaration:
-                return Token(COMMA_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(COMMA_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character == "," and self.in_function_declaration:
-                return Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character.isalpha():
                 token = self.generate_keyword_token()
                 if token.ttype == FUNCTION_ARG_TOKEN_TYPE and not self.fn_left_paren_set:
@@ -1937,12 +1937,12 @@ class Lexer:
             elif character == ':' and self.program.get_next_char() == ':':
                 return self.handle_function_separator()
             elif character == ':' and self.program.get_next_char() != ':':  # Do we care about a single colon by itself?
-                return Token(COLON_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(COLON_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character == "\n":
                 self.check_for_valid_termination(character)
-                return Token(NEW_LINE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(NEW_LINE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             elif character.isspace():  # Never care about spaces
-                return Token(SPACE_TOKEN_TYPE, self.program.curr_col, self.program.curr_line, character, LOW)
+                return Token(SPACE_TOKEN_TYPE,  self.program.curr_line,self.program.curr_col, character, LOW)
             else:
                 raise InvalidTokenException(self.program.curr_line, self.program.curr_col, character)
         except InvalidVariableNameError as ivne:
@@ -2007,46 +2007,46 @@ class Lexer:
                 self.if_idx_list.append(len(self.token_list))
             elif keyword == ELSE:
                 self.else_idx_list.append(len(self.token_list))
-            return Token(KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+            return Token(KEYWORD_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, ULTRA_HIGH)
         elif keyword == MACRO:
-            return Token(MACRO_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, ULTRA_HIGH)
+            return Token(MACRO_KEYWORD_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, ULTRA_HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value in VARIABLE_KEYWORDS:
             self.variable_name_list.append(keyword)
-            return Token(VARIABLE_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+            return Token(VARIABLE_NAME_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, LOW)
         elif len(self.token_list) > 0 and self.token_list[-1].value == MACRO:
             self.macro_name_list.append(keyword)
-            return Token(MACRO_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+            return Token(MACRO_NAME_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, LOW)
         elif keyword in self.macro_name_list:
-            return Token(MACRO_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+            return Token(MACRO_REFERENCE_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, LOW)
         elif keyword in self.variable_name_list:
-            return Token(VARIABLE_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+            return Token(VARIABLE_REFERENCE_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, LOW)
         elif keyword in ["true", "false"]:
-            return Token(BOOLEAN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, LOW)
+            return Token(BOOLEAN_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, LOW)
         elif keyword == FN:
-            return Token(FUNCTION_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_KEYWORD_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif keyword == "return":
-            return Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+            return Token(FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, HIGH)
         elif len(self.token_list) > 0 and self.token_list[-1].value == FN:
             self.in_function_declaration = True
             self.curr_function_name = keyword
             self.function_args[self.curr_function_name] = {}
-            return Token(FUNCTION_NAME_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_NAME_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif self.in_function_declaration and keyword not in VARIABLE_KEYWORDS and keyword != "nil":
             self.function_args[self.curr_function_name].update({keyword: ""})
-            return Token(FUNCTION_ARG_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_ARG_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype != FUNCTION_SEPARATOR_TOKEN_TYPE:
             self.function_args[self.curr_function_name].update({self.token_list[-1].value: keyword})
-            return Token(FUNCTION_ARG_TYPE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_ARG_TYPE_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif self.in_function_declaration and keyword in VARIABLE_KEYWORDS and self.token_list[-1].ttype == FUNCTION_SEPARATOR_TOKEN_TYPE:
-            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_RETURN_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif self.in_function_declaration and keyword == "nil":
-            return Token(FUNCTION_RETURN_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_RETURN_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif keyword in self.function_args.get(self.curr_function_name, {}):
-            return Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+            return Token(FUNCTION_ARG_REFERENCE_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, HIGH)
         elif keyword in self.function_args.keys():
-            return Token(FUNCTION_REFERENCE_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, VERY_HIGH)
+            return Token(FUNCTION_REFERENCE_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, VERY_HIGH)
         elif keyword == "idx":
-            return Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE, original_pos, self.program.curr_line, keyword, HIGH)
+            return Token(LOOP_INDEX_KEYWORD_TOKEN_TYPE,  self.program.curr_line,original_pos, keyword, HIGH)
         else:
             raise UnknownKeywordError(self.program.curr_line, original_pos, keyword)
 
@@ -2061,7 +2061,7 @@ class Lexer:
             string += self.program.get_curr_char()
             self.program.advance_character()
 
-        return Token(STRING_TOKEN_TYPE, original_pos, self.program.curr_line, string, LOW)
+        return Token(STRING_TOKEN_TYPE,  self.program.curr_line,original_pos, string, LOW)
 
     def generate_char_token(self):
         # Move the character after the first single quote
@@ -2076,7 +2076,7 @@ class Lexer:
         if self.program.get_curr_char() != '\'':
             raise InvalidCharException(self.program.curr_line, self.program.curr_col)
 
-        return Token(CHARACTER_TOKEN_TYPE, original_pos, self.program.curr_line, char, LOW)
+        return Token(CHARACTER_TOKEN_TYPE,  self.program.curr_line,original_pos, char, LOW)
 
     def handle_dot_character(self):
         dot_operator = self.program.get_curr_char()
@@ -2084,7 +2084,7 @@ class Lexer:
         if self.program.get_next_char() == ".":
             self.program.advance_character()
             dot_operator += self.program.get_curr_char()
-            return Token(RANGE_INDICATION_TOKEN_TYPE, dot_operator_idx, self.program.curr_line, dot_operator, MEDIUM)
+            return Token(RANGE_INDICATION_TOKEN_TYPE,  self.program.curr_line,dot_operator_idx, dot_operator, MEDIUM)
         else:
             print_exception_message(self.program.lines, self.program.curr_col, InvalidTokenException(self.program.curr_line, self.program.curr_col, dot_operator))
             sys.exit()
@@ -2092,12 +2092,12 @@ class Lexer:
     def handle_equal_operator(self):
         equal_idx = self.program.curr_col
         self.program.advance_character()
-        return Token(EQUAL_TOKEN_TYPE, equal_idx, self.program.curr_line, "==", HIGH)
+        return Token(EQUAL_TOKEN_TYPE,  self.program.curr_line,equal_idx, "==", HIGH)
 
     def handle_function_separator(self):
         fn_idx = self.program.curr_col
         self.program.advance_character()
-        return Token(FUNCTION_SEPARATOR_TOKEN_TYPE, fn_idx, self.program.curr_line, "::", VERY_HIGH)
+        return Token(FUNCTION_SEPARATOR_TOKEN_TYPE,  self.program.curr_line,fn_idx, "::", VERY_HIGH)
 
     def check_paren_pairing(self):
         # Check to make sure all the parenthesis line up accordingly.
