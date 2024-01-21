@@ -5,16 +5,22 @@ from katana.katana import (
     # Tokens
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
     LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
     VARIABLE_NAME_TOKEN_TYPE,
     # Nodes
     AssignmentNode,
     LeftCurlBraceNode,
+    MultiplyDivideNode,
     NumberNode,
     PlusMinusNode,
     RightCurlBraceNode,
@@ -23,6 +29,7 @@ from katana.katana import (
     VariableNode,
     # Priorities
     LOW,
+    MEDIUM,
     HIGH,
     ULTRA_HIGH,
 )
@@ -34,7 +41,7 @@ class TestParserProcessBlock:
         # Token list for a single line of code doing addition
         token_list = [
             Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
-            Token(PLUS_TOKEN_TYPE, 0, 2, "+", LOW),
+            Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
             Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
         ]
@@ -43,6 +50,69 @@ class TestParserProcessBlock:
         expected_node_list = [
             NumberNode(token_list[0], "8"),
             PlusMinusNode(token_list[1], "+"),
+            NumberNode(token_list[2], "9"),
+        ]
+
+        parser = Parser(token_list)
+        parser.parse_block()
+        assert parser.nested_nodes_list == []
+        assert parser.curr_block == expected_node_list
+
+    def test_subtraction_line(self):
+        # Token list for a single line of code doing subtraction
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(MINUS_TOKEN_TYPE, 0, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the expected node list to compare
+        expected_node_list = [
+            NumberNode(token_list[0], "8"),
+            PlusMinusNode(token_list[1], "-"),
+            NumberNode(token_list[2], "9"),
+        ]
+
+        parser = Parser(token_list)
+        parser.parse_block()
+        assert parser.nested_nodes_list == []
+        assert parser.curr_block == expected_node_list
+
+    def test_multiply_line(self):
+        # Token list for a single line of code doing multiplication
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 0, 2, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the expected node list to compare
+        expected_node_list = [
+            NumberNode(token_list[0], "8"),
+            MultiplyDivideNode(token_list[1], "*"),
+            NumberNode(token_list[2], "9"),
+        ]
+
+        parser = Parser(token_list)
+        parser.parse_block()
+        assert parser.nested_nodes_list == []
+        assert parser.curr_block == expected_node_list
+
+    def test_divide_line(self):
+        # Token list for a single line of code doing division
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(DIVIDE_TOKEN_TYPE, 0, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the expected node list to compare
+        expected_node_list = [
+            NumberNode(token_list[0], "8"),
+            MultiplyDivideNode(token_list[1], "/"),
             NumberNode(token_list[2], "9"),
         ]
 
@@ -204,6 +274,25 @@ class TestParserComments:
         parser.parse_block()
         assert parser.nested_nodes_list == []
         assert parser.curr_block == second_expected_node_list
+
+
+class TestParserLoops:
+
+    def test_loop_up_declared(self):
+        # Token list for declaring a loop up
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "loopUp", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 0, "(", ULTRA_HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", ULTRA_HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 0, ")", LOW),
+        ]
+        assert False, "Not implemented"
+
+    def test_loop_down_declared(self):
+        assert False, "Not implemented"
+
+    def test_loop_from_declared(self):
+        assert False, "Not implemented"
 
 
 class TestParserTestMain:

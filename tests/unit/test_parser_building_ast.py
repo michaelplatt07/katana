@@ -1,19 +1,22 @@
-
 from katana.katana import (
     Parser,
     Token,
     # Tokens
     ASSIGNMENT_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
     LEFT_CURL_BRACE_TOKEN_TYPE,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
     VARIABLE_NAME_TOKEN_TYPE,
     # Nodes
     AssignmentNode,
+    MultiplyDivideNode,
     NumberNode,
     PlusMinusNode,
     StartNode,
@@ -21,18 +24,18 @@ from katana.katana import (
     VariableNode,
     # Priorities
     LOW,
+    MEDIUM,
     HIGH,
     ULTRA_HIGH,
 )
 
 
 class TestParserSingleLine:
-
     def test_build_addition_line_ast(self):
         # Token list for a single line of code doing addition
         token_list = [
             Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
-            Token(PLUS_TOKEN_TYPE, 0, 2, "+", LOW),
+            Token(PLUS_TOKEN_TYPE, 0, 2, "+", MEDIUM),
             Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
             Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
         ]
@@ -41,11 +44,72 @@ class TestParserSingleLine:
         num_node_one = NumberNode(token_list[0], "8")
         num_node_two = NumberNode(token_list[2], "9")
         addition_node = PlusMinusNode(
-            token_list[1], "+", left_side=num_node_one, right_side=num_node_two)
+            token_list[1], "+", left_side=num_node_one, right_side=num_node_two
+        )
 
         parser = Parser(token_list)
         parser.parse()
         assert parser.get_nodes() == [addition_node]
+
+    def test_build_subtraction_line_ast(self):
+        # Token list for a single line of code doing subtraction
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(MINUS_TOKEN_TYPE, 0, 2, "-", MEDIUM),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the ast to compare against
+        num_node_one = NumberNode(token_list[0], "8")
+        num_node_two = NumberNode(token_list[2], "9")
+        subtraction_node = PlusMinusNode(
+            token_list[1], "-", left_side=num_node_one, right_side=num_node_two
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [subtraction_node]
+
+    def test_build_multiply_line_ast(self):
+        # Token list for a single line of code doing multiplication
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(MULTIPLY_TOKEN_TYPE, 0, 2, "*", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the ast to compare against
+        num_node_one = NumberNode(token_list[0], "8")
+        num_node_two = NumberNode(token_list[2], "9")
+        multiply_node = MultiplyDivideNode(
+            token_list[1], "*", left_side=num_node_one, right_side=num_node_two
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [multiply_node]
+
+    def test_build_divide_line_ast(self):
+        # Token list for a single line of code doing division
+        token_list = [
+            Token(NUM_TOKEN_TYPE, 0, 0, "8", LOW),
+            Token(DIVIDE_TOKEN_TYPE, 0, 2, "/", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 4, "9", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 5, ";", LOW),
+        ]
+
+        # Set up the ast to compare against
+        num_node_one = NumberNode(token_list[0], "8")
+        num_node_two = NumberNode(token_list[2], "9")
+        divide_node = MultiplyDivideNode(
+            token_list[1], "/", left_side=num_node_one, right_side=num_node_two
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [divide_node]
 
     def test_build_var_assignment_ast(self):
         # Token list for a single line of code, in this case declaring an int
@@ -61,9 +125,11 @@ class TestParserSingleLine:
         var_name_node = VariableNode(token_list[1], "x", False)
         num_node = NumberNode(token_list[3], "8")
         assignment_node = AssignmentNode(
-            token_list[2], "=", left_side=var_name_node, right_side=num_node)
+            token_list[2], "=", left_side=var_name_node, right_side=num_node
+        )
         var_type_node = VariableKeywordNode(
-            token_list[0], "int8", child_node=assignment_node)
+            token_list[0], "int8", child_node=assignment_node
+        )
 
         parser = Parser(token_list)
         parser.parse()
@@ -79,7 +145,6 @@ class TestParserSingleLine:
 
 
 class TestParserComments:
-
     def test_build_ast_with_comment_on_separate_line(self):
         # Token list for program with comment on separate line
         token_list = [
@@ -98,11 +163,14 @@ class TestParserComments:
         var_name_node = VariableNode(token_list[4], "x", False)
         num_node = NumberNode(token_list[6], "8")
         assignment_node = AssignmentNode(
-            token_list[5], "=", left_side=var_name_node, right_side=num_node)
+            token_list[5], "=", left_side=var_name_node, right_side=num_node
+        )
         var_type_node = VariableKeywordNode(
-            token_list[3], "int8", child_node=assignment_node)
+            token_list[3], "int8", child_node=assignment_node
+        )
         main_node = StartNode(
-            token_list[0], token_list[0].value, children_nodes=[var_type_node])
+            token_list[0], token_list[0].value, children_nodes=[var_type_node]
+        )
 
         parser = Parser(token_list)
         parser.parse()
@@ -126,11 +194,14 @@ class TestParserComments:
         var_name_node = VariableNode(token_list[3], "x", False)
         num_node = NumberNode(token_list[5], "8")
         assignment_node = AssignmentNode(
-            token_list[4], "=", left_side=var_name_node, right_side=num_node)
+            token_list[4], "=", left_side=var_name_node, right_side=num_node
+        )
         var_type_node = VariableKeywordNode(
-            token_list[2], "int8", child_node=assignment_node)
+            token_list[2], "int8", child_node=assignment_node
+        )
         main_node = StartNode(
-            token_list[0], token_list[0].value, children_nodes=[var_type_node])
+            token_list[0], token_list[0].value, children_nodes=[var_type_node]
+        )
 
         parser = Parser(token_list)
         parser.parse()
@@ -159,19 +230,26 @@ class TestParserComments:
         var_name_node_one = VariableNode(token_list[3], "x", False)
         num_node_one = NumberNode(token_list[5], "8")
         assignment_node_one = AssignmentNode(
-            token_list[4], "=", left_side=var_name_node_one, right_side=num_node_one)
+            token_list[4], "=", left_side=var_name_node_one, right_side=num_node_one
+        )
         var_type_node_one = VariableKeywordNode(
-            token_list[2], "int8", child_node=assignment_node_one)
+            token_list[2], "int8", child_node=assignment_node_one
+        )
 
         var_name_node_two = VariableNode(token_list[9], "y", False)
         num_node_two = NumberNode(token_list[11], "9")
         assignment_node_two = AssignmentNode(
-            token_list[10], "=", left_side=var_name_node_two, right_side=num_node_two)
+            token_list[10], "=", left_side=var_name_node_two, right_side=num_node_two
+        )
         var_type_node_two = VariableKeywordNode(
-            token_list[8], "int8", child_node=assignment_node_two)
+            token_list[8], "int8", child_node=assignment_node_two
+        )
 
         main_node = StartNode(
-            token_list[0], token_list[0].value, children_nodes=[var_type_node_one, var_type_node_two])
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node_one, var_type_node_two],
+        )
 
         parser = Parser(token_list)
         parser.parse()
@@ -179,7 +257,6 @@ class TestParserComments:
 
 
 class TestParserMain:
-
     def test_build_main_ast_with_var_dec(self):
         # Token list for main method with declaring a single int
         token_list = [
@@ -197,11 +274,14 @@ class TestParserMain:
         var_name_node = VariableNode(token_list[3], "x", False)
         num_node = NumberNode(token_list[5], "8")
         assignment_node = AssignmentNode(
-            token_list[4], "=", left_side=var_name_node, right_side=num_node)
+            token_list[4], "=", left_side=var_name_node, right_side=num_node
+        )
         var_type_node = VariableKeywordNode(
-            token_list[2], "int8", child_node=assignment_node)
+            token_list[2], "int8", child_node=assignment_node
+        )
         main_node = StartNode(
-            token_list[0], token_list[0].value, children_nodes=[var_type_node])
+            token_list[0], token_list[0].value, children_nodes=[var_type_node]
+        )
 
         parser = Parser(token_list)
         parser.parse()
@@ -228,17 +308,24 @@ class TestParserMain:
         var_name_node_one = VariableNode(token_list[3], "x", False)
         num_node_one = NumberNode(token_list[5], "8")
         assignment_node_one = AssignmentNode(
-            token_list[4], "=", left_side=var_name_node_one, right_side=num_node_one)
+            token_list[4], "=", left_side=var_name_node_one, right_side=num_node_one
+        )
         var_type_node_one = VariableKeywordNode(
-            token_list[2], "int8", child_node=assignment_node_one)
+            token_list[2], "int8", child_node=assignment_node_one
+        )
         var_name_node_two = VariableNode(token_list[8], "y", False)
         num_node_two = NumberNode(token_list[10], "9")
         assignment_node_two = AssignmentNode(
-            token_list[9], "=", left_side=var_name_node_two, right_side=num_node_two)
+            token_list[9], "=", left_side=var_name_node_two, right_side=num_node_two
+        )
         var_type_node_two = VariableKeywordNode(
-            token_list[7], "int8", child_node=assignment_node_two)
+            token_list[7], "int8", child_node=assignment_node_two
+        )
         main_node = StartNode(
-            token_list[0], token_list[0].value, children_nodes=[var_type_node_one, var_type_node_two])
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node_one, var_type_node_two],
+        )
 
         parser = Parser(token_list)
         parser.parse()
