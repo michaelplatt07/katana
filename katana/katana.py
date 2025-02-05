@@ -1285,6 +1285,14 @@ class LoopKeywordNode(KeywordNode):
             for node in loop_body:
                 node.parent_node = self
 
+    def set_child_node(self, node):
+        self.child_node = node
+        node.parent_node = self
+
+    def add_loop_body_node(self, node):
+        self.loop_body.append(node)
+        node.parent_node = self
+
     def __hash__(self):
         return hash(f"{self.__repr__()}_{self.token.row}_{self.token.col}")
 
@@ -1297,7 +1305,7 @@ class LoopUpKeywordNode(LoopKeywordNode):
     Specialized node for the `loopUp` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1323,7 +1331,7 @@ class LoopDownKeywordNode(LoopKeywordNode):
     Specialized node for the `loopDown` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1349,7 +1357,7 @@ class LoopFromKeywordNode(LoopKeywordNode):
     Specialized node for the `loopFrom` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1723,6 +1731,14 @@ class RangeNode(ExpressionNode):
 
     def __init__(self, token, value, left_side=None, right_side=None, parent_node=None):
         super().__init__(token, value, MEDIUM, left_side, right_side, parent_node)
+
+    def set_left_side(self, node):
+        self.left_side = node
+        node.parent_node = self
+
+    def set_right_side(self, node):
+        self.right_side = node
+        node.parent_node = self
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -2718,6 +2734,14 @@ class Parser:
                 main_node.add_child_node(self.build_var_dec_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                main_node.add_child_node(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                main_node.add_child_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                main_node.add_child_node(self.build_loop_down_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                main_node.add_child_node(self.build_loop_from_ast())
             else:
                 assert (
                     False
@@ -2745,6 +2769,106 @@ class Parser:
         op_node.set_right_side(number_node_two)
         return op_node
 
+    def build_loop_up_ast(self):
+        loop_node = self.curr_block[0]
+        end_val_node = self.curr_block[1]
+        loop_node.set_child_node(end_val_node)
+
+        while (
+            len(self.nested_nodes_list) > 0
+            and type(self.nested_nodes_list[-1]) == LoopUpKeywordNode
+        ):
+            self.parse_block()
+            if len(self.curr_block) == 0:
+                # Do nothing because we didn't get nodes to parse
+                pass
+            elif type(self.curr_block[0]) == VariableKeywordNode:
+                loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == RightCurlBraceNode:
+                pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                loop_node.add_loop_body_node(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_down_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_from_ast())
+            else:
+                assert (
+                    False
+                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+
+        return loop_node
+
+    def build_loop_down_ast(self):
+        loop_node = self.curr_block[0]
+        end_val_node = self.curr_block[1]
+        loop_node.set_child_node(end_val_node)
+
+        while (
+            len(self.nested_nodes_list) > 0
+            and type(self.nested_nodes_list[-1]) == LoopDownKeywordNode
+        ):
+            self.parse_block()
+            if len(self.curr_block) == 0:
+                # Do nothing because we didn't get nodes to parse
+                pass
+            elif type(self.curr_block[0]) == VariableKeywordNode:
+                loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == RightCurlBraceNode:
+                pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                loop_node.add_loop_body_node(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_from_ast())
+            else:
+                assert (
+                    False
+                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+
+        return loop_node
+
+    def build_loop_from_ast(self):
+        loop_node = self.curr_block[0]
+        start_val_node = self.curr_block[1]
+        end_val_node = self.curr_block[3]
+        range_node = self.curr_block[2]
+        range_node.set_left_side(start_val_node)
+        range_node.set_right_side(end_val_node)
+        loop_node.set_child_node(range_node)
+
+        while (
+            len(self.nested_nodes_list) > 0
+            and type(self.nested_nodes_list[-1]) == LoopFromKeywordNode
+        ):
+            self.parse_block()
+            if len(self.curr_block) == 0:
+                # Do nothing because we didn't get nodes to parse
+                pass
+            elif type(self.curr_block[0]) == VariableKeywordNode:
+                loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == RightCurlBraceNode:
+                pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                loop_node.add_loop_body_node(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                loop_node.add_loop_body_node(self.build_loop_from_ast())
+            else:
+                assert (
+                    False
+                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+
+        return loop_node
+
     def parse_block(self):
         # Method for parsing a single block of code. A block of code can be
         # defined as a single line of code that ends in a semicolon, or code
@@ -2765,6 +2889,12 @@ class Parser:
             self.read_full_line()
         elif type(first_node) == RightCurlBraceNode and len(self.nested_nodes_list) > 0:
             self.read_right_curl_brace(first_node)
+        elif type(first_node) == LoopUpKeywordNode:
+            self.read_loop_dec_line(first_node)
+        elif type(first_node) == LoopDownKeywordNode:
+            self.read_loop_dec_line(first_node)
+        elif type(first_node) == LoopFromKeywordNode:
+            self.read_loop_dec_line(first_node)
         elif type(first_node) == CommentNode:
             # Set an empty block because there's nothing to parse on this line
             self.read_comment_line()
@@ -2827,6 +2957,82 @@ class Parser:
         self.curr_block = [right_curl_node]
         self.advance_token()
         self.nested_nodes_list.pop()
+
+    def read_loop_dec_line(self, loop_node):
+        if type(loop_node) == LoopUpKeywordNode:
+            block = [loop_node]
+
+            # Set the node in the list of tracking nodes that need a closing curl
+            # brace
+            self.nested_nodes_list.append(loop_node)
+
+            # Move onto the next node which should be a left paren
+            self.advance_token()
+            # Move past the left paren
+            self.advance_token()
+            # Get the number to which the loop should execute
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+            # Move past the right paren
+            self.advance_token()
+
+            # Add the left curl brace to the node list and move past the token
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+            self.curr_block = block
+        elif type(loop_node) == LoopDownKeywordNode:
+            block = [loop_node]
+
+            # Set the node in the list of tracking nodes that need a closing curl
+            # brace
+            self.nested_nodes_list.append(loop_node)
+
+            # Move onto the next node which should be a left paren
+            self.advance_token()
+            # Move past the left paren
+            self.advance_token()
+            # Get the number to which the loop should execute
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+            # Move past the right paren
+            self.advance_token()
+
+            # Add the left curl brace to the node list and move past the token
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+            self.curr_block = block
+        elif type(loop_node) == LoopFromKeywordNode:
+            block = [loop_node]
+
+            # Set the node in the list of tracking nodes that need a closing curl
+            # brace
+            self.nested_nodes_list.append(loop_node)
+
+            # Move onto the next node which should be a left paren
+            self.advance_token()
+            # Move past the left paren
+            self.advance_token()
+            # Get the first number in the loop
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+            # Get the range indication
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+            # Get the second number for the loop
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+            # Move past the right paren
+            self.advance_token()
+
+            # Add the left curl brace to the node list and move past the token
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+            self.curr_block = block
+        else:
+            assert False, f"Cannot handle loop of type {type(loop_node)}"
 
     def process_token_rewrite(self):
         if (
@@ -3040,9 +3246,9 @@ class Parser:
             self.curr_token_pos += 1
             self.curr_token = self.token_list[self.curr_token_pos]
 
-        end_of_file = self.curr_token.ttype != EOF_TOKEN_TYPE
+        end_of_file = self.curr_token.ttype == EOF_TOKEN_TYPE
         has_more_tokens = self.curr_token_pos + 1 < len(self.token_list)
-        self.has_next_token = not end_of_file and not has_more_tokens
+        self.has_next_token = not end_of_file and has_more_tokens
 
     def peek_next_token(self):
         return self.token_list[self.curr_token_pos + 1]

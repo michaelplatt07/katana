@@ -1,4 +1,3 @@
-
 from katana.katana import (
     Parser,
     Token,
@@ -14,15 +13,20 @@ from katana.katana import (
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    RANGE_INDICATION_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
     RIGHT_PAREN_TOKEN_TYPE,
     VARIABLE_NAME_TOKEN_TYPE,
     # Nodes
     AssignmentNode,
     LeftCurlBraceNode,
+    LoopDownKeywordNode,
+    LoopFromKeywordNode,
+    LoopUpKeywordNode,
     MultiplyDivideNode,
     NumberNode,
     PlusMinusNode,
+    RangeNode,
     RightCurlBraceNode,
     StartNode,
     VariableKeywordNode,
@@ -36,7 +40,6 @@ from katana.katana import (
 
 
 class TestParserProcessBlock:
-
     def test_addition_line(self):
         # Token list for a single line of code doing addition
         token_list = [
@@ -136,7 +139,7 @@ class TestParserProcessBlock:
             VariableKeywordNode(token_list[0], "int8"),
             VariableNode(token_list[1], "x", False),
             AssignmentNode(token_list[2], "="),
-            NumberNode(token_list[3], "8")
+            NumberNode(token_list[3], "8"),
         ]
 
         parser = Parser(token_list)
@@ -165,13 +168,12 @@ class TestParserProcessBlock:
             VariableNode(token_list[1], "x", False),
             AssignmentNode(token_list[2], "="),
             NumberNode(token_list[3], "8"),
-
         ]
         second_expected_node_list = [
             VariableKeywordNode(token_list[5], "int8"),
             VariableNode(token_list[6], "y", False),
             AssignmentNode(token_list[7], "="),
-            NumberNode(token_list[8], "9")
+            NumberNode(token_list[8], "9"),
         ]
 
         parser = Parser(token_list)
@@ -186,7 +188,6 @@ class TestParserProcessBlock:
 
 
 class TestParserComments:
-
     def test_comment_solo_on_line(self):
         # Token list for a single line of code, in this case declaring an int
         token_list = [
@@ -194,8 +195,7 @@ class TestParserComments:
         ]
 
         # Set up the expected node list to compare
-        expected_node_list = [
-        ]
+        expected_node_list = []
 
         parser = Parser(token_list)
         parser.parse_block()
@@ -218,7 +218,7 @@ class TestParserComments:
             VariableKeywordNode(token_list[0], "int8"),
             VariableNode(token_list[1], "x", False),
             AssignmentNode(token_list[2], "="),
-            NumberNode(token_list[3], "8")
+            NumberNode(token_list[3], "8"),
         ]
 
         parser = Parser(token_list)
@@ -252,13 +252,12 @@ class TestParserComments:
             VariableNode(token_list[1], "x", False),
             AssignmentNode(token_list[2], "="),
             NumberNode(token_list[3], "8"),
-
         ]
         second_expected_node_list = [
             VariableKeywordNode(token_list[6], "int8"),
             VariableNode(token_list[7], "y", False),
             AssignmentNode(token_list[8], "="),
-            NumberNode(token_list[9], "9")
+            NumberNode(token_list[9], "9"),
         ]
 
         parser = Parser(token_list)
@@ -277,26 +276,144 @@ class TestParserComments:
 
 
 class TestParserLoops:
-
     def test_loop_up_declared(self):
         # Token list for declaring a loop up
         token_list = [
-            Token(KEYWORD_TOKEN_TYPE, 0, 0, "loopUp", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 0, 0, "(", ULTRA_HIGH),
-            Token(NUM_TOKEN_TYPE, 0, 0, "8", ULTRA_HIGH),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 0, ")", LOW),
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 6, "(", 3),
+            Token(NUM_TOKEN_TYPE, 0, 7, "8", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 8, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 10, "{", 3),
+            Token(NUM_TOKEN_TYPE, 1, 4, "3", 0),
+            Token(PLUS_TOKEN_TYPE, 1, 6, "+", 1),
+            Token(NUM_TOKEN_TYPE, 1, 8, "5", 0),
+            Token(EOL_TOKEN_TYPE, 1, 9, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
         ]
-        assert False, "Not implemented"
+
+        # Set up the expected node list to compare
+        loop_up_node = LoopUpKeywordNode(token_list[0], "loopUp")
+        first_expected_node_list = [
+            loop_up_node,
+            NumberNode(token_list[2], "8"),
+            LeftCurlBraceNode(token_list[4], token_list[4].value),
+        ]
+        second_expected_node_list = [
+            NumberNode(token_list[5], token_list[5].value),
+            PlusMinusNode(token_list[6], token_list[6].value),
+            NumberNode(token_list[7], token_list[7].value),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == first_expected_node_list
+        assert parser.nested_nodes_list == [loop_up_node]
+
+        parser.parse_block()
+        assert parser.curr_block == second_expected_node_list
+        assert parser.nested_nodes_list == [loop_up_node]
+
+        parser.parse_block()
+        assert parser.curr_block == [
+            RightCurlBraceNode(token_list[9], token_list[9].value)
+        ]
+        assert parser.nested_nodes_list == []
 
     def test_loop_down_declared(self):
-        assert False, "Not implemented"
+        # Token list for declaring a loop up
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 8, "(", 3),
+            Token(NUM_TOKEN_TYPE, 0, 9, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 10, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 12, "{", 3),
+            Token(NUM_TOKEN_TYPE, 1, 4, "5", 0),
+            Token(PLUS_TOKEN_TYPE, 1, 6, "+", 1),
+            Token(NUM_TOKEN_TYPE, 1, 8, "4", 0),
+            Token(EOL_TOKEN_TYPE, 1, 9, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+        ]
+
+        # Set up the expected node list to compare
+        loop_down_node = LoopDownKeywordNode(token_list[0], "loopDown")
+        first_expected_node_list = [
+            loop_down_node,
+            NumberNode(token_list[2], "5"),
+            LeftCurlBraceNode(token_list[4], token_list[4].value),
+        ]
+        second_expected_node_list = [
+            NumberNode(token_list[5], token_list[5].value),
+            PlusMinusNode(token_list[6], token_list[6].value),
+            NumberNode(token_list[7], token_list[7].value),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == first_expected_node_list
+        assert parser.nested_nodes_list == [loop_down_node]
+
+        parser.parse_block()
+        assert parser.curr_block == second_expected_node_list
+        assert parser.nested_nodes_list == [loop_down_node]
+
+        parser.parse_block()
+        assert parser.curr_block == [
+            RightCurlBraceNode(token_list[9], token_list[9].value)
+        ]
+        assert parser.nested_nodes_list == []
 
     def test_loop_from_declared(self):
-        assert False, "Not implemented"
+        # Token list for declaring a loop up
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 8, "(", 3),
+            Token(NUM_TOKEN_TYPE, 0, 9, "3", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 0, 10, "..", 1),
+            Token(NUM_TOKEN_TYPE, 0, 12, "5", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 15, "{", 3),
+            Token(NUM_TOKEN_TYPE, 1, 4, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 1, 6, "+", 1),
+            Token(NUM_TOKEN_TYPE, 1, 8, "2", 0),
+            Token(EOL_TOKEN_TYPE, 1, 9, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+        ]
+
+        # Set up the expected node list to compare
+        loop_from_node = LoopFromKeywordNode(token_list[0], "loopFrom")
+        first_expected_node_list = [
+            loop_from_node,
+            NumberNode(token_list[2], "3"),
+            RangeNode(token_list[3], ".."),
+            NumberNode(token_list[4], "5"),
+            LeftCurlBraceNode(token_list[6], token_list[6].value),
+        ]
+        second_expected_node_list = [
+            NumberNode(token_list[7], token_list[7].value),
+            PlusMinusNode(token_list[8], token_list[8].value),
+            NumberNode(token_list[9], token_list[9].value),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == first_expected_node_list
+        assert parser.nested_nodes_list == [loop_from_node]
+
+        parser.parse_block()
+        assert parser.curr_block == second_expected_node_list
+        assert parser.nested_nodes_list == [loop_from_node]
+
+        parser.parse_block()
+        assert parser.curr_block == [
+            RightCurlBraceNode(token_list[11], token_list[11].value)
+        ]
+        assert parser.nested_nodes_list == []
 
 
 class TestParserTestMain:
-
     def test_main_loop_declared(self):
         # Token list for main method and single line of code
         token_list = [
@@ -314,7 +431,7 @@ class TestParserTestMain:
         start_node = StartNode(token_list[0], token_list[0].value)
         expected_main_node_list = [
             start_node,
-            LeftCurlBraceNode(token_list[1], token_list[1].value)
+            LeftCurlBraceNode(token_list[1], token_list[1].value),
         ]
         expected_node_list = [
             VariableKeywordNode(token_list[2], "int8"),
@@ -335,8 +452,9 @@ class TestParserTestMain:
 
         parser.parse_block()
         assert parser.nested_nodes_list == []
-        assert parser.curr_block == [RightCurlBraceNode(
-            token_list[7], token_list[7].value)]
+        assert parser.curr_block == [
+            RightCurlBraceNode(token_list[7], token_list[7].value)
+        ]
 
     def test_main_loop_declared_with_multiple_lines(self):
         # Token list for main method and multiple lines of code
@@ -360,7 +478,7 @@ class TestParserTestMain:
         start_node = StartNode(token_list[0], token_list[0].value)
         expected_main_node_list = [
             start_node,
-            LeftCurlBraceNode(token_list[1], token_list[1].value)
+            LeftCurlBraceNode(token_list[1], token_list[1].value),
         ]
         first_expected_node_list = [
             VariableKeywordNode(token_list[2], "int8"),
@@ -391,5 +509,6 @@ class TestParserTestMain:
 
         parser.parse_block()
         assert parser.nested_nodes_list == []
-        assert parser.curr_block == [RightCurlBraceNode(
-            token_list[12], token_list[12].value)]
+        assert parser.curr_block == [
+            RightCurlBraceNode(token_list[12], token_list[12].value)
+        ]

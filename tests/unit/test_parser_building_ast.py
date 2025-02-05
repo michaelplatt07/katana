@@ -8,17 +8,24 @@ from katana.katana import (
     EOL_TOKEN_TYPE,
     KEYWORD_TOKEN_TYPE,
     LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
     MINUS_TOKEN_TYPE,
     MULTIPLY_TOKEN_TYPE,
     NUM_TOKEN_TYPE,
     PLUS_TOKEN_TYPE,
+    RANGE_INDICATION_TOKEN_TYPE,
     RIGHT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
     VARIABLE_NAME_TOKEN_TYPE,
     # Nodes
     AssignmentNode,
+    LoopUpKeywordNode,
+    LoopDownKeywordNode,
+    LoopFromKeywordNode,
     MultiplyDivideNode,
     NumberNode,
     PlusMinusNode,
+    RangeNode,
     StartNode,
     VariableKeywordNode,
     VariableNode,
@@ -249,6 +256,140 @@ class TestParserComments:
             token_list[0],
             token_list[0].value,
             children_nodes=[var_type_node_one, var_type_node_two],
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+
+class TestParserLoop:
+    def test_build_loop_up_ast(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 4, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopUp", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 11, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 14, "{", 3),
+            Token(NUM_TOKEN_TYPE, 2, 8, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(NUM_TOKEN_TYPE, 2, 12, "2", 0),
+            Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        # Set up the ast to compare to
+        num_node_one = NumberNode(token_list[7], token_list[7].value)
+        num_node_two = NumberNode(token_list[9], token_list[9].value)
+        plus_node = PlusMinusNode(
+            token_list[8],
+            token_list[8].value,
+            left_side=num_node_one,
+            right_side=num_node_two,
+        )
+        loop_arg_node = NumberNode(token_list[4], token_list[4].value)
+        loop_up_node = LoopUpKeywordNode(
+            token_list[2],
+            token_list[2].value,
+            child_node=loop_arg_node,
+            loop_body=[plus_node],
+        )
+        main_node = StartNode(
+            token_list[0], token_list[0].value, children_nodes=[loop_up_node]
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+    def test_build_loop_down_ast(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 4, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopDown", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 11, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 14, "{", 3),
+            Token(NUM_TOKEN_TYPE, 2, 8, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(NUM_TOKEN_TYPE, 2, 12, "2", 0),
+            Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        # Set up the ast to compare to
+        num_node_one = NumberNode(token_list[7], token_list[7].value)
+        num_node_two = NumberNode(token_list[9], token_list[9].value)
+        plus_node = PlusMinusNode(
+            token_list[8],
+            token_list[8].value,
+            left_side=num_node_one,
+            right_side=num_node_two,
+        )
+        loop_arg_node = NumberNode(token_list[4], token_list[4].value)
+        loop_down_node = LoopDownKeywordNode(
+            token_list[2],
+            token_list[2].value,
+            child_node=loop_arg_node,
+            loop_body=[plus_node],
+        )
+        main_node = StartNode(
+            token_list[0], token_list[0].value, children_nodes=[loop_down_node]
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+    def test_build_loop_from_ast(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 5, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "loopFrom", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 12, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(RANGE_INDICATION_TOKEN_TYPE, 1, 14, "..", 1),
+            Token(NUM_TOKEN_TYPE, 1, 16, "8", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 17, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 19, "{", 3),
+            Token(NUM_TOKEN_TYPE, 2, 8, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(NUM_TOKEN_TYPE, 2, 12, "2", 0),
+            Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        # Set up the ast to compare to
+        num_node_one = NumberNode(token_list[9], token_list[9].value)
+        num_node_two = NumberNode(token_list[11], token_list[11].value)
+        plus_node = PlusMinusNode(
+            token_list[10],
+            token_list[10].value,
+            left_side=num_node_one,
+            right_side=num_node_two,
+        )
+        range_start_node = NumberNode(token_list[4], token_list[4].value)
+        range_end_node = NumberNode(token_list[6], token_list[6].value)
+        loop_arg_node = RangeNode(
+            token_list[5],
+            token_list[5].value,
+            left_side=range_start_node,
+            right_side=range_end_node,
+        )
+        loop_from_node = LoopFromKeywordNode(
+            token_list[2],
+            token_list[2].value,
+            child_node=loop_arg_node,
+            loop_body=[plus_node],
+        )
+        main_node = StartNode(
+            token_list[0], token_list[0].value, children_nodes=[loop_from_node]
         )
 
         parser = Parser(token_list)
