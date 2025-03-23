@@ -1,106 +1,59 @@
-import pytest
 from unittest.mock import patch
 
-from katana.katana import (
-    Parser,
-    AssignmentNode,
-    BooleanNode,
-    CharNode,
-    CompareNode,
-    FunctionNode,
-    FunctionArgNode,
-    FunctionArgReferenceNode,
-    FunctionArgTypeNode,
-    FunctionKeywordNode,
-    FunctionNameNode,
-    FunctionReferenceNode,
-    FunctionReturnNode,
-    FunctionReturnTypeNode,
-    LogicKeywordNode,
-    LoopDownKeywordNode,
-    LoopFromKeywordNode,
-    LoopIdxKeywordNode,
-    LoopUpKeywordNode,
-    LoopUpInclusiveKeywordNode,
-    LoopDownInclusiveKeywordNode,
-    LoopFromInclusiveKeywordNode,
-    MacroNameNode,
-    MacroNode,
-    MultiplyDivideNode,
-    NumberNode,
-    PlusMinusNode,
-    RangeNode,
-    StartNode,
-    StringNode,
-    VariableNode,
-    VariableKeywordNode,
-    VariableReferenceNode,
-    BufferOverflowException,
-    EmptyMacroException,
-    UnnamedFunctionException,
-    KeywordMisuseException,
-    InvalidArgsException,
-    InvalidAssignmentException,
-    InvalidConcatenationException,
-    InvalidFunctionDeclarationException,
-    InvalidMacroDeclaration,
-    InvalidTypeDeclarationException,
-    NotEnoughArgsException,
-    TooManyArgsException,
-    UnnamedMacroException,
-    Token,
-    ASSIGNMENT_TOKEN_TYPE,
-    BOOLEAN_TOKEN_TYPE,
-    CHARACTER_TOKEN_TYPE,
-    COMMA_TOKEN_TYPE,
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    EQUAL_TOKEN_TYPE,
-    EOF_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    LESS_THAN_TOKEN_TYPE,
-    LOOP_INDEX_KEYWORD_TOKEN_TYPE,
-    GREATER_THAN_TOKEN_TYPE,
-    FUNCTION_ARG_TOKEN_TYPE,
-    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
-    FUNCTION_ARG_TYPE_TOKEN_TYPE,
-    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
-    FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
-    FUNCTION_RETURN_TOKEN_TYPE,
-    FUNCTION_KEYWORD_TOKEN_TYPE,
-    FUNCTION_NAME_TOKEN_TYPE,
-    FUNCTION_SEPARATOR_TOKEN_TYPE,
-    FUNCTION_REFERENCE_TOKEN_TYPE,
-    MACRO_KEYWORD_TOKEN_TYPE,
-    MACRO_NAME_TOKEN_TYPE,
-    MACRO_REFERENCE_TOKEN_TYPE,
-    MINUS_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    RANGE_INDICATION_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_PAREN_TOKEN_TYPE,
-    STRING_TOKEN_TYPE,
-    VARIABLE_NAME_TOKEN_TYPE,
-    VARIABLE_REFERENCE_TOKEN_TYPE,
-    LOW,
-    HIGH,
-    MEDIUM,
-    VERY_HIGH,
-    ULTRA_HIGH,
-    CHAR_AT_SIGNATURE,
-    COPY_STR_SIGNATURE,
-    LOOP_DOWN_SIGNATURE,
-    LOOP_FROM_SIGNATURE,
-    LOOP_UP_SIGNATURE,
-    MAIN_SIGNATURE,
-    PRINT_SIGNATURE,
-    UPDATE_CHAR_SIGNATURE,
-)
+import pytest
+
+from katana.katana import (ASSIGNMENT_TOKEN_TYPE, BOOLEAN_TOKEN_TYPE,
+                           CHAR_AT_SIGNATURE, CHARACTER_TOKEN_TYPE,
+                           COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
+                           COPY_STR_SIGNATURE, DIVIDE_TOKEN_TYPE,
+                           EOF_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
+                           FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
+                           FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+                           FUNCTION_ARG_TOKEN_TYPE,
+                           FUNCTION_ARG_TYPE_TOKEN_TYPE,
+                           FUNCTION_KEYWORD_TOKEN_TYPE,
+                           FUNCTION_NAME_TOKEN_TYPE,
+                           FUNCTION_REFERENCE_TOKEN_TYPE,
+                           FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
+                           FUNCTION_RETURN_TOKEN_TYPE,
+                           FUNCTION_SEPARATOR_TOKEN_TYPE,
+                           GREATER_THAN_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
+                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                           LESS_THAN_TOKEN_TYPE, LOOP_DOWN_SIGNATURE,
+                           LOOP_FROM_SIGNATURE, LOOP_INDEX_KEYWORD_TOKEN_TYPE,
+                           LOOP_UP_SIGNATURE, LOW, MACRO_KEYWORD_TOKEN_TYPE,
+                           MACRO_NAME_TOKEN_TYPE, MACRO_REFERENCE_TOKEN_TYPE,
+                           MAIN_SIGNATURE, MEDIUM, MINUS_TOKEN_TYPE,
+                           MULTIPLY_TOKEN_TYPE, NUM_TOKEN_TYPE,
+                           PLUS_TOKEN_TYPE, PRINT_SIGNATURE,
+                           RANGE_INDICATION_TOKEN_TYPE,
+                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
+                           STRING_TOKEN_TYPE, ULTRA_HIGH,
+                           UPDATE_CHAR_SIGNATURE, VARIABLE_NAME_TOKEN_TYPE,
+                           VARIABLE_REFERENCE_TOKEN_TYPE, VERY_HIGH,
+                           AssignmentNode, BooleanNode,
+                           BufferOverflowException, CharNode, CompareNode,
+                           EmptyMacroException, FunctionArgNode,
+                           FunctionArgReferenceNode, FunctionArgTypeNode,
+                           FunctionKeywordNode, FunctionNameNode, FunctionNode,
+                           FunctionReferenceNode, FunctionReturnNode,
+                           FunctionReturnTypeNode, InvalidArgsException,
+                           InvalidAssignmentException,
+                           InvalidConcatenationException,
+                           InvalidFunctionDeclarationException,
+                           InvalidMacroDeclaration,
+                           InvalidTypeDeclarationException,
+                           KeywordMisuseException, LogicKeywordNode,
+                           LoopDownInclusiveKeywordNode, LoopDownKeywordNode,
+                           LoopFromInclusiveKeywordNode, LoopFromKeywordNode,
+                           LoopIdxKeywordNode, LoopUpInclusiveKeywordNode,
+                           LoopUpKeywordNode, MacroNameNode, MacroNode,
+                           MultiplyDivideNode, NotEnoughArgsException,
+                           NumberNode, Parser, PlusMinusNode, RangeNode,
+                           StartNode, StringNode, Token, TooManyArgsException,
+                           UnnamedFunctionException, UnnamedMacroException,
+                           VariableKeywordNode, VariableNode,
+                           VariableReferenceNode)
 
 
 class TestParserLiterals:
@@ -661,7 +614,7 @@ class TestParserPrint:
     def test_keyword_print_with_literal(self):
         """
         Given a program like:
-        main() {
+        main {
             print(3);
         }
         Expected to return an AST like:
@@ -669,9 +622,7 @@ class TestParserPrint:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 0, "{", 3),
             Token(KEYWORD_TOKEN_TYPE, 0, 1, "print", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 5, 1, "(", HIGH),
             Token(NUM_TOKEN_TYPE, 6, 1, "3", LOW),
@@ -680,9 +631,9 @@ class TestParserPrint:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
         ]
-        three_node = NumberNode(token_list[6], "3")
-        print_node = FunctionKeywordNode(token_list[4], "print", [three_node])
-        ast = StartNode(token_list[0], "main", [print_node])
+        three_node = NumberNode(token_list[4], "3")
+        print_node = FunctionKeywordNode(token_list[2], "print", arg_nodes=[three_node])
+        ast = StartNode(token_list[0], "main", children_nodes=[print_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -698,9 +649,7 @@ class TestParserPrint:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 4, "{", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
             Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
             Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
@@ -709,9 +658,11 @@ class TestParserPrint:
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
             Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
-        three_node = NumberNode(token_list[6], "3")
-        printl_node = FunctionKeywordNode(token_list[4], "printl", [three_node])
-        ast = StartNode(token_list[0], "main", [printl_node])
+        three_node = NumberNode(token_list[4], "3")
+        printl_node = FunctionKeywordNode(
+            token_list[2], "printl", arg_nodes=[three_node]
+        )
+        ast = StartNode(token_list[0], "main", children_nodes=[printl_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()

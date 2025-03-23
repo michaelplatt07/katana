@@ -1,42 +1,20 @@
-from katana.katana import (
-    Parser,
-    Token,
-    # Tokens
-    ASSIGNMENT_TOKEN_TYPE,
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    MINUS_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    RANGE_INDICATION_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_PAREN_TOKEN_TYPE,
-    VARIABLE_NAME_TOKEN_TYPE,
-    # Nodes
-    AssignmentNode,
-    LeftCurlBraceNode,
-    LoopDownKeywordNode,
-    LoopFromKeywordNode,
-    LoopUpKeywordNode,
-    MultiplyDivideNode,
-    NumberNode,
-    PlusMinusNode,
-    RangeNode,
-    RightCurlBraceNode,
-    StartNode,
-    VariableKeywordNode,
-    VariableNode,
-    # Priorities
-    LOW,
-    MEDIUM,
-    HIGH,
-    ULTRA_HIGH,
-)
+from katana.katana import ASSIGNMENT_TOKEN_TYPE  # Tokens; Nodes; Priorities
+from katana.katana import (COMMENT_TOKEN_TYPE, DIVIDE_TOKEN_TYPE,
+                           EOL_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
+                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
+                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
+                           RANGE_INDICATION_TOKEN_TYPE,
+                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
+                           ULTRA_HIGH, VARIABLE_NAME_TOKEN_TYPE,
+                           VARIABLE_REFERENCE_TOKEN_TYPE, AssignmentNode,
+                           FunctionKeywordNode, LeftCurlBraceNode,
+                           LoopDownKeywordNode, LoopFromKeywordNode,
+                           LoopUpKeywordNode, MultiplyDivideNode, NumberNode,
+                           Parser, PlusMinusNode, RangeNode,
+                           RightCurlBraceNode, StartNode, Token,
+                           VariableKeywordNode, VariableNode,
+                           VariableReferenceNode)
 
 
 class TestParserProcessBlock:
@@ -411,6 +389,124 @@ class TestParserLoops:
             RightCurlBraceNode(token_list[11], token_list[11].value)
         ]
         assert parser.nested_nodes_list == []
+
+
+class TestParserPrintFunctionKeyword:
+    def test_print_keyword(self):
+        # Token list for print keywork being called
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 5, "(", 3),
+            Token(NUM_TOKEN_TYPE, 0, 6, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 7, ")", 3),
+            Token(EOL_TOKEN_TYPE, 0, 8, ";", 0),
+        ]
+
+        # Set up the expected node list to compare
+        print_node = FunctionKeywordNode(token_list[0], "print")
+        expected_node_list = [
+            print_node,
+            NumberNode(token_list[2], "1"),
+        ]
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list
+
+    def test_printl_keyword(self):
+        # Token list for print keywork being called
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "printl", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 6, "(", 3),
+            Token(NUM_TOKEN_TYPE, 0, 7, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 8, ")", 3),
+            Token(EOL_TOKEN_TYPE, 0, 9, ";", 0),
+        ]
+
+        # Set up the expected node list to compare
+        print_node = FunctionKeywordNode(token_list[0], "printl")
+        expected_node_list = [
+            print_node,
+            NumberNode(token_list[2], "1"),
+        ]
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list
+
+    def test_print_with_var_keyword(self):
+        # Token list for print keywork being called
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int64", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 6, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 8, "=", 2),
+            Token(NUM_TOKEN_TYPE, 0, 10, "1", 0),
+            Token(EOL_TOKEN_TYPE, 0, 11, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 5, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 1, 6, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 7, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 8, ";", 0),
+        ]
+
+        # Set up the expected node list to compare
+        first_expected_node_list = [
+            VariableKeywordNode(token_list[0], "int64"),
+            VariableNode(token_list[1], "x", False),
+            AssignmentNode(token_list[2], "="),
+            NumberNode(token_list[3], "1"),
+        ]
+        second_expected_node_list = [
+            FunctionKeywordNode(token_list[5], "print"),
+            VariableReferenceNode(token_list[7], "x"),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == first_expected_node_list
+
+        parser.parse_block()
+        assert parser.curr_block == second_expected_node_list
+
+    def test_print_with_complex_expression(self):
+        # Token list for print keywork being called
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int64", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 6, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 8, "=", 2),
+            Token(NUM_TOKEN_TYPE, 0, 10, "1", 0),
+            Token(EOL_TOKEN_TYPE, 0, 11, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 5, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 1, 6, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 1, 8, "+", 1),
+            Token(NUM_TOKEN_TYPE, 1, 10, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 11, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 12, ";", 0),
+        ]
+
+        # Set up the expected node list to compare
+        first_expected_node_list = [
+            VariableKeywordNode(token_list[0], "int64"),
+            VariableNode(token_list[1], "x", False),
+            AssignmentNode(token_list[2], "="),
+            NumberNode(token_list[3], "1"),
+        ]
+        second_expected_node_list = [
+            FunctionKeywordNode(token_list[5], "print"),
+            VariableReferenceNode(token_list[7], "x"),
+            PlusMinusNode(token_list[8], "+"),
+            NumberNode(token_list[9], "1"),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == first_expected_node_list
+
+        parser.parse_block()
+        assert parser.curr_block == second_expected_node_list
 
 
 class TestParserTestMain:

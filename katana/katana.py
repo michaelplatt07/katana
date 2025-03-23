@@ -1019,14 +1019,22 @@ class FunctionKeywordNode(Node):
     More specialized node for Function keywords vs other types of keywords.
     """
 
-    def __init__(self, token, value, parent_node=None, arg_nodes=None):
+    def __init__(self, token, value, parent_node=None, arg_nodes=[]):
         super().__init__(token, HIGH, parent_node)
         self.value = value
+        self.arg_nodes = arg_nodes
         if arg_nodes:
-            self.arg_nodes = arg_nodes
+            for node in arg_nodes:
+                node.parent_node = self
+
+    def set_arg_nodes(self, arg_nodes):
+        self.arg_nodes = arg_nodes
+        for node in arg_nodes:
+            node.parent_node = self
 
     def __eq__(self, other):
-        return type(self) == type(other) and super().__eq__(other)
+        args_equal = self.arg_nodes == other.arg_nodes
+        return args_equal and type(self) == type(other) and super().__eq__(other)
 
     def __repr__(self):
         return f"({self.value}, {self.arg_nodes})"
@@ -1662,9 +1670,16 @@ class PlusMinusNode(ExpressionNode):
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
+        left_side_equal = self.left_side == other.left_side
+        right_side_equal = self.right_side == other.right_side
         if not types_equal and raise_assertion_flag:
             assert False, f"Type {type(self)} != {type(other)}"
-        return types_equal and super().__eq__(other)
+        return (
+            types_equal
+            and left_side_equal
+            and right_side_equal
+            and super().__eq__(other)
+        )
 
     def get_children_nodes(self):
         if not self.left_side and not self.right_side:
@@ -2742,6 +2757,8 @@ class Parser:
                 main_node.add_child_node(self.build_loop_down_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 main_node.add_child_node(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                main_node.add_child_node(self.build_function_keyword_ast())
             else:
                 assert (
                     False
@@ -2794,6 +2811,8 @@ class Parser:
                 loop_node.add_loop_body_node(self.build_loop_down_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                loop_node.add_loop_body_node(self.build_function_keyword_ast())
             else:
                 assert (
                     False
@@ -2826,6 +2845,8 @@ class Parser:
                 loop_node.add_loop_body_node(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                loop_node.add_loop_body_node(self.build_function_keyword_ast())
             else:
                 assert (
                     False
@@ -2862,12 +2883,53 @@ class Parser:
                 loop_node.add_loop_body_node(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                loop_node.add_loop_body_node(self.build_function_keyword_ast())
             else:
                 assert (
                     False
                 ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
 
         return loop_node
+
+    def build_function_keyword_ast(self):
+        keyword_node = self.curr_block[0]
+
+        function_args = []
+        if keyword_node.token.value in [PRINT, PRINTL]:
+            function_args = self.build_print_args_ast(self.curr_block[1:])
+        else:
+            assert (
+                False
+            ), f"Unsure how to build AST for args for function node of type {keyword_node.token.ttype}"
+
+        keyword_node.set_arg_nodes(function_args)
+
+        return keyword_node
+
+    def build_print_args_ast(self, node_list):
+        arg_ast = None
+
+        if (
+            type(node_list[0]) in [VariableReferenceNode, NumberNode]
+            and len(node_list) == 1
+        ):
+            arg_ast = node_list[0]
+        elif type(node_list[1]) == PlusMinusNode:
+            # TODO(map) This is a repeat of build_arithmetic_ast and should probably be used at some point
+            left_side_node = node_list[0]
+            right_side_node = node_list[2]
+            op_node = node_list[1]
+            op_node.set_left_side(left_side_node)
+            op_node.set_right_side(right_side_node)
+            arg_ast = op_node
+        else:
+            # TODO(map) This is not fully flushed out. It will fail for multiple arithmetic operations
+            assert (
+                False
+            ), f"Cannot have type {type(node)} as first arg in `print` function."
+
+        return [arg_ast]
 
     def parse_block(self):
         # Method for parsing a single block of code. A block of code can be
@@ -2895,6 +2957,8 @@ class Parser:
             self.read_loop_dec_line(first_node)
         elif type(first_node) == LoopFromKeywordNode:
             self.read_loop_dec_line(first_node)
+        elif type(first_node) == FunctionKeywordNode:
+            self.read_function_keyword_node_line(first_node)
         elif type(first_node) == CommentNode:
             # Set an empty block because there's nothing to parse on this line
             self.read_comment_line()
@@ -3033,6 +3097,25 @@ class Parser:
             self.curr_block = block
         else:
             assert False, f"Cannot handle loop of type {type(loop_node)}"
+
+    def read_function_keyword_node_line(self, function_node):
+        block = [function_node]
+
+        # Move onto the next node which should be a left paren
+        self.advance_token()
+        # Move past the left paren
+        self.advance_token()
+        # Get the param for the function call
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+        # Move past the right paren
+        self.advance_token()
+
+        # Move past the eol token
+        self.advance_token()
+
+        self.curr_block = block
 
     def process_token_rewrite(self):
         if (
@@ -3439,9 +3522,9 @@ class Parser:
         for node in fn_body_list:
             node.parent_node = fn_node
 
-        self.fn_name_ret_type_map[
-            fn_node.function_name.value
-        ] = fn_node.function_return_type.value
+        self.fn_name_ret_type_map[fn_node.function_name.value] = (
+            fn_node.function_return_type.value
+        )
         return fn_node
 
     def process_macro_token(self, macro_token):
@@ -4585,13 +4668,13 @@ class Parser:
             assignment_node.parent_node = var_node
 
         if var_is_const:
-            self.variable_to_type_map[
-                var_type_node.child_node.left_side.value
-            ] = var_type_node.value
+            self.variable_to_type_map[var_type_node.child_node.left_side.value] = (
+                var_type_node.value
+            )
         else:
-            self.variable_to_type_map[
-                var_node.child_node.left_side.value
-            ] = var_node.value
+            self.variable_to_type_map[var_node.child_node.left_side.value] = (
+                var_node.value
+            )
 
         return var_node
 
@@ -5301,9 +5384,9 @@ class Compiler:
                         self.max_loop_count_depth = self.curr_loop_count_depth
                     self.curr_loop_count_depth = 0
             elif type(single_node) == FunctionNode:
-                self.user_func_asm[
-                    single_node.function_name.value
-                ] = self.traverse_tree(single_node)
+                self.user_func_asm[single_node.function_name.value] = (
+                    self.traverse_tree(single_node)
+                )
                 if self.max_loop_count_depth < self.curr_loop_count_depth:
                     self.max_loop_count_depth = self.curr_loop_count_depth
                 self.curr_loop_count_depth = 0
