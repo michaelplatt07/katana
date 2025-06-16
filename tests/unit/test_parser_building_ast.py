@@ -1,19 +1,40 @@
 from katana.katana import ASSIGNMENT_TOKEN_TYPE  # Tokens; Nodes; Priorities
-from katana.katana import (COMMENT_TOKEN_TYPE, DIVIDE_TOKEN_TYPE,
-                           EOL_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
-                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
-                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
-                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
-                           RANGE_INDICATION_TOKEN_TYPE,
-                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
-                           ULTRA_HIGH, VARIABLE_NAME_TOKEN_TYPE,
-                           VARIABLE_REFERENCE_TOKEN_TYPE, AssignmentNode,
-                           FunctionKeywordNode, LoopDownKeywordNode,
-                           LoopFromKeywordNode, LoopUpKeywordNode,
-                           MultiplyDivideNode, NumberNode, Parser,
-                           PlusMinusNode, RangeNode, StartNode, Token,
-                           VariableKeywordNode, VariableNode,
-                           VariableReferenceNode)
+from katana.katana import (
+    COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    HIGH,
+    KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    LOW,
+    MEDIUM,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
+    NUM_TOKEN_TYPE,
+    PLUS_TOKEN_TYPE,
+    RANGE_INDICATION_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    ULTRA_HIGH,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE,
+    AssignmentNode,
+    FunctionKeywordNode,
+    LoopDownKeywordNode,
+    LoopFromKeywordNode,
+    LoopUpKeywordNode,
+    MultiplyDivideNode,
+    NumberNode,
+    Parser,
+    PlusMinusNode,
+    RangeNode,
+    StartNode,
+    Token,
+    VariableKeywordNode,
+    VariableNode,
+    VariableReferenceNode,
+)
 
 
 class TestParserSingleLine:
@@ -522,6 +543,81 @@ class TestParserPrintKeyword:
 
         parser.parse()
         assert parser.get_nodes() == [main_node]
+
+
+class TestParserVar:
+    def test_build_var_dec_and_redec_ast(self):
+        # Token list for main method with declaring a single int
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int8", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 13, "3", 0),
+            Token(EOL_TOKEN_TYPE, 1, 14, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 8, "4", 0),
+            Token(EOL_TOKEN_TYPE, 2, 9, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 9, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 10, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 11, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 12, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        # Set up the initial declaration node
+        var_name_node = VariableNode(token_list[5], "x", False)
+        num_node = NumberNode(token_list[7], "3")
+        assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=var_name_node, right_side=num_node
+        )
+        var_type_node = VariableKeywordNode(
+            token_list[4], "int8", child_node=assignment_node
+        )
+
+        # Set up the redeclaration line
+        var_ref_node = VariableReferenceNode(token_list[9], "x")
+        new_num_node = NumberNode(token_list[11], "4")
+        assignment_node_two = AssignmentNode(
+            token_list[10], "=", left_side=var_ref_node, right_side=new_num_node
+        )
+
+        # Set up print node
+        var_ref_node_two = VariableReferenceNode(token_list[15], "x")
+        print_node = FunctionKeywordNode(
+            token_list[13], "print", arg_nodes=[var_ref_node_two]
+        )
+
+        main_node = StartNode(
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node, assignment_node_two, print_node],
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+    def test_declare_const_var(self):
+        # Token list for main method with declaring a single int
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "const", 4),
+            Token(KEYWORD_TOKEN_TYPE, 1, 10, "int8", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 15, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 17, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 19, "3", 0),
+            Token(EOL_TOKEN_TYPE, 1, 20, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+        ]
 
 
 class TestParserMain:

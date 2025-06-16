@@ -2747,6 +2747,8 @@ class Parser:
                 pass
             elif type(self.curr_block[0]) == VariableKeywordNode:
                 main_node.add_child_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == VariableReferenceNode:
+                main_node.add_child_node(self.build_var_ref_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
             elif type(self.curr_block[0]) == NumberNode:
@@ -2767,15 +2769,41 @@ class Parser:
 
     def build_var_dec_ast(self):
         # TODO(map) Put in error checking
-        # TODO(map) Put in const logic
-        assignment_node = self.curr_block[2]
-        var_name_node = self.curr_block[1]
-        num_node = self.curr_block[3]
+        if self.curr_block[0].value == CONST:
+            assignment_node_idx = 3
+            var_name_node_idx = 2
+            val_node_idx = 4
+            var_type_node_idx = 1
+            const_node = self.curr_block[0]
+        else:
+            assignment_node_idx = 2
+            var_name_node_idx = 1
+            val_node_idx = 3
+            var_type_node_idx = 0
+            const_node = None
+
+        assignment_node = self.curr_block[assignment_node_idx]
+        var_name_node = self.curr_block[var_name_node_idx]
+        val_node = self.curr_block[val_node_idx]
+        assignment_node.set_left_side(var_name_node)
+        assignment_node.set_right_side(val_node)
+        var_type_node = self.curr_block[var_type_node_idx]
+        var_type_node.set_child_node(assignment_node)
+
+        if const_node is not None:
+            const_node.set_child_node(var_type_node)
+            return const_node
+
+        return var_type_node
+
+    def build_var_ref_ast(self):
+        # TODO(map) Put in error checking
+        assignment_node = self.curr_block[1]
+        var_name_node = self.curr_block[0]
+        num_node = self.curr_block[2]
         assignment_node.set_left_side(var_name_node)
         assignment_node.set_right_side(num_node)
-        var_type_node = self.curr_block[0]
-        var_type_node.set_child_node(assignment_node)
-        return var_type_node
+        return assignment_node
 
     def build_arithmetic_ast(self):
         # TODO(map) This is dumb right now. It doesn't handle PEMDAS
@@ -2911,7 +2939,8 @@ class Parser:
         arg_ast = None
 
         if (
-            type(node_list[0]) in [VariableReferenceNode, NumberNode]
+            type(node_list[0])
+            in [VariableReferenceNode, NumberNode, StringNode, CharNode]
             and len(node_list) == 1
         ):
             arg_ast = node_list[0]
@@ -2948,6 +2977,8 @@ class Parser:
         elif type(first_node) == NumberNode:
             self.read_full_line()
         elif type(first_node) == VariableKeywordNode:
+            self.read_full_line()
+        elif type(first_node) == VariableReferenceNode:
             self.read_full_line()
         elif type(first_node) == RightCurlBraceNode and len(self.nested_nodes_list) > 0:
             self.read_right_curl_brace(first_node)
