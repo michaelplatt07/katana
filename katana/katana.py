@@ -2829,6 +2829,8 @@ class Parser:
                 pass
             elif type(self.curr_block[0]) == VariableKeywordNode:
                 loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == VariableReferenceNode:
+                loop_node.add_loop_body_node(self.build_var_ref_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
             elif type(self.curr_block[0]) == NumberNode:
