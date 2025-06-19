@@ -1,5 +1,7 @@
-from katana.katana import ASSIGNMENT_TOKEN_TYPE  # Tokens; Nodes; Priorities
 from katana.katana import (
+    ASSIGNMENT_TOKEN_TYPE,
+    STRING_TOKEN_TYPE,
+    EQUAL_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
     EOL_TOKEN_TYPE,
@@ -19,6 +21,9 @@ from katana.katana import (
     ULTRA_HIGH,
     VARIABLE_NAME_TOKEN_TYPE,
     VARIABLE_REFERENCE_TOKEN_TYPE,
+    CompareNode,
+    LogicKeywordNode,
+    StringNode,
     AssignmentNode,
     FunctionKeywordNode,
     LoopDownKeywordNode,
@@ -618,6 +623,53 @@ class TestParserVar:
             Token(EOL_TOKEN_TYPE, 1, 20, ";", 0),
             Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
         ]
+
+
+class TestConditionals:
+    def test_if_block_equal_no_else(self):
+        # Token list for main method and single line of code
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
+            Token(EQUAL_TOKEN_TYPE, 1, 10, "==", 2),
+            Token(NUM_TOKEN_TYPE, 1, 13, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 14, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 16, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "True", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 21, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        string_node = StringNode(token_list[13], "True")
+        print_node = FunctionKeywordNode(
+            token_list[11], "print", arg_nodes=[string_node]
+        )
+
+        number_node_one = NumberNode(token_list[6], "1")
+        number_node_two = NumberNode(token_list[8], "2")
+        compare_node = CompareNode(
+            token_list[7], "==", left_side=number_node_one, right_side=number_node_two
+        )
+        if_node = LogicKeywordNode(
+            token_list[4], "if", child_node=compare_node, true_side=[print_node]
+        )
+
+        main_node = StartNode(
+            token_list[0], token_list[0].value, children_nodes=[if_node]
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
 
 
 class TestParserMain:
