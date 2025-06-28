@@ -2821,7 +2821,8 @@ class Parser:
                 type(self.curr_block[0]) is LogicKeywordNode
                 and self.curr_block[0].token.value == ELSE
             ):
-                self.add_false_side_ast_to_logic_block(main_node.children_nodes[-1])
+                false_nodes = self.build_false_side_nodes()
+                main_node.children_nodes[-1].set_false_side(false_nodes)
             else:
                 assert (
                     False
@@ -3076,6 +3077,16 @@ class Parser:
                 node_list.append(self.build_loop_from_ast())
             elif type(self.curr_block[0]) == FunctionKeywordNode:
                 node_list.append(self.build_function_keyword_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == IF
+            ):
+                node_list.append(self.build_logic_block_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == ELSE
+            ):
+                node_list[-1].set_false_side(self.build_false_side_nodes())
             else:
                 assert (
                     False
