@@ -2938,6 +2938,8 @@ class Parser:
                 pass
             elif type(self.curr_block[0]) == VariableKeywordNode:
                 loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == VariableReferenceNode:
+                loop_node.add_loop_body_node(self.build_var_ref_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
             elif type(self.curr_block[0]) == NumberNode:
@@ -2945,15 +2947,26 @@ class Parser:
             elif type(self.curr_block[0]) == LoopUpKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_up_ast())
+                loop_node.add_loop_body_node(self.build_loop_down_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_from_ast())
             elif type(self.curr_block[0]) == FunctionKeywordNode:
                 loop_node.add_loop_body_node(self.build_function_keyword_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == IF
+            ):
+                loop_node.add_loop_body_node(self.build_logic_block_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == ELSE
+            ):
+                false_nodes = self.build_false_side_nodes()
+                loop_node.loop_body[-1].set_false_side(false_nodes)
             else:
                 assert (
                     False
-                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+                ), f"Error building AST in loop down body starting with {type(self.curr_block[0])}"
 
         return loop_node
 
@@ -2976,6 +2989,8 @@ class Parser:
                 pass
             elif type(self.curr_block[0]) == VariableKeywordNode:
                 loop_node.add_loop_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == VariableReferenceNode:
+                loop_node.add_loop_body_node(self.build_var_ref_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
             elif type(self.curr_block[0]) == NumberNode:
@@ -2983,15 +2998,26 @@ class Parser:
             elif type(self.curr_block[0]) == LoopUpKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_up_ast())
+                loop_node.add_loop_body_node(self.build_loop_down_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
                 loop_node.add_loop_body_node(self.build_loop_from_ast())
             elif type(self.curr_block[0]) == FunctionKeywordNode:
                 loop_node.add_loop_body_node(self.build_function_keyword_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == IF
+            ):
+                loop_node.add_loop_body_node(self.build_logic_block_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == ELSE
+            ):
+                false_nodes = self.build_false_side_nodes()
+                loop_node.loop_body[-1].set_false_side(false_nodes)
             else:
                 assert (
                     False
-                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+                ), f"Error building AST in loop from body starting with {type(self.curr_block[0])}"
 
         return loop_node
 
