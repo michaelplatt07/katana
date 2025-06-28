@@ -980,7 +980,7 @@ class FunctionNode(Node):
         token,
         value,
         function_name=None,
-        function_args=[],
+        function_args=None,
         function_return_type=None,
         function_body=None,
         parent_node=None,
@@ -991,8 +991,11 @@ class FunctionNode(Node):
         self.function_return_type = function_return_type
         self.function_body = function_body
         self.function_args = function_args
-        for node in function_args:
-            node.parent_node = self
+        if function_args:
+            for node in function_args:
+                node.parent_node = self
+        else:
+            function_args = []
 
     def __eq__(self, other):
         # TODO(map) Make this equal better
@@ -1019,13 +1022,15 @@ class FunctionKeywordNode(Node):
     More specialized node for Function keywords vs other types of keywords.
     """
 
-    def __init__(self, token, value, parent_node=None, arg_nodes=[]):
+    def __init__(self, token, value, parent_node=None, arg_nodes=None):
         super().__init__(token, HIGH, parent_node)
         self.value = value
         self.arg_nodes = arg_nodes
         if arg_nodes:
             for node in arg_nodes:
                 node.parent_node = self
+        else:
+            arg_nodes = []
 
     def set_arg_nodes(self, arg_nodes):
         self.arg_nodes = arg_nodes
@@ -1045,10 +1050,13 @@ class FunctionReferenceNode(Node):
     Class for holding a call to a function
     """
 
-    def __init__(self, token, value, function_args=[], parent_node=None):
+    def __init__(self, token, value, function_args=None, parent_node=None):
         super().__init__(token, LOW, parent_node)
         self.value = value
-        self.function_args = function_args
+        if function_args:
+            self.function_args = function_args
+        else:
+            self.function_args = []
 
     def __eq__(self, other):
         return (
@@ -1235,8 +1243,8 @@ class LogicKeywordNode(KeywordNode):
         value,
         child_node=None,
         parent_node=None,
-        true_side=[],
-        false_side=[],
+        true_side=None,
+        false_side=None,
     ):
         super().__init__(token, value, child_node, parent_node)
         self.true_side = true_side
@@ -1245,21 +1253,27 @@ class LogicKeywordNode(KeywordNode):
         if true_side:
             for node in true_side:
                 node.parent_node = self
+        else:
+            self.true_side = []
         if false_side:
             for node in false_side:
                 node.parent_node = self
+        else:
+            self.false_side = []
 
     def set_child_node(self, node):
         self.child_node = node
         node.parent_node = self
 
-    def set_true_side(self, node):
-        self.true_side = node
-        node.parent_node = self
+    def set_true_side(self, nodes):
+        for node in nodes:
+            node.parent_node = self
+        self.true_side = nodes
 
-    def set_false_side(self, node):
-        self.false_side = node
-        node.parent_node = self
+    def set_false_side(self, nodes):
+        for node in nodes:
+            node.parent_node = self
+        self.false_side = nodes
 
     def add_true_side_body_node(self, node):
         self.true_side.append(node)
@@ -1305,9 +1319,12 @@ class LoopKeywordNode(KeywordNode):
     Specialized node for the different types of loops that exist.
     """
 
-    def __init__(self, token, value, child_node, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node)
-        self.loop_body = loop_body
+        if loop_body:
+            self.loop_body = loop_body
+        else:
+            self.loop_body = []
 
         if loop_body:
             for node in loop_body:
@@ -1333,7 +1350,7 @@ class LoopUpKeywordNode(LoopKeywordNode):
     Specialized node for the `loopUp` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1359,7 +1376,7 @@ class LoopDownKeywordNode(LoopKeywordNode):
     Specialized node for the `loopDown` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1385,7 +1402,7 @@ class LoopFromKeywordNode(LoopKeywordNode):
     Specialized node for the `loopFrom` keyword specifically.
     """
 
-    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=[]):
+    def __init__(self, token, value, child_node=None, parent_node=None, loop_body=None):
         super().__init__(token, value, child_node, parent_node, loop_body)
 
         # Because this is loop up we will always loop from 0 to the end value.
@@ -1511,12 +1528,15 @@ class StartNode(Node):
     Special node that represents the `main` keyword that starts the program.
     """
 
-    def __init__(self, token, value, children_nodes=[]):
+    def __init__(self, token, value, children_nodes=None):
         super().__init__(token, HIGHEST, None)
         self.value = value
-        self.children_nodes = children_nodes
-        for node in self.children_nodes:
-            node.parent_node = self
+        if children_nodes:
+            self.children_nodes = children_nodes
+            for node in self.children_nodes:
+                node.parent_node = self
+        else:
+            self.children_nodes = []
 
     def add_child_node(self, node):
         self.children_nodes.append(node)
@@ -1884,12 +1904,15 @@ class VariableReferenceNode(Node):
 
 class MacroNode(Node):
     def __init__(
-        self, token, value, name_node=None, children_nodes=[], parent_node=None
+        self, token, value, name_node=None, children_nodes=None, parent_node=None
     ):
         super().__init__(token, LOW, parent_node)
         self.value = value
         self.name_node = name_node
-        self.children_nodes = children_nodes
+        if children_nodes:
+            self.children_nodes = children_nodes
+        else:
+            self.children_nodes = []
         self.parent_node = parent_node
 
         for node in self.children_nodes:
@@ -2731,7 +2754,7 @@ class Parser:
         self.if_else_list = []
         self.left_paren_func_call_set = False
         self.in_function_body = False
-        self.current_if_node = None
+        # self.current_if_node = None
         self.fn_name_ret_type_map = {}
 
     def get_nodes(self):
@@ -2789,8 +2812,16 @@ class Parser:
                 main_node.add_child_node(self.build_loop_from_ast())
             elif type(self.curr_block[0]) == FunctionKeywordNode:
                 main_node.add_child_node(self.build_function_keyword_ast())
-            elif type(self.curr_block[0]) == LogicKeywordNode:
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == IF
+            ):
                 main_node.add_child_node(self.build_logic_block_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == ELSE
+            ):
+                self.add_false_side_ast_to_logic_block(main_node.children_nodes[-1])
             else:
                 assert (
                     False
@@ -2962,8 +2993,8 @@ class Parser:
         comparator_node.set_left_side(left_condition)
         comparator_node.set_right_side(right_condition)
 
-        logic_node.set_child_node(comparator_node)
-
+        true_side_nodes = []
+        false_side_nodes = []
         # Process the body of the conditional
         # TODO(map) This and others like it, might need a more robust comparison. For example, if we have an if block
         # nested in an if block, it's possible that we could kick out early or cause some problems. We should likely
@@ -2971,31 +3002,118 @@ class Parser:
         while (
             len(self.nested_nodes_list) > 0
             and type(self.nested_nodes_list[-1]) == LogicKeywordNode
+            and self.nested_nodes_list[-1] == logic_node
         ):
             self.parse_block()
             if len(self.curr_block) == 0:
                 # Do nothing because we didn't get nodes to parse
                 pass
             elif type(self.curr_block[0]) == VariableKeywordNode:
-                logic_node.add_true_side_body_node(self.build_var_dec_ast())
+                true_side_nodes.append(self.build_var_dec_ast())
             elif type(self.curr_block[0]) == RightCurlBraceNode:
                 pass  # No need to append here as it is just closing the loop
             elif type(self.curr_block[0]) == NumberNode:
-                logic_node.add_true_side_body_node(self.build_arithmetic_ast())
+                true_side_nodes.append(self.build_arithmetic_ast())
             elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                logic_node.add_true_side_body_node(self.build_loop_up_ast())
+                true_side_nodes.append(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                logic_node.add_true_side_body_node(self.build_loop_up_ast())
+                true_side_nodes.append(self.build_loop_up_ast())
             elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                logic_node.add_true_side_body_node(self.build_loop_from_ast())
+                true_side_nodes.append(self.build_loop_from_ast())
             elif type(self.curr_block[0]) == FunctionKeywordNode:
-                logic_node.add_true_side_body_node(self.build_function_keyword_ast())
+                true_side_nodes.append(self.build_function_keyword_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == IF
+            ):
+                true_side_nodes.append(self.build_logic_block_ast())
+            elif (
+                type(self.curr_block[0]) is LogicKeywordNode
+                and self.curr_block[0].token.value == ELSE
+            ):
+                false_side_nodes.extend(self.build_false_side_nodes())
             else:
                 assert (
                     False
                 ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
 
+        # We need to set the true side, false side, and comparator after so we can compare the original logic node as
+        # part of the loop to ensure we are on the same logic node for entire body. This comes into play when we have
+        # potentially nested logic nodes
+        logic_node.set_true_side(true_side_nodes)
+        if len(false_side_nodes) > 0:
+            logic_node.true_side[-1].set_false_side(false_side_nodes)
+
+        logic_node.set_child_node(comparator_node)
+
         return logic_node
+
+    def build_false_side_nodes(self):
+        else_node = self.curr_block[0]
+
+        node_list = []
+        # Parse the lef curl brace
+        while (
+            len(self.nested_nodes_list) > 0
+            and type(self.nested_nodes_list[-1]) is LogicKeywordNode
+            and self.nested_nodes_list[-1] == else_node
+        ):
+            self.parse_block()
+            if len(self.curr_block) == 0:
+                # Do nothing because we didn't get nodes to parse
+                pass
+            elif type(self.curr_block[0]) == VariableKeywordNode:
+                node_list.append(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == RightCurlBraceNode:
+                pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                node_list.append(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                node_list.append(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                node_list.append(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                node_list.append(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                node_list.append(self.build_function_keyword_ast())
+            else:
+                assert (
+                    False
+                ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
+
+        return node_list
+
+    def add_false_side_ast_to_logic_block(self, if_node):
+        else_node = self.curr_block[0]
+
+        # Parse the lef curl brace
+        while (
+            len(self.nested_nodes_list) > 0
+            and type(self.nested_nodes_list[-1]) is LogicKeywordNode
+            and self.nested_nodes_list[-1] == else_node
+        ):
+            self.parse_block()
+            if len(self.curr_block) == 0:
+                # Do nothing because we didn't get nodes to parse
+                pass
+            elif type(self.curr_block[0]) == VariableKeywordNode:
+                if_node.add_false_side_body_node(self.build_var_dec_ast())
+            elif type(self.curr_block[0]) == RightCurlBraceNode:
+                pass  # No need to append here as it is just closing the loop
+            elif type(self.curr_block[0]) == NumberNode:
+                if_node.add_false_side_body_node(self.build_arithmetic_ast())
+            elif type(self.curr_block[0]) == LoopUpKeywordNode:
+                if_node.add_false_side_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopDownKeywordNode:
+                if_node.add_false_side_body_node(self.build_loop_up_ast())
+            elif type(self.curr_block[0]) == LoopFromKeywordNode:
+                if_node.add_false_side_body_node(self.build_loop_from_ast())
+            elif type(self.curr_block[0]) == FunctionKeywordNode:
+                if_node.add_false_side_body_node(self.build_function_keyword_ast())
+            else:
+                assert (
+                    False
+                ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
 
     def build_function_keyword_ast(self):
         keyword_node = self.curr_block[0]
@@ -3067,8 +3185,10 @@ class Parser:
             self.read_loop_dec_line(first_node)
         elif type(first_node) == FunctionKeywordNode:
             self.read_function_keyword_node_line(first_node)
-        elif type(first_node) == LogicKeywordNode:
+        elif type(first_node) == LogicKeywordNode and first_node.token.value == IF:
             self.read_logic_declaration_line(first_node)
+        elif type(first_node) == LogicKeywordNode and first_node.token.value == ELSE:
+            self.read_logic_else_line(first_node)
         elif type(first_node) == CommentNode:
             # Set an empty block because there's nothing to parse on this line
             self.read_comment_line()
@@ -3244,7 +3364,21 @@ class Parser:
         # Move past the right paren
         self.advance_token()
 
-        # Move past the eol token
+        # Move past the left curl bracket token
+        self.advance_token()
+
+        self.curr_block = block
+
+    def read_logic_else_line(self, logic_node):
+        block = [logic_node]
+
+        # Add the logic node for tracking where we are in the branching
+        self.nested_nodes_list.append(logic_node)
+
+        # Move onto the next node which should be a left curl brace
+        self.advance_token()
+
+        # Move past the left curl bracket token
         self.advance_token()
 
         self.curr_block = block
