@@ -902,6 +902,9 @@ class ArgSeparatorNode(Node):
     def __init__(self, token):
         super().__init__(token, LOW)
 
+    def __repr__(self):
+        return ","
+
 
 class KeywordNode(Node):
     """
@@ -2834,22 +2837,32 @@ class Parser:
         if self.curr_block[0].value == CONST:
             assignment_node_idx = 3
             var_name_node_idx = 2
-            val_node_idx = 4
+            right_side_idx_start = 4
             var_type_node_idx = 1
             const_node = self.curr_block[0]
         else:
             assignment_node_idx = 2
             var_name_node_idx = 1
-            val_node_idx = 3
+            right_side_idx_start = 3
             var_type_node_idx = 0
             const_node = None
 
+        # Get the nodes we know will be constant like the assignment, var name, and var type nodes
         assignment_node = self.curr_block[assignment_node_idx]
         var_name_node = self.curr_block[var_name_node_idx]
-        val_node = self.curr_block[val_node_idx]
+        var_type_node = self.curr_block[var_type_node_idx]
+
+        # Evaluate the right side of the assignment
+        if type(self.curr_block[right_side_idx_start]) is FunctionKeywordNode:
+            val_node = self.build_function_keyword_ast(
+                self.curr_block[right_side_idx_start:]
+            )
+        else:
+            val_node = self.curr_block[right_side_idx_start]
+
+        # Finish building the assignment AST
         assignment_node.set_left_side(var_name_node)
         assignment_node.set_right_side(val_node)
-        var_type_node = self.curr_block[var_type_node_idx]
         var_type_node.set_child_node(assignment_node)
 
         if const_node is not None:
@@ -3167,12 +3180,18 @@ class Parser:
                     False
                 ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
 
-    def build_function_keyword_ast(self):
-        keyword_node = self.curr_block[0]
+    def build_function_keyword_ast(self, function_node_list=None):
+        if function_node_list is not None:
+            node_list = function_node_list
+        else:
+            node_list = self.curr_block
+        keyword_node = node_list[0]
 
         function_args = []
         if keyword_node.token.value in [PRINT, PRINTL]:
-            function_args = self.build_print_args_ast(self.curr_block[1:])
+            function_args = self.build_print_args_ast(node_list[1:])
+        elif keyword_node.token.value == CHAR_AT:
+            function_args = self.build_char_at_ast(node_list[1:])
         else:
             assert (
                 False
@@ -3206,6 +3225,13 @@ class Parser:
             ), f"Cannot have type {type(node)} as first arg in `print` function."
 
         return [arg_ast]
+
+    def build_char_at_ast(self, node_list):
+        # TODO This should raise an error at some point
+        # if len(node_list) > 2:
+        # pass
+        # TODO Raise errors when the typing isn't correct on the parameters
+        return [node_list[1], node_list[3]]
 
     def parse_block(self):
         # Method for parsing a single block of code. A block of code can be

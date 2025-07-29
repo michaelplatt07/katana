@@ -1,19 +1,21 @@
-from katana.katana import (ASSIGNMENT_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
-                           DIVIDE_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
-                           HIGH, KEYWORD_TOKEN_TYPE,
-                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
-                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
+from katana.katana import (ASSIGNMENT_TOKEN_TYPE, COMMA_TOKEN_TYPE,
+                           COMMENT_TOKEN_TYPE, DIVIDE_TOKEN_TYPE,
+                           EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE, HIGH,
+                           KEYWORD_TOKEN_TYPE, LEFT_CURL_BRACE_TOKEN_TYPE,
+                           LEFT_PAREN_TOKEN_TYPE, LOW, MEDIUM,
+                           MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
                            NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
                            RANGE_INDICATION_TOKEN_TYPE,
                            RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
                            STRING_TOKEN_TYPE, ULTRA_HIGH,
                            VARIABLE_NAME_TOKEN_TYPE,
-                           VARIABLE_REFERENCE_TOKEN_TYPE, AssignmentNode,
-                           CompareNode, FunctionKeywordNode, LogicKeywordNode,
+                           VARIABLE_REFERENCE_TOKEN_TYPE, ArgSeparatorNode,
+                           AssignmentNode, CompareNode, FunctionKeywordNode,
+                           LeftParenNode, LogicKeywordNode,
                            LoopDownKeywordNode, LoopFromKeywordNode,
                            LoopUpKeywordNode, MultiplyDivideNode, NumberNode,
-                           Parser, PlusMinusNode, RangeNode, StartNode,
-                           StringNode, Token, VariableKeywordNode,
+                           Parser, PlusMinusNode, RangeNode, RightParenNode,
+                           StartNode, StringNode, Token, VariableKeywordNode,
                            VariableNode, VariableReferenceNode)
 
 
@@ -707,7 +709,48 @@ class TestConditionals:
         )
 
         parser = Parser(token_list)
-        # breakpoint()
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+
+class TestParserCharAt:
+    def test_chart_at_assigned_to_var(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 1, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 19, "(", 3),
+            Token(STRING_TOKEN_TYPE, 1, 20, "Hello", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 27, ",", 0),
+            Token(NUM_TOKEN_TYPE, 1, 29, "0", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 30, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 31, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+        ]
+
+        string_node = StringNode(token_list[9], "Hello")
+        index_node = NumberNode(token_list[11], "0")
+        char_at_node = FunctionKeywordNode(
+            token_list[7], "charAt", arg_nodes=[string_node, index_node]
+        )
+        var_name_node = VariableNode(token_list[5], "x", False)
+        assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=var_name_node, right_side=char_at_node
+        )
+        var_type_node = VariableKeywordNode(
+            token_list[4], "char", child_node=assignment_node
+        )
+
+        main_node = StartNode(
+            token_list[0], token_list[0].value, children_nodes=[var_type_node]
+        )
+
+        parser = Parser(token_list)
         parser.parse()
         assert parser.get_nodes() == [main_node]
 
