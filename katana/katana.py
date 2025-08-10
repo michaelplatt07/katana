@@ -2740,14 +2740,6 @@ class Parser:
         self.curr_token_pos = 0
         self.curr_token = self.token_list[self.curr_token_pos]
 
-        # Keeps track of nodes that are nested within eachother. As you parse
-        # the program, you could run into something like an `if` within a loop
-        # and without a smart way to track which closing curl brace you are
-        # parsing, it could cause a problem. As such, using the -1 index of
-        # this list will get the type of node that is being closed by the curl
-        # brace itself.
-        self.nested_nodes_list = []
-
         # @@@ WIP: Old properties that may not be useful anymore
         self.main_node = None
         self.variable_to_type_map = {}
@@ -2791,45 +2783,11 @@ class Parser:
         main_node = self.curr_block[0]
         # TODO(map) Include check for the node being a left curl brace
         left_curl_node = self.curr_block[1]
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) == StartNode
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                main_node.add_child_node(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                main_node.add_child_node(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                main_node.add_child_node(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                main_node.add_child_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                main_node.add_child_node(self.build_loop_down_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                main_node.add_child_node(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                main_node.add_child_node(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                main_node.add_child_node(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                false_nodes = self.build_false_side_nodes()
-                main_node.children_nodes[-1].set_false_side(false_nodes)
-            else:
-                assert (
-                    False
-                ), f"Error building AST in main body starting with {type(self.curr_block[0])}"
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                main_node.add_child_node(ast)
+        self.parse_block()
         return main_node
 
     def build_var_dec_ast(self):
@@ -2894,45 +2852,11 @@ class Parser:
         end_val_node = self.curr_block[1]
         loop_node.set_child_node(end_val_node)
 
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) == LoopUpKeywordNode
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                loop_node.add_loop_body_node(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                loop_node.add_loop_body_node(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                loop_node.add_loop_body_node(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_down_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                loop_node.add_loop_body_node(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                loop_node.add_loop_body_node(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                false_nodes = self.build_false_side_nodes()
-                loop_node.loop_body[-1].set_false_side(false_nodes)
-            else:
-                assert (
-                    False
-                ), f"Error building AST in loop up body starting with {type(self.curr_block[0])}"
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                loop_node.add_loop_body_node(ast)
+        self.parse_block()  # Parse the next block
 
         return loop_node
 
@@ -2941,45 +2865,11 @@ class Parser:
         end_val_node = self.curr_block[1]
         loop_node.set_child_node(end_val_node)
 
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) == LoopDownKeywordNode
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                loop_node.add_loop_body_node(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                loop_node.add_loop_body_node(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                loop_node.add_loop_body_node(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_down_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                loop_node.add_loop_body_node(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                loop_node.add_loop_body_node(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                false_nodes = self.build_false_side_nodes()
-                loop_node.loop_body[-1].set_false_side(false_nodes)
-            else:
-                assert (
-                    False
-                ), f"Error building AST in loop down body starting with {type(self.curr_block[0])}"
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                loop_node.add_loop_body_node(ast)
+        self.parse_block()
 
         return loop_node
 
@@ -2992,45 +2882,11 @@ class Parser:
         range_node.set_right_side(end_val_node)
         loop_node.set_child_node(range_node)
 
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) == LoopFromKeywordNode
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                loop_node.add_loop_body_node(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                loop_node.add_loop_body_node(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                loop_node.add_loop_body_node(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_down_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                loop_node.add_loop_body_node(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                loop_node.add_loop_body_node(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                loop_node.add_loop_body_node(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                false_nodes = self.build_false_side_nodes()
-                loop_node.loop_body[-1].set_false_side(false_nodes)
-            else:
-                assert (
-                    False
-                ), f"Error building AST in loop from body starting with {type(self.curr_block[0])}"
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                loop_node.add_loop_body_node(ast)
+        self.parse_block()
 
         return loop_node
 
@@ -3044,141 +2900,58 @@ class Parser:
         comparator_node.set_left_side(left_condition)
         comparator_node.set_right_side(right_condition)
 
-        true_side_nodes = []
-        false_side_nodes = []
         # Process the body of the conditional
         # TODO(map) This and others like it, might need a more robust comparison. For example, if we have an if block
         # nested in an if block, it's possible that we could kick out early or cause some problems. We should likely
         # check the value as well as the location in the token list but we need to write tests for that first
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) == LogicKeywordNode
-            and self.nested_nodes_list[-1] == logic_node
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                true_side_nodes.append(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                true_side_nodes.append(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                true_side_nodes.append(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                true_side_nodes.append(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                true_side_nodes.append(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                true_side_nodes.append(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                true_side_nodes.append(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                true_side_nodes.append(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                false_side_nodes.extend(self.build_false_side_nodes())
-            else:
-                assert (
-                    False
-                ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                logic_node.add_true_side_body_node(ast)
 
-        # We need to set the true side, false side, and comparator after so we can compare the original logic node as
-        # part of the loop to ensure we are on the same logic node for entire body. This comes into play when we have
-        # potentially nested logic nodes
-        logic_node.set_true_side(true_side_nodes)
-        if len(false_side_nodes) > 0:
-            logic_node.true_side[-1].set_false_side(false_side_nodes)
+        if self.peek_next_token().value == ELSE:
+            self.parse_block()  # Parse the right curl brace
+            self.parse_block()  # Parse the else keyword
+            while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+                ast = self.process_body_block_line()
+                if ast is not None:
+                    logic_node.add_false_side_body_node(ast)
 
+        self.parse_block()  # Parse the next block
         logic_node.set_child_node(comparator_node)
 
         return logic_node
 
-    def build_false_side_nodes(self):
-        else_node = self.curr_block[0]
-
-        node_list = []
-        # Parse the lef curl brace
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) is LogicKeywordNode
-            and self.nested_nodes_list[-1] == else_node
+    def process_body_block_line(self):
+        self.parse_block()
+        if len(self.curr_block) == 0:
+            # Do nothing because we didn't get nodes to parse
+            return None
+        elif type(self.curr_block[0]) is VariableKeywordNode:
+            return self.build_var_dec_ast()
+        elif type(self.curr_block[0]) is VariableReferenceNode:
+            return self.build_var_ref_ast()
+        elif type(self.curr_block[0]) is RightCurlBraceNode:
+            return None  # No need to append here as it is just closing the loop
+        elif type(self.curr_block[0]) is NumberNode:
+            return self.build_arithmetic_ast()
+        elif type(self.curr_block[0]) is LoopUpKeywordNode:
+            return self.build_loop_up_ast()
+        elif type(self.curr_block[0]) is LoopDownKeywordNode:
+            return self.build_loop_up_ast()
+        elif type(self.curr_block[0]) is LoopFromKeywordNode:
+            return self.build_loop_from_ast()
+        elif type(self.curr_block[0]) is FunctionKeywordNode:
+            return self.build_function_keyword_ast()
+        elif (
+            type(self.curr_block[0]) is LogicKeywordNode
+            and self.curr_block[0].token.value == IF
         ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                node_list.append(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == VariableReferenceNode:
-                node_list.append(self.build_var_ref_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                node_list.append(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                node_list.append(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                node_list.append(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                node_list.append(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                node_list.append(self.build_function_keyword_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == IF
-            ):
-                node_list.append(self.build_logic_block_ast())
-            elif (
-                type(self.curr_block[0]) is LogicKeywordNode
-                and self.curr_block[0].token.value == ELSE
-            ):
-                node_list[-1].set_false_side(self.build_false_side_nodes())
-            else:
-                assert (
-                    False
-                ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
-
-        return node_list
-
-    def add_false_side_ast_to_logic_block(self, if_node):
-        else_node = self.curr_block[0]
-
-        # Parse the lef curl brace
-        while (
-            len(self.nested_nodes_list) > 0
-            and type(self.nested_nodes_list[-1]) is LogicKeywordNode
-            and self.nested_nodes_list[-1] == else_node
-        ):
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                if_node.add_false_side_body_node(self.build_var_dec_ast())
-            elif type(self.curr_block[0]) == RightCurlBraceNode:
-                pass  # No need to append here as it is just closing the loop
-            elif type(self.curr_block[0]) == NumberNode:
-                if_node.add_false_side_body_node(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == LoopUpKeywordNode:
-                if_node.add_false_side_body_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopDownKeywordNode:
-                if_node.add_false_side_body_node(self.build_loop_up_ast())
-            elif type(self.curr_block[0]) == LoopFromKeywordNode:
-                if_node.add_false_side_body_node(self.build_loop_from_ast())
-            elif type(self.curr_block[0]) == FunctionKeywordNode:
-                if_node.add_false_side_body_node(self.build_function_keyword_ast())
-            else:
-                assert (
-                    False
-                ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
+            return self.build_logic_block_ast()
+        else:
+            assert (
+                False
+            ), f"Error building AST in conditional body starting with {type(self.curr_block[0])}"
 
     def build_function_keyword_ast(self, function_node_list=None):
         if function_node_list is not None:
@@ -3253,7 +3026,7 @@ class Parser:
             self.read_full_line()
         elif type(first_node) == VariableReferenceNode:
             self.read_full_line()
-        elif type(first_node) == RightCurlBraceNode and len(self.nested_nodes_list) > 0:
+        elif type(first_node) == RightCurlBraceNode:
             self.read_right_curl_brace(first_node)
         elif type(first_node) == LoopUpKeywordNode:
             self.read_loop_dec_line(first_node)
@@ -3306,10 +3079,6 @@ class Parser:
         """
         block = []
 
-        # Set the node in the list of tracking nodes that need a closing curl
-        # brace
-        self.nested_nodes_list.append(start_node)
-
         # Loop until we hit the left curl brace that starts the definition of
         # the function call body
         while self.curr_token.ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
@@ -3328,15 +3097,10 @@ class Parser:
         """
         self.curr_block = [right_curl_node]
         self.advance_token()
-        self.nested_nodes_list.pop()
 
     def read_loop_dec_line(self, loop_node):
         if type(loop_node) == LoopUpKeywordNode:
             block = [loop_node]
-
-            # Set the node in the list of tracking nodes that need a closing curl
-            # brace
-            self.nested_nodes_list.append(loop_node)
 
             # Move onto the next node which should be a left paren
             self.advance_token()
@@ -3356,10 +3120,6 @@ class Parser:
         elif type(loop_node) == LoopDownKeywordNode:
             block = [loop_node]
 
-            # Set the node in the list of tracking nodes that need a closing curl
-            # brace
-            self.nested_nodes_list.append(loop_node)
-
             # Move onto the next node which should be a left paren
             self.advance_token()
             # Move past the left paren
@@ -3377,10 +3137,6 @@ class Parser:
             self.curr_block = block
         elif type(loop_node) == LoopFromKeywordNode:
             block = [loop_node]
-
-            # Set the node in the list of tracking nodes that need a closing curl
-            # brace
-            self.nested_nodes_list.append(loop_node)
 
             # Move onto the next node which should be a left paren
             self.advance_token()
@@ -3428,9 +3184,6 @@ class Parser:
     def read_logic_declaration_line(self, logic_node):
         block = [logic_node]
 
-        # Add the logic node for tracking where we are in the branching
-        self.nested_nodes_list.append(logic_node)
-
         # Move onto the next node which should be a left paren
         self.advance_token()
         # Move past the left paren
@@ -3449,9 +3202,6 @@ class Parser:
 
     def read_logic_else_line(self, logic_node):
         block = [logic_node]
-
-        # Add the logic node for tracking where we are in the branching
-        self.nested_nodes_list.append(logic_node)
 
         # Move onto the next node which should be a left curl brace
         self.advance_token()

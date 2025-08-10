@@ -1,25 +1,53 @@
 import pytest
 
 from katana.katana import ASSIGNMENT_TOKEN_TYPE  # Tokens; Nodes
-from katana.katana import (COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
-                           DIVIDE_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
-                           HIGH, KEYWORD_TOKEN_TYPE,
-                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
-                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
-                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
-                           RANGE_INDICATION_TOKEN_TYPE,
-                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
-                           STRING_TOKEN_TYPE, ULTRA_HIGH,
-                           VARIABLE_NAME_TOKEN_TYPE,
-                           VARIABLE_REFERENCE_TOKEN_TYPE, ArgSeparatorNode,
-                           AssignmentNode, CompareNode, FunctionKeywordNode,
-                           LeftCurlBraceNode, LeftParenNode, LogicKeywordNode,
-                           LoopDownKeywordNode, LoopFromKeywordNode,
-                           LoopUpKeywordNode, MultiplyDivideNode, NumberNode,
-                           Parser, PlusMinusNode, RangeNode,
-                           RightCurlBraceNode, RightParenNode, StartNode,
-                           StringNode, Token, VariableKeywordNode,
-                           VariableNode, VariableReferenceNode)
+from katana.katana import (
+    COMMA_TOKEN_TYPE,
+    COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    EQUAL_TOKEN_TYPE,
+    HIGH,
+    KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    LOW,
+    MEDIUM,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
+    NUM_TOKEN_TYPE,
+    PLUS_TOKEN_TYPE,
+    RANGE_INDICATION_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    STRING_TOKEN_TYPE,
+    ULTRA_HIGH,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE,
+    ArgSeparatorNode,
+    AssignmentNode,
+    CompareNode,
+    FunctionKeywordNode,
+    LeftCurlBraceNode,
+    LeftParenNode,
+    LogicKeywordNode,
+    LoopDownKeywordNode,
+    LoopFromKeywordNode,
+    LoopUpKeywordNode,
+    MultiplyDivideNode,
+    NumberNode,
+    Parser,
+    PlusMinusNode,
+    RangeNode,
+    RightCurlBraceNode,
+    RightParenNode,
+    StartNode,
+    StringNode,
+    Token,
+    VariableKeywordNode,
+    VariableNode,
+    VariableReferenceNode,
+)
 
 
 class TestParserProcessBlock:
@@ -41,7 +69,6 @@ class TestParserProcessBlock:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_subtraction_line(self):
@@ -62,7 +89,6 @@ class TestParserProcessBlock:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_multiply_line(self):
@@ -83,7 +109,6 @@ class TestParserProcessBlock:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_divide_line(self):
@@ -104,7 +129,6 @@ class TestParserProcessBlock:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_single_line_block_parses(self):
@@ -127,7 +151,6 @@ class TestParserProcessBlock:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_multiple_lines_block_parses(self):
@@ -162,11 +185,9 @@ class TestParserProcessBlock:
         parser = Parser(token_list)
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == first_expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == second_expected_node_list
 
 
@@ -182,7 +203,6 @@ class TestParserComments:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
     def test_comment_same_line_as_code(self):
@@ -206,11 +226,9 @@ class TestParserComments:
 
         parser = Parser(token_list)
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == []
 
     def test_comment_after_first_line_with_second_line_present(self):
@@ -246,15 +264,12 @@ class TestParserComments:
         parser = Parser(token_list)
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == first_expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == []
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == second_expected_node_list
 
 
@@ -291,17 +306,14 @@ class TestParserLoops:
 
         parser.parse_block()
         assert parser.curr_block == first_expected_node_list
-        assert parser.nested_nodes_list == [loop_up_node]
 
         parser.parse_block()
         assert parser.curr_block == second_expected_node_list
-        assert parser.nested_nodes_list == [loop_up_node]
 
         parser.parse_block()
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[9], token_list[9].value)
         ]
-        assert parser.nested_nodes_list == []
 
     def test_loop_down_declared(self):
         # Token list for declaring a loop up
@@ -335,17 +347,14 @@ class TestParserLoops:
 
         parser.parse_block()
         assert parser.curr_block == first_expected_node_list
-        assert parser.nested_nodes_list == [loop_down_node]
 
         parser.parse_block()
         assert parser.curr_block == second_expected_node_list
-        assert parser.nested_nodes_list == [loop_down_node]
 
         parser.parse_block()
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[9], token_list[9].value)
         ]
-        assert parser.nested_nodes_list == []
 
     def test_loop_from_declared(self):
         # Token list for declaring a loop up
@@ -383,17 +392,14 @@ class TestParserLoops:
 
         parser.parse_block()
         assert parser.curr_block == first_expected_node_list
-        assert parser.nested_nodes_list == [loop_from_node]
 
         parser.parse_block()
         assert parser.curr_block == second_expected_node_list
-        assert parser.nested_nodes_list == [loop_from_node]
 
         parser.parse_block()
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[11], token_list[11].value)
         ]
-        assert parser.nested_nodes_list == []
 
 
 class TestParserPrintFunctionKeyword:
@@ -596,17 +602,14 @@ class TestConditionals:
 
         parser.parse_block()
         assert parser.curr_block == first_expected_node_list
-        assert parser.nested_nodes_list == [if_node]
 
         parser.parse_block()
         assert parser.curr_block == second_expected_node_list
-        assert parser.nested_nodes_list == [if_node]
 
         parser.parse_block()
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[12], token_list[12].value)
         ]
-        assert parser.nested_nodes_list == []
 
         parser.parse_block()
         assert parser.curr_block == third_expected_node_list
@@ -661,17 +664,14 @@ class TestConditionals:
 
         parser.parse_block()
         assert parser.curr_block == first_expected_node_list
-        assert parser.nested_nodes_list == [if_node]
 
         parser.parse_block()
         assert parser.curr_block == second_expected_node_list
-        assert parser.nested_nodes_list == [if_node]
 
         parser.parse_block()
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[12], token_list[12].value)
         ]
-        assert parser.nested_nodes_list == []
 
         parser.parse_block()
         assert parser.curr_block == third_expected_node_list
@@ -748,15 +748,12 @@ class TestParserTestMain:
         parser = Parser(token_list)
 
         parser.parse_block()
-        assert parser.nested_nodes_list == [start_node]
         assert parser.curr_block == expected_main_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == [start_node]
         assert parser.curr_block == expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[7], token_list[7].value)
         ]
@@ -801,19 +798,15 @@ class TestParserTestMain:
         parser = Parser(token_list)
 
         parser.parse_block()
-        assert parser.nested_nodes_list == [start_node]
         assert parser.curr_block == expected_main_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == [start_node]
         assert parser.curr_block == first_expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == [start_node]
         assert parser.curr_block == second_expected_node_list
 
         parser.parse_block()
-        assert parser.nested_nodes_list == []
         assert parser.curr_block == [
             RightCurlBraceNode(token_list[12], token_list[12].value)
         ]
