@@ -1,7 +1,6 @@
-import pytest
-
-from katana.katana import ASSIGNMENT_TOKEN_TYPE  # Tokens; Nodes
 from katana.katana import (
+    ASSIGNMENT_TOKEN_TYPE,
+    CHARACTER_TOKEN_TYPE,
     COMMA_TOKEN_TYPE,
     COMMENT_TOKEN_TYPE,
     DIVIDE_TOKEN_TYPE,
@@ -25,6 +24,7 @@ from katana.katana import (
     VARIABLE_NAME_TOKEN_TYPE,
     VARIABLE_REFERENCE_TOKEN_TYPE,
     ArgSeparatorNode,
+    CharNode,
     AssignmentNode,
     CompareNode,
     FunctionKeywordNode,
@@ -716,6 +716,102 @@ class TestParserCharAt:
 
         parser.parse_block()
         assert parser.curr_block == expected_node_list
+
+
+class TestParserUpdateChar:
+    def test_update_char(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 7, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 9, "=", 2),
+            Token(STRING_TOKEN_TYPE, 0, 11, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 0, 18, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "updateChar", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 12, ",", 0),
+            Token(NUM_TOKEN_TYPE, 1, 14, "0", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 15, ",", 0),
+            Token(CHARACTER_TOKEN_TYPE, 1, 18, "Q", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 20, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 21, ";", 0),
+        ]
+
+        expected_node_list_1 = [
+            VariableKeywordNode(token_list[0], "string"),
+            VariableNode(token_list[1], "x", False),
+            AssignmentNode(token_list[2], "="),
+            StringNode(token_list[3], "Hello"),
+        ]
+        expected_node_list_2 = [
+            FunctionKeywordNode(token_list[5], "updateChar"),
+            VariableReferenceNode(token_list[7], "x"),
+            ArgSeparatorNode(token_list[8]),
+            NumberNode(token_list[9], "0"),
+            ArgSeparatorNode(token_list[10]),
+            CharNode(token_list[11], "Q"),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list_1
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list_2
+
+
+class TestParserCopyStr:
+    def test_copy_str(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 7, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 9, "=", 2),
+            Token(STRING_TOKEN_TYPE, 0, 11, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 0, 18, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 7, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 9, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 11, "olleH", 0),
+            Token(EOL_TOKEN_TYPE, 1, 18, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 0, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 7, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 8, "y", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 9, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 11, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 12, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 13, ";", 0),
+        ]
+
+        expected_node_list_one = [
+            VariableKeywordNode(token_list[0], "string"),
+            VariableNode(token_list[1], "x", False),
+            AssignmentNode(token_list[2], "="),
+            StringNode(token_list[3], "Hello"),
+        ]
+        expected_node_list_two = [
+            VariableKeywordNode(token_list[5], "string"),
+            VariableNode(token_list[6], "y", False),
+            AssignmentNode(token_list[7], "="),
+            StringNode(token_list[8], "olleH"),
+        ]
+        expected_node_list_three = [
+            FunctionKeywordNode(token_list[10], "copyStr"),
+            VariableReferenceNode(token_list[12], "y"),
+            ArgSeparatorNode(token_list[13]),
+            VariableReferenceNode(token_list[14], "x"),
+        ]
+
+        parser = Parser(token_list)
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list_one
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list_two
+
+        parser.parse_block()
+        assert parser.curr_block == expected_node_list_three
 
 
 class TestParserTestMain:

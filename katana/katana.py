@@ -2833,9 +2833,16 @@ class Parser:
         # TODO(map) Put in error checking
         assignment_node = self.curr_block[1]
         var_name_node = self.curr_block[0]
-        num_node = self.curr_block[2]
         assignment_node.set_left_side(var_name_node)
-        assignment_node.set_right_side(num_node)
+
+        # Evaluate the right side of the assignment
+        if type(self.curr_block[2]) is FunctionKeywordNode:
+            val_node = self.build_function_keyword_ast(self.curr_block[2:])
+        else:
+            val_node = self.curr_block[2]
+
+        assignment_node.set_right_side(val_node)
+
         return assignment_node
 
     def build_arithmetic_ast(self):
@@ -2965,10 +2972,14 @@ class Parser:
             function_args = self.build_print_args_ast(node_list[1:])
         elif keyword_node.token.value == CHAR_AT:
             function_args = self.build_char_at_ast(node_list[1:])
+        elif keyword_node.token.value == UPDATE_CHAR:
+            function_args = self.build_update_char_ast(node_list[1:])
+        elif keyword_node.token.value == COPY_STR:
+            function_args = self.build_copy_str_ast(node_list[1:])
         else:
             assert (
                 False
-            ), f"Unsure how to build AST for args for function node of type {keyword_node.token.ttype}"
+            ), f"Unsure how to build AST for args for function {keyword_node.token.value} of type {keyword_node.token.ttype} at {keyword_node.token.row + 1}, {keyword_node.token.col + 1}"
 
         keyword_node.set_arg_nodes(function_args)
 
@@ -3004,7 +3015,18 @@ class Parser:
         # if len(node_list) > 2:
         # pass
         # TODO Raise errors when the typing isn't correct on the parameters
+        breakpoint()
         return [node_list[1], node_list[3]]
+
+    def build_update_char_ast(self, node_list):
+        # TODO This should raise an error at some point
+        # TODO Raise errors when the typing isn't correct on the parameters
+        return [node_list[0], node_list[2], node_list[4]]
+
+    def build_copy_str_ast(self, node_list):
+        # TODO This should raise an error at some point
+        # TODO Raise errors when the typing isn't correct on the parameters
+        return [node_list[0], node_list[2]]
 
     def parse_block(self):
         # Method for parsing a single block of code. A block of code can be
@@ -3016,6 +3038,7 @@ class Parser:
         # unit of work like a single line of code or if we are going to have a
         # block with a body
         first_node = self.process_token_rewrite()
+        # breakpoint()
 
         # Determine the flag for the block type that is being parsed.
         if type(first_node) == StartNode:
@@ -5615,6 +5638,9 @@ class Compiler:
             else:
                 # We don't know how to parse this keyword.
                 assert False, f"Unable to parse Function Keyword Node {node}"
+            if node.arg_nodes is None:
+                # breakpoint()
+                print()
             for arg_node in node.arg_nodes:
                 if not arg_node.visited:
                     asm.extend(self.traverse_tree(arg_node))

@@ -1,22 +1,51 @@
-from katana.katana import (ASSIGNMENT_TOKEN_TYPE, COMMA_TOKEN_TYPE,
-                           COMMENT_TOKEN_TYPE, DIVIDE_TOKEN_TYPE,
-                           EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE, HIGH,
-                           KEYWORD_TOKEN_TYPE, LEFT_CURL_BRACE_TOKEN_TYPE,
-                           LEFT_PAREN_TOKEN_TYPE, LOW, MEDIUM,
-                           MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
-                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
-                           RANGE_INDICATION_TOKEN_TYPE,
-                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
-                           STRING_TOKEN_TYPE, ULTRA_HIGH,
-                           VARIABLE_NAME_TOKEN_TYPE,
-                           VARIABLE_REFERENCE_TOKEN_TYPE, ArgSeparatorNode,
-                           AssignmentNode, CompareNode, FunctionKeywordNode,
-                           LeftParenNode, LogicKeywordNode,
-                           LoopDownKeywordNode, LoopFromKeywordNode,
-                           LoopUpKeywordNode, MultiplyDivideNode, NumberNode,
-                           Parser, PlusMinusNode, RangeNode, RightParenNode,
-                           StartNode, StringNode, Token, VariableKeywordNode,
-                           VariableNode, VariableReferenceNode)
+from katana.katana import (
+    ASSIGNMENT_TOKEN_TYPE,
+    COMMA_TOKEN_TYPE,
+    CHARACTER_TOKEN_TYPE,
+    COMMENT_TOKEN_TYPE,
+    DIVIDE_TOKEN_TYPE,
+    EOL_TOKEN_TYPE,
+    EQUAL_TOKEN_TYPE,
+    HIGH,
+    KEYWORD_TOKEN_TYPE,
+    LEFT_CURL_BRACE_TOKEN_TYPE,
+    LEFT_PAREN_TOKEN_TYPE,
+    LOW,
+    MEDIUM,
+    MINUS_TOKEN_TYPE,
+    MULTIPLY_TOKEN_TYPE,
+    NUM_TOKEN_TYPE,
+    PLUS_TOKEN_TYPE,
+    RANGE_INDICATION_TOKEN_TYPE,
+    RIGHT_CURL_BRACE_TOKEN_TYPE,
+    RIGHT_PAREN_TOKEN_TYPE,
+    STRING_TOKEN_TYPE,
+    ULTRA_HIGH,
+    VARIABLE_NAME_TOKEN_TYPE,
+    VARIABLE_REFERENCE_TOKEN_TYPE,
+    ArgSeparatorNode,
+    CharNode,
+    AssignmentNode,
+    CompareNode,
+    FunctionKeywordNode,
+    LeftParenNode,
+    LogicKeywordNode,
+    LoopDownKeywordNode,
+    LoopFromKeywordNode,
+    LoopUpKeywordNode,
+    MultiplyDivideNode,
+    NumberNode,
+    Parser,
+    PlusMinusNode,
+    RangeNode,
+    RightParenNode,
+    StartNode,
+    StringNode,
+    Token,
+    VariableKeywordNode,
+    VariableNode,
+    VariableReferenceNode,
+)
 
 
 class TestParserSingleLine:
@@ -748,6 +777,192 @@ class TestParserCharAt:
 
         main_node = StartNode(
             token_list[0], token_list[0].value, children_nodes=[var_type_node]
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+    def test_chart_at_assigned_to_var_ref(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 9, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 11, "=", 2),
+            Token(CHARACTER_TOKEN_TYPE, 2, 14, "Q", 0),
+            Token(EOL_TOKEN_TYPE, 2, 16, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 4, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 3, 6, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 3, 8, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 14, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 15, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 3, 16, ",", 0),
+            Token(NUM_TOKEN_TYPE, 3, 18, "1", 0),
+            Token(PLUS_TOKEN_TYPE, 3, 20, "+", 1),
+            Token(NUM_TOKEN_TYPE, 3, 22, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        string_node = StringNode(token_list[7], "Hello")
+        var_name_node = VariableNode(token_list[5], "x", False)
+        assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=var_name_node, right_side=string_node
+        )
+        var_type_node = VariableKeywordNode(
+            token_list[4], "string", child_node=assignment_node
+        )
+
+        char_node = CharNode(token_list[12], "Q")
+        var_name_node_two = VariableNode(token_list[10], "y", False)
+        assignment_node_two = AssignmentNode(
+            token_list[11], "=", left_side=var_name_node_two, right_side=char_node
+        )
+        var_type_node_two = VariableKeywordNode(
+            token_list[9], "char", child_node=assignment_node_two
+        )
+
+        var_ref_node = VariableReferenceNode(token_list[14], "y")
+        var_ref_node_two = VariableReferenceNode(token_list[18], "x")
+        number_node_one = VariableReferenceNode(token_list[20], "1")
+        number_node_two = VariableReferenceNode(token_list[22], "1")
+        plus_node = PlusMinusNode(
+            token_list[21], "+", left_side=number_node_one, right_side=number_node_two
+        )
+        char_at_node = FunctionKeywordNode(
+            token_list[16], "charAt", arg_nodes=[var_ref_node_two, plus_node]
+        )
+        assignment_node_three = AssignmentNode(
+            token_list[15], "=", left_side=var_ref_node, right_side=char_at_node
+        )
+
+        main_node = StartNode(
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node, var_type_node_two, assignment_node_three],
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+
+class TestParserUpdateChar:
+    def test_update_char(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "updateChar", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 14, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 15, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 16, ",", 0),
+            Token(NUM_TOKEN_TYPE, 2, 18, "0", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 19, ",", 0),
+            Token(CHARACTER_TOKEN_TYPE, 2, 22, "Q", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 24, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 25, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+        ]
+
+        # Set up ast to compare to
+        string_node = StringNode(token_list[7], "Hello")
+        var_name_node = VariableNode(token_list[5], "x", False)
+        assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=var_name_node, right_side=string_node
+        )
+        var_type_node = VariableKeywordNode(
+            token_list[4], "string", child_node=assignment_node
+        )
+
+        var_ref_node = VariableReferenceNode(token_list[11], "x")
+        number_node = NumberNode(token_list[13], "0")
+        char_node = CharNode(token_list[15], "Q")
+        update_char_node = FunctionKeywordNode(
+            token_list[9],
+            "updateChar",
+            arg_nodes=[var_ref_node, number_node, char_node],
+        )
+
+        main_node = StartNode(
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node, update_char_node],
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [main_node]
+
+
+class TestParserCopyStr:
+    def test_copy_str(self):
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 11, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 2, 15, "olleH", 0),
+            Token(EOL_TOKEN_TYPE, 2, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 11, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 12, "y", 0),
+            Token(COMMA_TOKEN_TYPE, 3, 13, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 15, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 16, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 17, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+        ]
+
+        var_name_node_one = VariableNode(token_list[5], "x", False)
+        string_node_one = StringNode(token_list[7], "Hello")
+        assignment_node_one = AssignmentNode(
+            token_list[6], "=", left_side=var_name_node_one, right_side=string_node_one
+        )
+        var_type_node_one = VariableKeywordNode(
+            token_list[4], "string", child_node=assignment_node_one
+        )
+        var_name_node_two = VariableNode(token_list[10], "y", False)
+        string_node_two = StringNode(token_list[12], "olleH")
+        assignment_node_two = AssignmentNode(
+            token_list[11], "=", left_side=var_name_node_two, right_side=string_node_two
+        )
+        var_type_node_two = VariableKeywordNode(
+            token_list[9], "string", child_node=assignment_node_two
+        )
+        var_ref_node_one = VariableReferenceNode(token_list[16], "y")
+        var_ref_node_two = VariableReferenceNode(token_list[18], "x")
+        copy_str_node = FunctionKeywordNode(
+            token_list[14], "copyStr", arg_nodes=[var_ref_node_one, var_ref_node_two]
+        )
+
+        main_node = StartNode(
+            token_list[0],
+            token_list[0].value,
+            children_nodes=[var_type_node_one, var_type_node_two, copy_str_node],
         )
 
         parser = Parser(token_list)
