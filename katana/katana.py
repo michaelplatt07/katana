@@ -2838,6 +2838,9 @@ class Parser:
         # Evaluate the right side of the assignment
         if type(self.curr_block[2]) is FunctionKeywordNode:
             val_node = self.build_function_keyword_ast(self.curr_block[2:])
+        elif any(isinstance(node, PlusMinusNode) for node in self.curr_block[2:]):
+            # TODO(map) PEMDAS ISSUE This sends to a dumb method that doesn't do PEMDAS yet
+            val_node = self.build_arithmetic_ast(self.curr_block[2:])
         else:
             val_node = self.curr_block[2]
 
@@ -2845,11 +2848,15 @@ class Parser:
 
         return assignment_node
 
-    def build_arithmetic_ast(self):
+    def build_arithmetic_ast(self, node_list=None):
         # TODO(map) This is dumb right now. It doesn't handle PEMDAS
-        number_node_one = self.curr_block[0]
-        number_node_two = self.curr_block[2]
-        op_node = self.curr_block[1]
+        if node_list:
+            nodes = node_list
+        else:
+            nodes = self.curr_block
+        number_node_one = nodes[0]
+        number_node_two = nodes[2]
+        op_node = nodes[1]
         op_node.set_left_side(number_node_one)
         op_node.set_right_side(number_node_two)
         return op_node
@@ -3015,7 +3022,11 @@ class Parser:
         # if len(node_list) > 2:
         # pass
         # TODO Raise errors when the typing isn't correct on the parameters
-        breakpoint()
+        if any(isinstance(node, PlusMinusNode) for node in node_list[3:]):
+            # TODO(map) PEMDAS ISSUE : This is very not good and should be more robust. As things stands this will only
+            # check for an arithmetic node and send it off to a metod that can't do PEMDAS meaning this will only work
+            # for single mathetmatical expressions like 1 + 2 and not 1 + 2 + 3;
+            return [node_list[1], self.build_arithmetic_ast(node_list[3:])]
         return [node_list[1], node_list[3]]
 
     def build_update_char_ast(self, node_list):
@@ -3038,7 +3049,6 @@ class Parser:
         # unit of work like a single line of code or if we are going to have a
         # block with a body
         first_node = self.process_token_rewrite()
-        # breakpoint()
 
         # Determine the flag for the block type that is being parsed.
         if type(first_node) == StartNode:
@@ -5639,7 +5649,6 @@ class Compiler:
                 # We don't know how to parse this keyword.
                 assert False, f"Unable to parse Function Keyword Node {node}"
             if node.arg_nodes is None:
-                # breakpoint()
                 print()
             for arg_node in node.arg_nodes:
                 if not arg_node.visited:
@@ -7031,6 +7040,7 @@ class Compiler:
             )
         return asm
 
+    # TODO(map) Are these methods and others like it deprecated?
     def get_push_loop_start_val_asm(self, loop_start):
         return ["    ;; Push loop start and end on stack\n", f"    push {loop_start}\n"]
 
@@ -7038,6 +7048,8 @@ class Compiler:
         return ["    ;; Push loop start and end on stack\n", f"    push {loop_end}\n"]
 
     def get_push_loop_up_indices_with_var_asm(self, var_ref, loop_level, loop_count):
+        # TODO(map) This fails for anything other than int64 type because of the second command, mov rax. Might need a
+        # mov eax instead for instance
         return [
             "    ;; Push loop start and end on stack\n",
             f"    mov qword [loop_idx_{loop_level}], 0\n",
