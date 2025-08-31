@@ -7050,10 +7050,18 @@ class Compiler:
     def get_push_loop_up_indices_with_var_asm(self, var_ref, loop_level, loop_count):
         # TODO(map) This fails for anything other than int64 type because of the second command, mov rax. Might need a
         # mov eax instead for instance
+        if self.variables[var_ref]["int_type"] == INT_8:
+            reg_ref = "al"
+        elif self.variables[var_ref]["int_type"] == INT_16:
+            reg_ref = "ax"
+        elif self.variables[var_ref]["int_type"] == INT_32:
+            reg_ref = "eax"
+        elif self.variables[var_ref]["int_type"] == INT_64:
+            reg_ref = "rax"
         return [
             "    ;; Push loop start and end on stack\n",
             f"    mov qword [loop_idx_{loop_level}], 0\n",
-            f"    mov rax, [{self.variables[var_ref]['var_name']}]\n",
+            f"    mov {reg_ref}, [{self.variables[var_ref]['var_name']}]\n",
             f"    mov qword [loop_end_{loop_level}], rax\n",
         ]
 
