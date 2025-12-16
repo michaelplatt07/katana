@@ -833,8 +833,8 @@ class TestParserCharAt:
 
         var_ref_node = VariableReferenceNode(token_list[14], "y")
         var_ref_node_two = VariableReferenceNode(token_list[18], "x")
-        number_node_one = VariableReferenceNode(token_list[20], "1")
-        number_node_two = VariableReferenceNode(token_list[22], "1")
+        number_node_one = NumberNode(token_list[20], "1")
+        number_node_two = NumberNode(token_list[22], "1")
         plus_node = PlusMinusNode(
             token_list[21], "+", left_side=number_node_one, right_side=number_node_two
         )
