@@ -1,51 +1,23 @@
-from katana.katana import (
-    ASSIGNMENT_TOKEN_TYPE,
-    COMMA_TOKEN_TYPE,
-    CHARACTER_TOKEN_TYPE,
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    EQUAL_TOKEN_TYPE,
-    HIGH,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    LOW,
-    MEDIUM,
-    MINUS_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    RANGE_INDICATION_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_PAREN_TOKEN_TYPE,
-    STRING_TOKEN_TYPE,
-    ULTRA_HIGH,
-    VARIABLE_NAME_TOKEN_TYPE,
-    VARIABLE_REFERENCE_TOKEN_TYPE,
-    ArgSeparatorNode,
-    CharNode,
-    AssignmentNode,
-    CompareNode,
-    FunctionKeywordNode,
-    LeftParenNode,
-    LogicKeywordNode,
-    LoopDownKeywordNode,
-    LoopFromKeywordNode,
-    LoopUpKeywordNode,
-    MultiplyDivideNode,
-    NumberNode,
-    Parser,
-    PlusMinusNode,
-    RangeNode,
-    RightParenNode,
-    StartNode,
-    StringNode,
-    Token,
-    VariableKeywordNode,
-    VariableNode,
-    VariableReferenceNode,
-)
+from katana.katana import (ASSIGNMENT_TOKEN_TYPE, CHARACTER_TOKEN_TYPE,
+                           COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
+                           DIVIDE_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
+                           HIGH, KEYWORD_TOKEN_TYPE,
+                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
+                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
+                           RANGE_INDICATION_TOKEN_TYPE,
+                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
+                           STRING_TOKEN_TYPE, ULTRA_HIGH,
+                           VARIABLE_NAME_TOKEN_TYPE,
+                           VARIABLE_REFERENCE_TOKEN_TYPE, ArgSeparatorNode,
+                           AssignmentNode, CharNode, CompareNode,
+                           FunctionKeywordNode, LeftParenNode,
+                           LogicKeywordNode, LoopDownKeywordNode,
+                           LoopFromKeywordNode, LoopUpKeywordNode,
+                           MultiplyDivideNode, NumberNode, Parser,
+                           PlusMinusNode, RangeNode, RightParenNode, StartNode,
+                           StringNode, Token, VariableKeywordNode,
+                           VariableNode, VariableReferenceNode)
 
 
 class TestParserSingleLine:
@@ -144,6 +116,36 @@ class TestParserSingleLine:
         num_node = NumberNode(token_list[3], "8")
         assignment_node = AssignmentNode(
             token_list[2], "=", left_side=var_name_node, right_side=num_node
+        )
+        var_type_node = VariableKeywordNode(
+            token_list[0], "int8", child_node=assignment_node
+        )
+
+        parser = Parser(token_list)
+        parser.parse()
+        assert parser.get_nodes() == [var_type_node]
+
+    def test_build_var_assignment_with_arithmetic_ast(self):
+        # Token list for a single line of code declaring a var with addition
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "int8", ULTRA_HIGH),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 0, 6, "x", LOW),
+            Token(ASSIGNMENT_TOKEN_TYPE, 0, 8, "=", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 10, "8", LOW),
+            Token(PLUS_TOKEN_TYPE, 0, 12, "+", HIGH),
+            Token(NUM_TOKEN_TYPE, 0, 14, "4", LOW),
+            Token(EOL_TOKEN_TYPE, 0, 15, ";", LOW),
+        ]
+
+        # Set up the ast to compare against
+        var_name_node = VariableNode(token_list[1], "x", False)
+        num_node_one = NumberNode(token_list[3], "8")
+        num_node_two = NumberNode(token_list[5], "4")
+        plus_node = PlusMinusNode(
+            token_list[4], "+", left_side=num_node_one, right_side=num_node_two
+        )
+        assignment_node = AssignmentNode(
+            token_list[2], "=", left_side=var_name_node, right_side=plus_node
         )
         var_type_node = VariableKeywordNode(
             token_list[0], "int8", child_node=assignment_node

@@ -2763,21 +2763,34 @@ class Parser:
         return ret_nodes
 
     def parse(self):
-        while self.has_next_token:
-            self.parse_block()
-            if len(self.curr_block) == 0:
-                # Do nothing because we didn't get nodes to parse
-                pass
-            elif type(self.curr_block[0]) == StartNode:
-                self.node_list.append(self.build_main_node())
-            elif type(self.curr_block[0]) == NumberNode:
-                self.node_list.append(self.build_arithmetic_ast())
-            elif type(self.curr_block[0]) == VariableKeywordNode:
-                self.node_list.append(self.build_var_dec_ast())
-            else:
-                assert (
-                    False
-                ), f"Error building AST for block starting with {type(self.curr_block[0])}"
+        try:
+            while self.has_next_token:
+                self.parse_block()
+                if len(self.curr_block) == 0:
+                    # Do nothing because we didn't get nodes to parse
+                    pass
+                elif type(self.curr_block[0]) == StartNode:
+                    self.node_list.append(self.build_main_node())
+                elif type(self.curr_block[0]) == NumberNode:
+                    self.node_list.append(self.build_arithmetic_ast())
+                elif type(self.curr_block[0]) == VariableKeywordNode:
+                    self.node_list.append(self.build_var_dec_ast())
+                else:
+                    assert (
+                        False
+                    ), f"Error building AST for block starting with {type(self.curr_block[0])}"
+        except KeywordMisuseException as kme:
+            print_exception_message(program_lines, kme.col_num, kme)
+            sys.exit()
+        except TooManyArgsException as tmae:
+            print_exception_message(program_lines, tmae.col_num, tmae)
+            sys.exit()
+        except NotEnoughArgsException as neae:
+            print_exception_message(program_lines, neae.col_num, neae)
+            sys.exit()
+        except InvalidArgsException as iae:
+            print_exception_message(program_lines, iae.col_num, iae)
+            sys.exit()
 
     def build_main_node(self):
         main_node = self.curr_block[0]
@@ -2816,7 +2829,12 @@ class Parser:
                 self.curr_block[right_side_idx_start:]
             )
         else:
-            val_node = self.curr_block[right_side_idx_start]
+            # NOTE(map) This doesn't feel like it should work correctly for all cases. Is it really just as simple as
+            # if all other check above fail, we know it's an arithmetic line??
+            val_node = self.build_arithmetic_line_ast(
+                self.curr_block[right_side_idx_start:]
+            )
+            # val_node = self.curr_block[right_side_idx_start]
 
         # Finish building the assignment AST
         assignment_node.set_left_side(var_name_node)
@@ -2826,6 +2844,10 @@ class Parser:
         if const_node is not None:
             const_node.set_child_node(var_type_node)
             return const_node
+
+        self.variable_to_type_map[var_type_node.child_node.left_side.value] = (
+            var_type_node.value
+        )
 
         return var_type_node
 
@@ -2976,9 +2998,19 @@ class Parser:
 
         function_args = []
         if keyword_node.token.value in [PRINT, PRINTL]:
-            function_args = self.build_print_args_ast(node_list[1:])
+            function_args = self.build_print_args_ast(
+                keyword_node.token.row,
+                keyword_node.token.col,
+                keyword_node.token.value,
+                node_list[1:],
+            )
         elif keyword_node.token.value == CHAR_AT:
-            function_args = self.build_char_at_ast(node_list[1:])
+            function_args = self.build_char_at_ast(
+                keyword_node.token.row,
+                keyword_node.token.col,
+                keyword_node.token.value,
+                node_list[1:],
+            )
         elif keyword_node.token.value == UPDATE_CHAR:
             function_args = self.build_update_char_ast(node_list[1:])
         elif keyword_node.token.value == COPY_STR:
@@ -2992,8 +3024,14 @@ class Parser:
 
         return keyword_node
 
-    def build_print_args_ast(self, node_list):
+    def build_print_args_ast(self, row, col, value, node_list):
         arg_ast = None
+
+        # Validation of the signature of the print being used
+        if len(node_list) == 0:
+            raise KeywordMisuseException(row, col, value, PRINT_SIGNATURE)
+        elif any([type(node) is ArgSeparatorNode for node in node_list]):
+            raise TooManyArgsException(row, col)
 
         if (
             type(node_list[0])
@@ -3017,10 +3055,55 @@ class Parser:
 
         return [arg_ast]
 
-    def build_char_at_ast(self, node_list):
-        # TODO This should raise an error at some point
-        # if len(node_list) > 2:
-        # pass
+    def build_char_at_ast(self, line, col, keyword, node_list):
+        # Validation of the args being present
+        args_len = len(
+            [
+                node
+                for node in node_list
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if len(node_list) <= 2:
+            # We raise if we are at two or lower nodes in the node list because that means just parenthesis are being
+            # passed instead of including some parameters
+            raise KeywordMisuseException(line, col, keyword, CHAR_AT_SIGNATURE)
+        elif args_len < 2:
+            # Raise if we less than two args since the signature requires two args exactly.
+            raise NotEnoughArgsException(line, col)
+        elif (
+            type(node_list[1]) is not StringNode
+            and type(node_list[1]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[1]))
+        elif (
+            type(node_list[1]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[1].value)
+            and self.variable_to_type_map.get(node_list[1].value) != STRING
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[1].value),
+            )
+        elif (
+            type(node_list[3]) is not NumberNode
+            and type(node_list[3]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[3]))
+        elif (
+            type(node_list[3]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[3].value)
+            and self.variable_to_type_map.get(node_list[3].value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[3].value),
+            )
+
         # TODO Raise errors when the typing isn't correct on the parameters
         if any(isinstance(node, PlusMinusNode) for node in node_list[3:]):
             # TODO(map) PEMDAS ISSUE : This is very not good and should be more robust. As things stands this will only
