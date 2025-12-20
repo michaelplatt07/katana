@@ -1031,7 +1031,7 @@ class TestParserInt:
         assignment_node = AssignmentNode(token_list[6], "=", x_node, three_node)
         variable_dec_node = VariableKeywordNode(token_list[4], "int64", assignment_node)
         x_ref_node = VariableReferenceNode(token_list[11], "x")
-        print_node = FunctionKeywordNode(token_list[9], "print", [x_ref_node])
+        print_node = FunctionKeywordNode(token_list[9], "print", arg_nodes=[x_ref_node])
         ast = StartNode(token_list[0], "main", [variable_dec_node, print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -1041,16 +1041,16 @@ class TestParserInt:
     def test_int_8_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int8", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
-            Token(NUM_TOKEN_TYPE, 13, 1, "288", 0),
-            Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int8", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 13, "288", 0),
+            Token(EOL_TOKEN_TYPE, 1, 16, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1061,16 +1061,16 @@ class TestParserInt:
     def test_int_16_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int16", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(NUM_TOKEN_TYPE, 14, 1, "65538", 0),
-            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int16", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "65538", 0),
+            Token(EOL_TOKEN_TYPE, 1, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1081,16 +1081,16 @@ class TestParserInt:
     def test_int_32_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int32", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(NUM_TOKEN_TYPE, 14, 1, "4294967298", 0),
-            Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int32", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "4294967298", 0),
+            Token(EOL_TOKEN_TYPE, 1, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):

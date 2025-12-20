@@ -2791,6 +2791,9 @@ class Parser:
         except InvalidArgsException as iae:
             print_exception_message(program_lines, iae.col_num, iae)
             sys.exit()
+        except BufferOverflowException as boe:
+            print_exception_message(program_lines, boe.col_num, boe)
+            sys.exit()
 
     def build_main_node(self):
         main_node = self.curr_block[0]
@@ -2835,6 +2838,21 @@ class Parser:
                 self.curr_block[right_side_idx_start:]
             )
             # val_node = self.curr_block[right_side_idx_start]
+
+        type_to_max_val = {
+            INT_8: 255,
+            INT_16: 65536,
+            INT_32: 4294967296,
+            INT_64: 14294967296,  # TODO(map) Get the right number
+        }
+        # TODO(map) Need to make a method to walk the right side and calculate
+        # the right side value to raise an error.
+        max_value = type_to_max_val.get(var_type_node.value)
+
+        if type(val_node) is NumberNode and max_value < int(val_node.value):
+            raise BufferOverflowException(
+                var_name_node.token.row, var_name_node.token.col
+            )
 
         # Finish building the assignment AST
         assignment_node.set_left_side(var_name_node)
