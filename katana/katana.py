@@ -3047,36 +3047,60 @@ class Parser:
 
         return keyword_node
 
-    def build_print_args_ast(self, row, col, value, node_list):
+    def build_print_args_ast(self, line, col, keyword, node_list):
+        # Validation of the args being present
+        args_len = len(
+            [
+                node
+                for node in node_list
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if len(node_list) <= 2:
+            # We raise if we are at two or lower nodes in the node list because that means just parenthesis are being
+            # passed instead of including some parameters
+            raise KeywordMisuseException(line, col, keyword, PRINT_SIGNATURE)
+        elif args_len < 1:
+            # Raise if we less than one arg since the signature requires two args exactly.
+            # This really won't get hit because the first if will catch the incorrect number of args
+            raise NotEnoughArgsException(line, col)
+        elif args_len > 1 and not any(
+            [type(node) in [PlusMinusNode, MultiplyDivideNode] for node in node_list]
+        ):
+            # TODO(map) Is there a better way to exclude the fact that an expression of math is valid here? There aren't
+            # actually too many args, even though there are three in the case of 1 + 2.
+            # Raise if we have more than one arg because print doesn't accept that
+            raise TooManyArgsException(line, col)
+        elif type(node_list[1]) not in [StringNode, VariableReferenceNode, NumberNode]:
+            # TODO(map) char is valid too
+            raise InvalidArgsException(line, col, keyword, type(node_list[1]))
+        elif (
+            type(node_list[1]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[1].value)
+            and self.variable_to_type_map.get(node_list[1].value)
+            not in (STRING,) + INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[1].value),
+            )
+
         # Need to pass the whole set of things like we did with other build methods and validate that. This means the
         # surrounding parenthesis of the function params will be included
         arg_ast = None
-
-        # Validation of the signature of the print being used
-        if len(node_list) == 0:
-            raise KeywordMisuseException(row, col, value, PRINT_SIGNATURE)
-        elif any([type(node) is ArgSeparatorNode for node in node_list]):
-            raise TooManyArgsException(row, col)
-
-        if (
-            type(node_list[0])
-            in [VariableReferenceNode, NumberNode, StringNode, CharNode]
-            and len(node_list) == 1
-        ):
-            arg_ast = node_list[0]
-        elif type(node_list[1]) == PlusMinusNode:
-            # TODO(map) This is a repeat of build_arithmetic_ast and should probably be used at some point
-            left_side_node = node_list[0]
-            right_side_node = node_list[2]
-            op_node = node_list[1]
-            op_node.set_left_side(left_side_node)
-            op_node.set_right_side(right_side_node)
-            arg_ast = op_node
+        if args_len > 1:
+            arg_ast = self.build_arithmetic_line_ast(
+                [
+                    node
+                    for node in node_list
+                    if type(node)
+                    not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+                ]
+            )
         else:
-            # TODO(map) This is not fully flushed out. It will fail for multiple arithmetic operations
-            assert (
-                False
-            ), f"Cannot have type {type(node)} as first arg in `print` function."
+            arg_ast = node_list[1]
 
         return [arg_ast]
 
@@ -3171,29 +3195,13 @@ class Parser:
             )
         elif (
             type(node_list[3]) is not NumberNode
-            and type(node_list[2]) is not VariableReferenceNode
-        ):
-            raise InvalidArgsException(line, col, keyword, type(node_list[2]))
-        elif (
-            type(node_list[2]) is VariableReferenceNode
-            and self.variable_to_type_map.get(node_list[2].value)
-            and self.variable_to_type_map.get(node_list[2].value) not in INT_KEYWORDS
-        ):
-            raise InvalidArgsException(
-                line,
-                col,
-                keyword,
-                self.variable_to_type_map.get(node_list[5].value),
-            )
-        elif (
-            type(node_list[3]) is not CharNode
             and type(node_list[3]) is not VariableReferenceNode
         ):
-            raise InvalidArgsException(line, col, keyword, type(node_list[2]))
+            raise InvalidArgsException(line, col, keyword, type(node_list[3]))
         elif (
             type(node_list[3]) is VariableReferenceNode
             and self.variable_to_type_map.get(node_list[3].value)
-            and self.variable_to_type_map.get(node_list[3].value) != CHAR
+            and self.variable_to_type_map.get(node_list[3].value) not in INT_KEYWORDS
         ):
             raise InvalidArgsException(
                 line,
@@ -3201,8 +3209,24 @@ class Parser:
                 keyword,
                 self.variable_to_type_map.get(node_list[3].value),
             )
+        elif (
+            type(node_list[5]) is not CharNode
+            and type(node_list[3]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[5]))
+        elif (
+            type(node_list[3]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[5].value)
+            and self.variable_to_type_map.get(node_list[5].value) != CHAR
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[5].value),
+            )
 
-        return [node_list[0], node_list[2], node_list[4]]
+        return [node_list[1], node_list[3], node_list[5]]
 
     def build_copy_str_ast(self, node_list):
         # TODO This should raise an error at some point

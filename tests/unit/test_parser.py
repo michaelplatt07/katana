@@ -1,53 +1,24 @@
-from katana.katana import (
-    ASSIGNMENT_TOKEN_TYPE,
-    CHARACTER_TOKEN_TYPE,
-    COMMA_TOKEN_TYPE,
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    EQUAL_TOKEN_TYPE,
-    HIGH,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    LOW,
-    MEDIUM,
-    MINUS_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    RANGE_INDICATION_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_PAREN_TOKEN_TYPE,
-    STRING_TOKEN_TYPE,
-    ULTRA_HIGH,
-    VARIABLE_NAME_TOKEN_TYPE,
-    VARIABLE_REFERENCE_TOKEN_TYPE,
-    ArgSeparatorNode,
-    CharNode,
-    AssignmentNode,
-    CompareNode,
-    FunctionKeywordNode,
-    LeftCurlBraceNode,
-    LeftParenNode,
-    LogicKeywordNode,
-    LoopDownKeywordNode,
-    LoopFromKeywordNode,
-    LoopUpKeywordNode,
-    MultiplyDivideNode,
-    NumberNode,
-    Parser,
-    PlusMinusNode,
-    RangeNode,
-    RightCurlBraceNode,
-    RightParenNode,
-    StartNode,
-    StringNode,
-    Token,
-    VariableKeywordNode,
-    VariableNode,
-    VariableReferenceNode,
-)
+from katana.katana import (ASSIGNMENT_TOKEN_TYPE, CHARACTER_TOKEN_TYPE,
+                           COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
+                           DIVIDE_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
+                           HIGH, KEYWORD_TOKEN_TYPE,
+                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                           LOW, MEDIUM, MINUS_TOKEN_TYPE, MULTIPLY_TOKEN_TYPE,
+                           NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
+                           RANGE_INDICATION_TOKEN_TYPE,
+                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
+                           STRING_TOKEN_TYPE, ULTRA_HIGH,
+                           VARIABLE_NAME_TOKEN_TYPE,
+                           VARIABLE_REFERENCE_TOKEN_TYPE, ArgSeparatorNode,
+                           AssignmentNode, CharNode, CompareNode,
+                           FunctionKeywordNode, LeftCurlBraceNode,
+                           LeftParenNode, LogicKeywordNode,
+                           LoopDownKeywordNode, LoopFromKeywordNode,
+                           LoopUpKeywordNode, MultiplyDivideNode, NumberNode,
+                           Parser, PlusMinusNode, RangeNode,
+                           RightCurlBraceNode, RightParenNode, StartNode,
+                           StringNode, Token, VariableKeywordNode,
+                           VariableNode, VariableReferenceNode)
 
 
 class TestParserProcessBlock:
@@ -417,7 +388,9 @@ class TestParserPrintFunctionKeyword:
         print_node = FunctionKeywordNode(token_list[0], "print")
         expected_node_list = [
             print_node,
+            LeftParenNode(token_list[1], "("),
             NumberNode(token_list[2], "1"),
+            RightParenNode(token_list[3], ")"),
         ]
         parser = Parser(token_list)
 
@@ -438,7 +411,9 @@ class TestParserPrintFunctionKeyword:
         print_node = FunctionKeywordNode(token_list[0], "printl")
         expected_node_list = [
             print_node,
+            LeftParenNode(token_list[1], "("),
             NumberNode(token_list[2], "1"),
+            RightParenNode(token_list[3], ")"),
         ]
         parser = Parser(token_list)
 
@@ -469,7 +444,9 @@ class TestParserPrintFunctionKeyword:
         ]
         second_expected_node_list = [
             FunctionKeywordNode(token_list[5], "print"),
+            LeftParenNode(token_list[6], "("),
             VariableReferenceNode(token_list[7], "x"),
+            RightParenNode(token_list[8], ")"),
         ]
 
         parser = Parser(token_list)
@@ -506,9 +483,11 @@ class TestParserPrintFunctionKeyword:
         ]
         second_expected_node_list = [
             FunctionKeywordNode(token_list[5], "print"),
+            LeftParenNode(token_list[6], "("),
             VariableReferenceNode(token_list[7], "x"),
             PlusMinusNode(token_list[8], "+"),
             NumberNode(token_list[9], "1"),
+            RightParenNode(token_list[10], ")"),
         ]
 
         parser = Parser(token_list)
@@ -548,7 +527,9 @@ class TestConditionals:
         ]
         second_expected_node_list = [
             FunctionKeywordNode(token_list[7], "print"),
+            LeftParenNode(token_list[8], "("),
             StringNode(token_list[9], "True"),
+            RightParenNode(token_list[10], ")"),
         ]
 
         parser = Parser(token_list)
@@ -591,11 +572,15 @@ class TestConditionals:
         ]
         second_expected_node_list = [
             FunctionKeywordNode(token_list[7], "print"),
+            LeftParenNode(token_list[8], "("),
             StringNode(token_list[9], "True"),
+            RightParenNode(token_list[10], ")"),
         ]
         third_expected_node_list = [
             FunctionKeywordNode(token_list[13], "print"),
+            LeftParenNode(token_list[14], "("),
             StringNode(token_list[15], "False"),
+            RightParenNode(token_list[16], ")"),
         ]
 
         parser = Parser(token_list)
@@ -650,14 +635,18 @@ class TestConditionals:
         ]
         second_expected_node_list = [
             FunctionKeywordNode(token_list[7], "print"),
+            LeftParenNode(token_list[8], "("),
             StringNode(token_list[9], "True"),
+            RightParenNode(token_list[10], ")"),
         ]
         third_expected_node_list = [
             LogicKeywordNode(token_list[13], "else"),
         ]
         fourth_expected_node_list = [
             FunctionKeywordNode(token_list[15], "print"),
+            LeftParenNode(token_list[16], "("),
             StringNode(token_list[17], "False"),
+            RightParenNode(token_list[18], ")"),
         ]
 
         parser = Parser(token_list)
@@ -745,11 +734,13 @@ class TestParserUpdateChar:
         ]
         expected_node_list_2 = [
             FunctionKeywordNode(token_list[5], "updateChar"),
+            LeftParenNode(token_list[6], "("),
             VariableReferenceNode(token_list[7], "x"),
             ArgSeparatorNode(token_list[8]),
             NumberNode(token_list[9], "0"),
             ArgSeparatorNode(token_list[10]),
             CharNode(token_list[11], "Q"),
+            RightParenNode(token_list[12], ")"),
         ]
 
         parser = Parser(token_list)
@@ -797,9 +788,11 @@ class TestParserCopyStr:
         ]
         expected_node_list_three = [
             FunctionKeywordNode(token_list[10], "copyStr"),
+            LeftParenNode(token_list[11], "("),
             VariableReferenceNode(token_list[12], "y"),
             ArgSeparatorNode(token_list[13]),
             VariableReferenceNode(token_list[14], "x"),
+            RightParenNode(token_list[15], ")"),
         ]
 
         parser = Parser(token_list)
