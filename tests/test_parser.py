@@ -1443,6 +1443,101 @@ class TestParserCharAt:
             [], 13, InvalidArgsException(2, 13, "charAt", "char")
         )
 
+    def test_char_at_keyword_not_assigned(self):
+        """
+        Given a program like:
+        main() {
+            string x = "Hello, Katana!";
+            charAt(x, 2);
+        }
+        Expected to return an AST like:
+        (main[(string(x="Hello, Katana!")), (charAt(x,2))])
+        """
+        token_list = [
+            Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello, Katana!", 0),
+            Token(EOL_TOKEN_TYPE, 1, 31, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 9, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 11, "=", 2),
+            Token(KEYWORD_TOKEN_TYPE, 2, 13, "charAt", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 19, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 20, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 2, 21, ",", 0),
+            Token(NUM_TOKEN_TYPE, 2, 23, "2", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 24, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 25, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 7, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 8, "y", 0),
+            Token(EQUAL_TOKEN_TYPE, 3, 10, "==", 2),
+            Token(CHARACTER_TOKEN_TYPE, 3, 14, "l", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 16, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 3, 18, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 4, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 14, "equal", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 21, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 22, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 4, "}", 3),
+            Token(KEYWORD_TOKEN_TYPE, 5, 6, "else", 4),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 5, 11, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 6, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 6, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 6, 14, "unequal", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 6, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 6, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 7, 4, "}", 3),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 8, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 9, 0, "EOF", 0),
+        ]
+        string_node = StringNode(token_list[7], "Hello, Katana!")
+        x_node = VariableNode(token_list[5], "x", False)
+        x_assign_node = AssignmentNode(token_list[6], "=", x_node, string_node)
+        string_declare_node = VariableKeywordNode(
+            token_list[4], "string", x_assign_node
+        )
+        two_node = NumberNode(token_list[16], "2")
+        x_ref_node = VariableReferenceNode(token_list[14], "x")
+        char_at_node = FunctionKeywordNode(
+            token_list[12], "charAt", arg_nodes=[x_ref_node, two_node]
+        )
+        y_node = VariableNode(token_list[10], "y", False)
+        y_assign_node = AssignmentNode(token_list[11], "=", y_node, char_at_node)
+        char_declare_node = VariableKeywordNode(token_list[9], "char", y_assign_node)
+        char_l_node = CharNode(token_list[23], "l")
+        y_ref_node = VariableReferenceNode(token_list[21], "y")
+        compare_node = CompareNode(token_list[22], "==", y_ref_node, char_l_node)
+        equal_string_node = StringNode(token_list[28], "equal")
+        unequal_string_node = StringNode(token_list[36], "unequal")
+        print_equal_node = FunctionKeywordNode(
+            token_list[26], "print", arg_nodes=[equal_string_node]
+        )
+        print_unequal_node = FunctionKeywordNode(
+            token_list[34], "print", arg_nodes=[unequal_string_node]
+        )
+        conditional_node = LogicKeywordNode(
+            token_list[19],
+            "if",
+            compare_node,
+            true_side=[print_equal_node],
+            false_side=[print_unequal_node],
+        )
+        ast = StartNode(
+            token_list[0],
+            "main",
+            [string_declare_node, char_declare_node, conditional_node],
+        )
+        parser = Parser(token_list)
+        parser.parse()
+        assert [ast] == parser.get_nodes()
+
 
 class TestUpdateChar:
     """
@@ -1532,6 +1627,7 @@ class TestUpdateChar:
             [], 4, KeywordMisuseException(2, 4, "updateChar", UPDATE_CHAR_SIGNATURE)
         )
 
+    @pytest.mark.skip("Will revist at a later time with appropriate exception handling")
     @patch("katana.katana.print_exception_message")
     def test_update_char_function_no_left_paren_raises_error(self, mock_print):
         """

@@ -3030,7 +3030,12 @@ class Parser:
                 node_list[1:],
             )
         elif keyword_node.token.value == UPDATE_CHAR:
-            function_args = self.build_update_char_ast(node_list[1:])
+            function_args = self.build_update_char_ast(
+                keyword_node.token.row,
+                keyword_node.token.col,
+                keyword_node.token.value,
+                node_list[1:],
+            )
         elif keyword_node.token.value == COPY_STR:
             function_args = self.build_copy_str_ast(node_list[1:])
         else:
@@ -3043,6 +3048,8 @@ class Parser:
         return keyword_node
 
     def build_print_args_ast(self, row, col, value, node_list):
+        # Need to pass the whole set of things like we did with other build methods and validate that. This means the
+        # surrounding parenthesis of the function params will be included
         arg_ast = None
 
         # Validation of the signature of the print being used
@@ -3130,9 +3137,71 @@ class Parser:
             return [node_list[1], self.build_arithmetic_ast(node_list[3:])]
         return [node_list[1], node_list[3]]
 
-    def build_update_char_ast(self, node_list):
-        # TODO This should raise an error at some point
-        # TODO Raise errors when the typing isn't correct on the parameters
+    def build_update_char_ast(self, line, col, keyword, node_list):
+        # Validation of the args being present
+        args_len = len(
+            [
+                node
+                for node in node_list
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if len(node_list) <= 2:
+            # We raise if we are at two or lower nodes in the node list because that means just parenthesis are being
+            # passed instead of including some parameters
+            raise KeywordMisuseException(line, col, keyword, UPDATE_CHAR_SIGNATURE)
+        elif args_len < 3:
+            # Raise if we less than three args since the signature requires three args exactly.
+            raise NotEnoughArgsException(line, col)
+        elif (
+            type(node_list[1]) is not StringNode
+            and type(node_list[1]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[1]))
+        elif (
+            type(node_list[1]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[1].value)
+            and self.variable_to_type_map.get(node_list[1].value) != STRING
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[1].value),
+            )
+        elif (
+            type(node_list[3]) is not NumberNode
+            and type(node_list[2]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[2]))
+        elif (
+            type(node_list[2]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[2].value)
+            and self.variable_to_type_map.get(node_list[2].value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[5].value),
+            )
+        elif (
+            type(node_list[3]) is not CharNode
+            and type(node_list[3]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[2]))
+        elif (
+            type(node_list[3]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[3].value)
+            and self.variable_to_type_map.get(node_list[3].value) != CHAR
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[3].value),
+            )
+
         return [node_list[0], node_list[2], node_list[4]]
 
     def build_copy_str_ast(self, node_list):
@@ -3301,12 +3370,15 @@ class Parser:
 
         # Move onto the next node which should be a left paren
         self.advance_token()
+        block.append(self.process_token_rewrite())
         # Move past the left paren
         self.advance_token()
         # Get the param for the function call
         while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
             block.append(self.process_token_rewrite())
             self.advance_token()
+
+        block.append(self.process_token_rewrite())
         # Move past the right paren
         self.advance_token()
 
