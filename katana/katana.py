@@ -3037,7 +3037,12 @@ class Parser:
                 node_list[1:],
             )
         elif keyword_node.token.value == COPY_STR:
-            function_args = self.build_copy_str_ast(node_list[1:])
+            function_args = self.build_copy_str_ast(
+                keyword_node.token.row,
+                keyword_node.token.col,
+                keyword_node.token.value,
+                node_list[1:],
+            )
         else:
             assert (
                 False
@@ -3228,10 +3233,56 @@ class Parser:
 
         return [node_list[1], node_list[3], node_list[5]]
 
-    def build_copy_str_ast(self, node_list):
-        # TODO This should raise an error at some point
-        # TODO Raise errors when the typing isn't correct on the parameters
-        return [node_list[0], node_list[2]]
+    def build_copy_str_ast(self, line, col, keyword, node_list):
+        # Validation of the args being present
+        args_len = len(
+            [
+                node
+                for node in node_list
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if len(node_list) <= 2:
+            # We raise if we are at two or lower nodes in the node list because that means just parenthesis are being
+            # passed instead of including some parameters
+            raise KeywordMisuseException(line, col, keyword, COPY_STR_SIGNATURE)
+        elif args_len < 2:
+            # Raise if we less than three args since the signature requires three args exactly.
+            raise NotEnoughArgsException(line, col)
+        elif (
+            type(node_list[1]) is not StringNode
+            and type(node_list[1]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[1]))
+        elif (
+            type(node_list[1]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[1].value)
+            and self.variable_to_type_map.get(node_list[1].value) != STRING
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[1].value),
+            )
+        elif (
+            type(node_list[3]) is not StringNode
+            and type(node_list[3]) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(line, col, keyword, type(node_list[3]))
+        elif (
+            type(node_list[3]) is VariableReferenceNode
+            and self.variable_to_type_map.get(node_list[3].value)
+            and self.variable_to_type_map.get(node_list[3].value) != STRING
+        ):
+            raise InvalidArgsException(
+                line,
+                col,
+                keyword,
+                self.variable_to_type_map.get(node_list[3].value),
+            )
+
+        return [node_list[1], node_list[3]]
 
     def parse_block(self):
         # Method for parsing a single block of code. A block of code can be
@@ -3390,6 +3441,7 @@ class Parser:
             assert False, f"Cannot handle loop of type {type(loop_node)}"
 
     def read_function_keyword_node_line(self, function_node):
+        # TODO(map) Clean up how this is being built. Adding and then advancing one at a time isn't great
         block = [function_node]
 
         # Move onto the next node which should be a left paren

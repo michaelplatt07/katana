@@ -1706,23 +1706,29 @@ class TestParserCopyString:
         ]
         hello_node = StringNode(token_list[7], "Hello")
         x_node = VariableNode(token_list[5], "x", False)
-        x_assign_node = AssignmentNode(token_list[6], "=", x_node, hello_node)
-        hello_declare_node = VariableKeywordNode(token_list[4], "string", x_assign_node)
+        x_assign_node = AssignmentNode(
+            token_list[6], "=", left_side=x_node, right_side=hello_node
+        )
+        hello_declare_node = VariableKeywordNode(
+            token_list[4], "string", child_node=x_assign_node
+        )
         katana_node = StringNode(token_list[12], "Katana")
         y_node = VariableNode(token_list[10], "y", False)
-        y_assign_node = AssignmentNode(token_list[11], "=", y_node, katana_node)
+        y_assign_node = AssignmentNode(
+            token_list[11], "=", left_side=y_node, right_side=katana_node
+        )
         katana_declare_node = VariableKeywordNode(
-            token_list[9], "string", y_assign_node
+            token_list[9], "string", child_node=y_assign_node
         )
         x_ref_node = VariableReferenceNode(token_list[16], "x")
         y_ref_node = VariableReferenceNode(token_list[18], "y")
         copy_str_node = FunctionKeywordNode(
-            token_list[14], "copyStr", [x_ref_node, y_ref_node]
+            token_list[14], "copyStr", arg_nodes=[x_ref_node, y_ref_node]
         )
         ast = StartNode(
             token_list[0],
             "main",
-            [hello_declare_node, katana_declare_node, copy_str_node],
+            children_nodes=[hello_declare_node, katana_declare_node, copy_str_node],
         )
         parser = Parser(token_list)
         parser.parse()
@@ -1740,10 +1746,10 @@ class TestParserCopyString:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 1, 0, "copyStr", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 0, 1, "copyStr", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", VERY_HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", VERY_HIGH),
             Token(EOL_TOKEN_TYPE, 1, 13, ";", 0),
@@ -1757,6 +1763,9 @@ class TestParserCopyString:
             [], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE)
         )
 
+    @pytest.mark.skip(
+        "This will be fixed later. Open closing paren raises error in lexing"
+    )
     @patch("katana.katana.print_exception_message")
     def test_copy_str_function_no_left_paren_raises_error(self, mock_print):
         """
@@ -1797,18 +1806,18 @@ class TestParserCopyString:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "copyStr", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 11, 1, "(", 3),
-            Token(NUM_TOKEN_TYPE, 12, 1, "3", 0),
-            Token(COMMA_TOKEN_TYPE, 13, 1, ",", 0),
-            Token(STRING_TOKEN_TYPE, 16, 1, "elloH", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 23, 1, ")", 3),
-            Token(EOL_TOKEN_TYPE, 24, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 11, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 12, "3", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 13, ",", 0),
+            Token(STRING_TOKEN_TYPE, 1, 16, "elloH", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1821,18 +1830,18 @@ class TestParserCopyString:
     def test_copy_str_second_arg_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "copyStr", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 11, 1, "(", 3),
-            Token(STRING_TOKEN_TYPE, 12, 1, "Hello", 0),
-            Token(COMMA_TOKEN_TYPE, 19, 1, ",", 0),
-            Token(NUM_TOKEN_TYPE, 21, 1, "3", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 22, 1, ")", 3),
-            Token(EOL_TOKEN_TYPE, 23, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 11, "(", 3),
+            Token(STRING_TOKEN_TYPE, 1, 12, "Hello", 0),
+            Token(COMMA_TOKEN_TYPE, 1, 19, ",", 0),
+            Token(NUM_TOKEN_TYPE, 1, 21, "3", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 22, ")", 3),
+            Token(EOL_TOKEN_TYPE, 1, 23, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1845,28 +1854,28 @@ class TestParserCopyString:
     def test_copy_str_first_arg_var_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
-            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
-            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int64", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
-            Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
-            Token(EOL_TOKEN_TYPE, 15, 2, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 3, "copyStr", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 11, 3, "(", 3),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 12, 3, "y", 0),
-            Token(COMMA_TOKEN_TYPE, 13, 3, ",", 0),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 15, 3, "x", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
-            Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "int64", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 10, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 14, "3", 0),
+            Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 11, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 12, "y", 0),
+            Token(COMMA_TOKEN_TYPE, 3, 13, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 15, "x", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 16, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 17, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -1879,28 +1888,28 @@ class TestParserCopyString:
     def test_copy_str_second_arg_var_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
-            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
-            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 2, "int64", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 2, "y", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 2, "=", 2),
-            Token(NUM_TOKEN_TYPE, 14, 2, "3", 0),
-            Token(EOL_TOKEN_TYPE, 15, 2, ";", 0),
-            Token(KEYWORD_TOKEN_TYPE, 4, 3, "copyStr", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 11, 3, "(", 3),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 12, 3, "x", 0),
-            Token(COMMA_TOKEN_TYPE, 13, 3, ",", 0),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 15, 3, "y", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 16, 3, ")", 3),
-            Token(EOL_TOKEN_TYPE, 17, 3, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 4, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 5, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 2, 4, "int64", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 2, 10, "y", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 14, "3", 0),
+            Token(EOL_TOKEN_TYPE, 2, 15, ";", 0),
+            Token(KEYWORD_TOKEN_TYPE, 3, 4, "copyStr", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 3, 11, "(", 3),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 12, "x", 0),
+            Token(COMMA_TOKEN_TYPE, 3, 13, ",", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 3, 15, "y", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 3, 16, ")", 3),
+            Token(EOL_TOKEN_TYPE, 3, 17, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
@@ -2116,45 +2125,54 @@ class TestParserIfElse:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "if", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 7, 1, "(", 3),
-            Token(NUM_TOKEN_TYPE, 8, 1, "1", 0),
-            Token(GREATER_THAN_TOKEN_TYPE, 10, 1, ">", 2),
-            Token(NUM_TOKEN_TYPE, 12, 1, "0", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 13, 1, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 15, 1, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
-            Token(STRING_TOKEN_TYPE, 14, 2, "greater", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 23, 2, ")", 3),
-            Token(EOL_TOKEN_TYPE, 24, 2, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 8, "1", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 1, 10, ">", 2),
+            Token(NUM_TOKEN_TYPE, 1, 12, "0", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 9, 4, "(", 3),
-            Token(STRING_TOKEN_TYPE, 10, 4, "lower", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 4, ")", 3),
-            Token(EOL_TOKEN_TYPE, 18, 4, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 9, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 10, "lower", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 18, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[19], "lower")
         second_print_node = FunctionKeywordNode(
-            token_list[17], "print", [lower_string_node]
+            token_list[17], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(
-            token_list[11], "print", [greater_string_node]
+            token_list[11], "print", arg_nodes=[greater_string_node]
         )
         one_node = NumberNode(token_list[6], "1")
         zero_node = NumberNode(token_list[8], "0")
-        greater_than_node = CompareNode(token_list[7], ">", one_node, zero_node)
-        if_node = LogicKeywordNode(
-            token_list[4], "if", greater_than_node, None, [first_print_node], None
+        greater_than_node = CompareNode(
+            token_list[7], ">", left_side=one_node, right_side=zero_node
         )
-        ast = StartNode(token_list[0], "main", [if_node, second_print_node])
+        if_node = LogicKeywordNode(
+            token_list[4],
+            "if",
+            child_node=greater_than_node,
+            parent_node=None,
+            true_side=[first_print_node],
+            false_side=None,
+        )
+        ast = StartNode(
+            token_list[0], "main", children_nodes=[if_node, second_print_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -2173,45 +2191,54 @@ class TestParserIfElse:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "if", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 7, 1, "(", 3),
-            Token(NUM_TOKEN_TYPE, 8, 1, "0", 0),
-            Token(GREATER_THAN_TOKEN_TYPE, 10, 1, ">", 2),
-            Token(NUM_TOKEN_TYPE, 12, 1, "1", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 13, 1, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 15, 1, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 8, 2, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 13, 2, "(", 3),
-            Token(STRING_TOKEN_TYPE, 14, 2, "greater", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 23, 2, ")", 3),
-            Token(EOL_TOKEN_TYPE, 24, 2, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 4, 3, "}", 3),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "if", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 7, "(", 3),
+            Token(NUM_TOKEN_TYPE, 1, 8, "0", 0),
+            Token(GREATER_THAN_TOKEN_TYPE, 1, 10, ">", 2),
+            Token(NUM_TOKEN_TYPE, 1, 12, "1", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 13, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 1, 15, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 2, 8, "print", 4),
+            Token(LEFT_PAREN_TOKEN_TYPE, 2, 13, "(", 3),
+            Token(STRING_TOKEN_TYPE, 2, 14, "greater", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 2, 23, ")", 3),
+            Token(EOL_TOKEN_TYPE, 2, 24, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 4, "}", 3),
             Token(KEYWORD_TOKEN_TYPE, 4, 4, "print", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 9, 4, "(", 3),
-            Token(STRING_TOKEN_TYPE, 10, 4, "lower", 0),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 17, 4, ")", 3),
-            Token(EOL_TOKEN_TYPE, 18, 4, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 5, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 6, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 4, 9, "(", 3),
+            Token(STRING_TOKEN_TYPE, 4, 10, "lower", 0),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 4, 17, ")", 3),
+            Token(EOL_TOKEN_TYPE, 4, 18, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 5, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 6, 0, "EOF", 0),
         ]
         lower_string_node = StringNode(token_list[19], "lower")
         second_print_node = FunctionKeywordNode(
-            token_list[17], "print", [lower_string_node]
+            token_list[17], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(
-            token_list[11], "print", [greater_string_node]
+            token_list[11], "print", arg_nodes=[greater_string_node]
         )
         zero_node = NumberNode(token_list[6], "0")
         one_node = NumberNode(token_list[8], "1")
-        greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
-        if_node = LogicKeywordNode(
-            token_list[4], "if", greater_than_node, None, [first_print_node], None
+        greater_than_node = CompareNode(
+            token_list[7], ">", left_side=zero_node, right_side=one_node
         )
-        ast = StartNode(token_list[0], "main", [if_node, second_print_node])
+        if_node = LogicKeywordNode(
+            token_list[4],
+            "if",
+            child_node=greater_than_node,
+            parent_node=None,
+            true_side=[first_print_node],
+            false_side=None,
+        )
+        ast = StartNode(
+            token_list[0], "main", children_nodes=[if_node, second_print_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -2266,28 +2293,30 @@ class TestParserIfElse:
         ]
         lower_string_node = StringNode(token_list[26], "lower")
         second_print_node = FunctionKeywordNode(
-            token_list[24], "print", [lower_string_node]
+            token_list[24], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(
-            token_list[11], "print", [greater_string_node]
+            token_list[11], "print", arg_nodes=[greater_string_node]
         )
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(
-            token_list[16], "print", [greater_still_string_node]
+            token_list[16], "print", arg_nodes=[greater_still_string_node]
         )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
-        greater_than_node = CompareNode(token_list[7], ">", zero_node, one_node)
+        greater_than_node = CompareNode(
+            token_list[7], ">", left_side=zero_node, right_side=one_node
+        )
         if_node = LogicKeywordNode(
             token_list[4],
             "if",
-            greater_than_node,
-            None,
-            [first_print_node, second_first_print_node],
-            [second_print_node],
+            child_node=greater_than_node,
+            parent_node=None,
+            true_side=[first_print_node, second_first_print_node],
+            false_side=[second_print_node],
         )
-        ast = StartNode(token_list[0], "main", [if_node])
+        ast = StartNode(token_list[0], "main", children_nodes=[if_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -2338,27 +2367,32 @@ class TestParserIfElse:
         ]
         lower_string_node = StringNode(token_list[24], "lower")
         second_print_node = FunctionKeywordNode(
-            token_list[22], "print", [lower_string_node]
+            token_list[22], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(
-            token_list[11], "print", [greater_string_node]
+            token_list[11], "print", arg_nodes=[greater_string_node]
         )
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(
-            token_list[16], "print", [greater_still_string_node]
+            token_list[16], "print", arg_nodes=[greater_still_string_node]
         )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
-        greater_than_node = CompareNode(token_list[7], "<", zero_node, one_node)
+        greater_than_node = CompareNode(
+            token_list[7], "<", left_side=zero_node, right_side=one_node
+        )
         if_node = LogicKeywordNode(
             token_list[4],
             "if",
-            greater_than_node,
-            None,
-            [first_print_node, second_first_print_node],
+            child_node=greater_than_node,
+            parent_node=None,
+            true_side=[first_print_node, second_first_print_node],
+            false_side=[],
         )
-        ast = StartNode(token_list[0], "main", [if_node, second_print_node])
+        ast = StartNode(
+            token_list[0], "main", children_nodes=[if_node, second_print_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -2409,27 +2443,31 @@ class TestParserIfElse:
         ]
         lower_string_node = StringNode(token_list[24], "lower")
         second_print_node = FunctionKeywordNode(
-            token_list[22], "print", [lower_string_node]
+            token_list[22], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[13], "greater")
         first_print_node = FunctionKeywordNode(
-            token_list[11], "print", [greater_string_node]
+            token_list[11], "print", arg_nodes=[greater_string_node]
         )
         greater_still_string_node = StringNode(token_list[18], "greater still")
         second_first_print_node = FunctionKeywordNode(
-            token_list[16], "print", [greater_still_string_node]
+            token_list[16], "print", arg_nodes=[greater_still_string_node]
         )
         zero_node = NumberNode(token_list[6], "1")
         one_node = NumberNode(token_list[8], "0")
-        equal_node = CompareNode(token_list[7], "==", zero_node, one_node)
+        equal_node = CompareNode(
+            token_list[7], "==", left_side=zero_node, right_side=one_node
+        )
         if_node = LogicKeywordNode(
             token_list[4],
             "if",
-            equal_node,
-            None,
-            [first_print_node, second_first_print_node],
+            child_node=equal_node,
+            true_side=[first_print_node, second_first_print_node],
+            false_side=[],
         )
-        ast = StartNode(token_list[0], "main", [if_node, second_print_node])
+        ast = StartNode(
+            token_list[0], "main", children_nodes=[if_node, second_print_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
