@@ -2904,6 +2904,28 @@ class Parser:
     def build_loop_up_ast(self):
         loop_node = self.curr_block[0]
         end_val_node = self.curr_block[1]
+        if (
+            type(end_val_node) is not NumberNode
+            and type(end_val_node) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                type(end_val_node),
+            )
+        elif (
+            type(end_val_node) is VariableReferenceNode
+            and self.variable_to_type_map.get(end_val_node.value)
+            and self.variable_to_type_map.get(end_val_node.value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                self.variable_to_type_map.get(end_val_node.value),
+            )
+
         loop_node.set_child_node(end_val_node)
 
         while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
@@ -2917,6 +2939,28 @@ class Parser:
     def build_loop_down_ast(self):
         loop_node = self.curr_block[0]
         end_val_node = self.curr_block[1]
+        if (
+            type(end_val_node) is not NumberNode
+            and type(end_val_node) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                type(end_val_node),
+            )
+        elif (
+            type(end_val_node) is VariableReferenceNode
+            and self.variable_to_type_map.get(end_val_node.value)
+            and self.variable_to_type_map.get(end_val_node.value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                self.variable_to_type_map.get(end_val_node.value),
+            )
+
         loop_node.set_child_node(end_val_node)
 
         while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
@@ -2992,7 +3036,7 @@ class Parser:
         elif type(self.curr_block[0]) is LoopUpKeywordNode:
             return self.build_loop_up_ast()
         elif type(self.curr_block[0]) is LoopDownKeywordNode:
-            return self.build_loop_up_ast()
+            return self.build_loop_down_ast()
         elif type(self.curr_block[0]) is LoopFromKeywordNode:
             return self.build_loop_from_ast()
         elif type(self.curr_block[0]) is FunctionKeywordNode:
