@@ -2903,8 +2903,36 @@ class Parser:
 
     def build_loop_up_ast(self):
         loop_node = self.curr_block[0]
-        end_val_node = self.curr_block[1]
-        if (
+        end_val_node = self.curr_block[2]
+
+        # Validation of the args
+        args_len = len(
+            [
+                node
+                for node in self.curr_block[1:]
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if any(type(node) is RangeNode for node in self.curr_block[1:]):
+            invalid_node = next(
+                node for node in self.curr_block[1:] if type(node) is RangeNode
+            )
+            raise InvalidArgsException(
+                invalid_node.token.row,
+                invalid_node.token.col,
+                loop_node.token.value,
+                type(invalid_node),
+            )
+        elif args_len > 1:
+            raise TooManyArgsException(end_val_node.token.row, end_val_node.token.col)
+        elif args_len <= 0:
+            raise KeywordMisuseException(
+                loop_node.token.row,
+                loop_node.token.col,
+                loop_node.token.value,
+                LOOP_UP_SIGNATURE,
+            )
+        elif (
             type(end_val_node) is not NumberNode
             and type(end_val_node) is not VariableReferenceNode
         ):
@@ -2938,8 +2966,36 @@ class Parser:
 
     def build_loop_down_ast(self):
         loop_node = self.curr_block[0]
-        end_val_node = self.curr_block[1]
-        if (
+        end_val_node = self.curr_block[2]
+
+        # Validation of the args
+        args_len = len(
+            [
+                node
+                for node in self.curr_block[1:]
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if any(type(node) is RangeNode for node in self.curr_block[1:]):
+            invalid_node = next(
+                node for node in self.curr_block[1:] if type(node) is RangeNode
+            )
+            raise InvalidArgsException(
+                invalid_node.token.row,
+                invalid_node.token.col,
+                loop_node.token.value,
+                type(invalid_node),
+            )
+        elif args_len > 1:
+            raise TooManyArgsException(end_val_node.token.row, end_val_node.token.col)
+        elif args_len <= 0:
+            raise KeywordMisuseException(
+                loop_node.token.row,
+                loop_node.token.col,
+                loop_node.token.value,
+                LOOP_DOWN_SIGNATURE,
+            )
+        elif (
             type(end_val_node) is not NumberNode
             and type(end_val_node) is not VariableReferenceNode
         ):
@@ -2973,9 +3029,75 @@ class Parser:
 
     def build_loop_from_ast(self):
         loop_node = self.curr_block[0]
-        start_val_node = self.curr_block[1]
-        end_val_node = self.curr_block[3]
-        range_node = self.curr_block[2]
+
+        # Validation of args
+        args_len = len(
+            [
+                node
+                for node in self.curr_block[1:]
+                if type(node) not in [ArgSeparatorNode, LeftParenNode, RightParenNode]
+            ]
+        )
+        if args_len <= 0:
+            raise KeywordMisuseException(
+                loop_node.token.row,
+                loop_node.token.col,
+                loop_node.token.value,
+                LOOP_FROM_SIGNATURE,
+            )
+        elif args_len < 2:
+            raise NotEnoughArgsException(loop_node.token.row, loop_node.token.col)
+
+        # If args length is met then we can access the values and start validating the args themselves
+        start_val_node = self.curr_block[2]
+        end_val_node = self.curr_block[4]
+        range_node = self.curr_block[3]
+
+        # Validate the first value node
+        if (
+            type(start_val_node) is not NumberNode
+            and type(start_val_node) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(
+                start_val_node.token.row,
+                start_val_node.token.col,
+                loop_node.token.value,
+                type(start_val_node),
+            )
+        elif (
+            type(start_val_node) is VariableReferenceNode
+            and self.variable_to_type_map.get(start_val_node.value)
+            and self.variable_to_type_map.get(start_val_node.value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                start_val_node.token.row,
+                start_val_node.token.col,
+                loop_node.token.value,
+                self.variable_to_type_map.get(start_val_node.value),
+            )
+        # Validate the second value node
+        elif (
+            type(end_val_node) is not NumberNode
+            and type(end_val_node) is not VariableReferenceNode
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                type(end_val_node),
+            )
+        elif (
+            type(end_val_node) is VariableReferenceNode
+            and self.variable_to_type_map.get(end_val_node.value)
+            and self.variable_to_type_map.get(end_val_node.value) not in INT_KEYWORDS
+        ):
+            raise InvalidArgsException(
+                end_val_node.token.row,
+                end_val_node.token.col,
+                loop_node.token.value,
+                self.variable_to_type_map.get(end_val_node.value),
+            )
+
         range_node.set_left_side(start_val_node)
         range_node.set_right_side(end_val_node)
         loop_node.set_child_node(range_node)
@@ -3033,11 +3155,20 @@ class Parser:
             return None  # No need to append here as it is just closing the loop
         elif type(self.curr_block[0]) is NumberNode:
             return self.build_arithmetic_ast()
-        elif type(self.curr_block[0]) is LoopUpKeywordNode:
+        elif type(self.curr_block[0]) in [
+            LoopUpKeywordNode,
+            LoopUpInclusiveKeywordNode,
+        ]:
             return self.build_loop_up_ast()
-        elif type(self.curr_block[0]) is LoopDownKeywordNode:
+        elif type(self.curr_block[0]) in [
+            LoopDownKeywordNode,
+            LoopDownInclusiveKeywordNode,
+        ]:
             return self.build_loop_down_ast()
-        elif type(self.curr_block[0]) is LoopFromKeywordNode:
+        elif type(self.curr_block[0]) in [
+            LoopFromKeywordNode,
+            LoopFromInclusiveKeywordNode,
+        ]:
             return self.build_loop_from_ast()
         elif type(self.curr_block[0]) is FunctionKeywordNode:
             return self.build_function_keyword_ast()
@@ -3120,7 +3251,12 @@ class Parser:
             # actually too many args, even though there are three in the case of 1 + 2.
             # Raise if we have more than one arg because print doesn't accept that
             raise TooManyArgsException(line, col)
-        elif type(node_list[1]) not in [StringNode, VariableReferenceNode, NumberNode]:
+        elif type(node_list[1]) not in [
+            StringNode,
+            VariableReferenceNode,
+            NumberNode,
+            LoopIdxKeywordNode,
+        ]:
             # TODO(map) char is valid too
             raise InvalidArgsException(line, col, keyword, type(node_list[1]))
         elif (
@@ -3350,11 +3486,11 @@ class Parser:
             self.read_full_line()
         elif type(first_node) == RightCurlBraceNode:
             self.read_right_curl_brace(first_node)
-        elif type(first_node) == LoopUpKeywordNode:
+        elif type(first_node) in [LoopUpKeywordNode, LoopUpInclusiveKeywordNode]:
             self.read_loop_dec_line(first_node)
-        elif type(first_node) == LoopDownKeywordNode:
+        elif type(first_node) in [LoopDownKeywordNode, LoopDownInclusiveKeywordNode]:
             self.read_loop_dec_line(first_node)
-        elif type(first_node) == LoopFromKeywordNode:
+        elif type(first_node) in [LoopFromKeywordNode, LoopFromInclusiveKeywordNode]:
             self.read_loop_dec_line(first_node)
         elif type(first_node) == FunctionKeywordNode:
             self.read_function_keyword_node_line(first_node)
@@ -3421,66 +3557,124 @@ class Parser:
         self.advance_token()
 
     def read_loop_dec_line(self, loop_node):
-        if type(loop_node) == LoopUpKeywordNode:
+        if type(loop_node) in [LoopUpKeywordNode, LoopUpInclusiveKeywordNode]:
             block = [loop_node]
+
+            # # Move onto the next node which should be a left paren
+            # self.advance_token()
+            # # Move past the left paren
+            # self.advance_token()
+            # # Get the number to which the loop should execute
+            # block.append(self.process_token_rewrite())
+            # self.advance_token()
+            # # Move past the right paren
+            # self.advance_token()
+            #
+            # # Add the left curl brace to the node list and move past the token
+            # block.append(self.process_token_rewrite())
+            # self.advance_token()
+
+            # self.curr_block = block
 
             # Move onto the next node which should be a left paren
             self.advance_token()
+            block.append(self.process_token_rewrite())
             # Move past the left paren
             self.advance_token()
-            # Get the number to which the loop should execute
+            # Get the param for the function call
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                block.append(self.process_token_rewrite())
+                self.advance_token()
+
             block.append(self.process_token_rewrite())
-            self.advance_token()
             # Move past the right paren
             self.advance_token()
 
-            # Add the left curl brace to the node list and move past the token
-            block.append(self.process_token_rewrite())
+            # Move past the eol token
             self.advance_token()
 
             self.curr_block = block
-        elif type(loop_node) == LoopDownKeywordNode:
+
+        elif type(loop_node) in [LoopDownKeywordNode, LoopDownInclusiveKeywordNode]:
             block = [loop_node]
 
+            # # Move onto the next node which should be a left paren
+            # self.advance_token()
+            # # Move past the left paren
+            # self.advance_token()
+            # # Get the number to which the loop should execute
+            # block.append(self.process_token_rewrite())
+            # self.advance_token()
+            # # Move past the right paren
+            # self.advance_token()
+            #
+            # # Add the left curl brace to the node list and move past the token
+            # block.append(self.process_token_rewrite())
+            # self.advance_token()
+            #
+            # self.curr_block = block
             # Move onto the next node which should be a left paren
             self.advance_token()
+            block.append(self.process_token_rewrite())
             # Move past the left paren
             self.advance_token()
-            # Get the number to which the loop should execute
+            # Get the param for the function call
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                block.append(self.process_token_rewrite())
+                self.advance_token()
+
             block.append(self.process_token_rewrite())
-            self.advance_token()
             # Move past the right paren
             self.advance_token()
 
-            # Add the left curl brace to the node list and move past the token
-            block.append(self.process_token_rewrite())
+            # Move past the eol token
             self.advance_token()
 
             self.curr_block = block
-        elif type(loop_node) == LoopFromKeywordNode:
+
+        elif type(loop_node) in [LoopFromKeywordNode, LoopFromInclusiveKeywordNode]:
             block = [loop_node]
 
+            #     # Move onto the next node which should be a left paren
+            #     self.advance_token()
+            #     # Move past the left paren
+            #     self.advance_token()
+            #     # Get the first number in the loop
+            #     block.append(self.process_token_rewrite())
+            #     self.advance_token()
+            #     # Get the range indication
+            #     block.append(self.process_token_rewrite())
+            #     self.advance_token()
+            #     # Get the second number for the loop
+            #     block.append(self.process_token_rewrite())
+            #     self.advance_token()
+            #     # Move past the right paren
+            #     self.advance_token()
+            #
+            #     # Add the left curl brace to the node list and move past the token
+            #     block.append(self.process_token_rewrite())
+            #     self.advance_token()
+            #
+            #     self.curr_block = block
             # Move onto the next node which should be a left paren
             self.advance_token()
+            block.append(self.process_token_rewrite())
             # Move past the left paren
             self.advance_token()
-            # Get the first number in the loop
+            # Get the param for the function call
+            while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+                block.append(self.process_token_rewrite())
+                self.advance_token()
+
             block.append(self.process_token_rewrite())
-            self.advance_token()
-            # Get the range indication
-            block.append(self.process_token_rewrite())
-            self.advance_token()
-            # Get the second number for the loop
-            block.append(self.process_token_rewrite())
-            self.advance_token()
             # Move past the right paren
             self.advance_token()
 
-            # Add the left curl brace to the node list and move past the token
-            block.append(self.process_token_rewrite())
+            # Move past the eol token
             self.advance_token()
 
             self.curr_block = block
+
         else:
             assert False, f"Cannot handle loop of type {type(loop_node)}"
 
@@ -4906,7 +5100,7 @@ class Parser:
                 assert False, "WRITE ME ELSE"
             elif type(processed_node) == LoopUpKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
-            elif type(processed_node) == LoopUpInclusiveKeywordNode:
+            elif type(processed_node) == LopUpInclusiveKeywordNode:
                 line_ast = self.build_loop_up_line_ast(processed_node)
             elif type(processed_node) == LoopDownKeywordNode:
                 line_ast = self.build_loop_down_line_ast(processed_node)
@@ -5897,6 +6091,8 @@ class Compiler:
                     keyword_call_asm = self.get_print_char_keyword_asm()
                 elif type(node.arg_nodes[0]) == PlusMinusNode:
                     # TODO(map) https://trello.com/c/wRuStWqL/11-update-the-print-node-logic-for-the-plusminusnode-to-handle-addition-of-things-other-than-strings
+                    keyword_call_asm = self.get_print_num_keyword_asm()
+                elif type(node.arg_nodes[0]) == LoopIdxKeywordNode:
                     keyword_call_asm = self.get_print_num_keyword_asm()
                 elif self.variables[node.arg_nodes[0].value]:
                     if self.variables[node.arg_nodes[0].value]["var_type"] == "string":
