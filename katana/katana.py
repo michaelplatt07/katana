@@ -1921,6 +1921,10 @@ class MacroNode(Node):
         for node in self.children_nodes:
             node.parent_node = self
 
+    def add_child_node(self, node):
+        self.children_nodes.append(node)
+        node.parent_node = self
+
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
@@ -2739,11 +2743,11 @@ class Parser:
         self.has_next_token = True
         self.curr_token_pos = 0
         self.curr_token = self.token_list[self.curr_token_pos]
+        self.macros = {}
 
         # @@@ WIP: Old properties that may not be useful anymore
         self.main_node = None
         self.variable_to_type_map = {}
-        self.macros = {}
         self.macro_reference_set = False
         self.node_list = []
         self.if_else_list = []
@@ -2771,6 +2775,8 @@ class Parser:
                     pass
                 elif type(self.curr_block[0]) == StartNode:
                     self.node_list.append(self.build_main_node())
+                elif type(self.curr_block[0]) == MacroNode:
+                    self.node_list.append(self.build_macro_node_ast())
                 elif type(self.curr_block[0]) == NumberNode:
                     self.node_list.append(self.build_arithmetic_ast())
                 elif type(self.curr_block[0]) == VariableKeywordNode:
@@ -2794,6 +2800,15 @@ class Parser:
         except BufferOverflowException as boe:
             print_exception_message(program_lines, boe.col_num, boe)
             sys.exit()
+        except InvalidMacroDeclaration as imd:
+            print_exception_message(program_lines, imd.col_num, imd)
+            sys.exit()
+        except UnnamedMacroException as ume:
+            print_exception_message(program_lines, ume.col_num, ume)
+            sys.exit()
+        except EmptyMacroException as eme:
+            print_exception_message(program_lines, eme.col_num, eme)
+            sys.exit()
 
     def build_main_node(self):
         main_node = self.curr_block[0]
@@ -2801,10 +2816,37 @@ class Parser:
         left_curl_node = self.curr_block[1]
         while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
             ast = self.process_body_block_line()
-            if ast is not None:
+            if ast is not None and type(ast) is not list:
                 main_node.add_child_node(ast)
+            elif ast is not None and type(ast) is list:
+                # In the case of Macros, the AST would be a list, potentially of a large size so we need to add all
+                # nodes to the main node as children, not just a single AST
+                for node in ast:
+                    main_node.add_child_node(node)
         self.parse_block()
         return main_node
+
+    def build_macro_node_ast(self):
+        macro_node = self.curr_block[0]
+
+        if type(self.curr_block[1]) is not MacroNameNode:
+            raise UnnamedMacroException(macro_node.token.row, macro_node.token.col)
+
+        macro_node.name_node = self.curr_block[1]
+        # TODO(map) Need to add checks for the format
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                macro_node.add_child_node(ast)
+        self.parse_block()
+
+        if len(macro_node.children_nodes) <= 0:
+            raise EmptyMacroException(macro_node.token.row, macro_node.token.col)
+
+        # Store an instance of the macro node AST under the name so if it is referenced the nodes can be inserted
+        self.macros[macro_node.name_node.value] = macro_node.children_nodes
+
+        return macro_node
 
     def build_var_dec_ast(self):
         # TODO(map) Put in error checking
@@ -3177,6 +3219,14 @@ class Parser:
             and self.curr_block[0].token.value == IF
         ):
             return self.build_logic_block_ast()
+        elif type(self.curr_block[0]) is MacroReferenceNode:
+            return self.macros[self.curr_block[0].token.value]
+        elif type(self.curr_block[0]) is MacroNode:
+            # TODO(map) This raises with `MAIN` as the caller but it could be raised in various circumstances. Might
+            # make more sense to raise a different exception, catch it, and wrap upward on the caller.
+            raise InvalidMacroDeclaration(
+                self.curr_block[0].token.row, self.curr_block[0].token.col, MAIN
+            )
         else:
             assert (
                 False
@@ -3476,15 +3526,17 @@ class Parser:
         first_node = self.process_token_rewrite()
 
         # Determine the flag for the block type that is being parsed.
-        if type(first_node) == StartNode:
+        if type(first_node) is StartNode:
             self.read_main_method_call_line(first_node)
-        elif type(first_node) == NumberNode:
+        elif type(first_node) is MacroNode:
+            self.read_macro_def_line(first_node)
+        elif type(first_node) is NumberNode:
             self.read_full_line()
-        elif type(first_node) == VariableKeywordNode:
+        elif type(first_node) is VariableKeywordNode:
             self.read_full_line()
-        elif type(first_node) == VariableReferenceNode:
+        elif type(first_node) is VariableReferenceNode:
             self.read_full_line()
-        elif type(first_node) == RightCurlBraceNode:
+        elif type(first_node) is RightCurlBraceNode:
             self.read_right_curl_brace(first_node)
         elif type(first_node) in [LoopUpKeywordNode, LoopUpInclusiveKeywordNode]:
             self.read_loop_dec_line(first_node)
@@ -3492,13 +3544,16 @@ class Parser:
             self.read_loop_dec_line(first_node)
         elif type(first_node) in [LoopFromKeywordNode, LoopFromInclusiveKeywordNode]:
             self.read_loop_dec_line(first_node)
-        elif type(first_node) == FunctionKeywordNode:
+        elif type(first_node) is FunctionKeywordNode:
             self.read_function_keyword_node_line(first_node)
-        elif type(first_node) == LogicKeywordNode and first_node.token.value == IF:
+        elif type(first_node) is LogicKeywordNode and first_node.token.value == IF:
             self.read_logic_declaration_line(first_node)
-        elif type(first_node) == LogicKeywordNode and first_node.token.value == ELSE:
+        elif type(first_node) is LogicKeywordNode and first_node.token.value == ELSE:
             self.read_logic_else_line(first_node)
-        elif type(first_node) == CommentNode:
+        elif type(first_node) is MacroReferenceNode:
+            # TODO(map) This is not safe. Macro might not exist. Problem for tomorrow me
+            self.read_macro_reference_line(first_node)
+        elif type(first_node) is CommentNode:
             # Set an empty block because there's nothing to parse on this line
             self.read_comment_line()
         else:
@@ -3535,6 +3590,21 @@ class Parser:
         unique because it requires no parenthesis to make the call as opposed
         to the traditional method call.
         """
+        block = []
+
+        # Loop until we hit the left curl brace that starts the definition of
+        # the function call body
+        while self.curr_token.ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+        # Add the left curl brace to the node list and move past the token
+        block.append(self.process_token_rewrite())
+        self.advance_token()
+
+        self.curr_block = block
+
+    def read_macro_def_line(self, start_node):
         block = []
 
         # Loop until we hit the left curl brace that starts the definition of
@@ -3701,6 +3771,20 @@ class Parser:
 
         self.curr_block = block
 
+    def read_macro_reference_line(self, macro_ref_node):
+        block = [macro_ref_node]
+
+        # Move to the next token which should be end of line
+        self.advance_token()
+        while self.curr_token.ttype != EOL_TOKEN_TYPE:
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+        # Move past the eol token
+        self.advance_token()
+
+        self.curr_block = block
+
     def read_logic_declaration_line(self, logic_node):
         block = [logic_node]
 
@@ -3784,7 +3868,8 @@ class Parser:
         elif self.curr_token.ttype == VARIABLE_REFERENCE_TOKEN_TYPE:
             return VariableReferenceNode(self.curr_token, self.curr_token.value, None)
         elif self.curr_token.ttype == MACRO_REFERENCE_TOKEN_TYPE:
-            return copy.deepcopy(self.macros[self.curr_token.value])
+            return MacroReferenceNode(self.curr_token, self.curr_token.value)
+            # return copy.deepcopy(self.macros[self.curr_token.value])
         elif self.curr_token.ttype == ASSIGNMENT_TOKEN_TYPE:
             return AssignmentNode(self.curr_token, self.curr_token.value)
         elif self.curr_token.ttype == BOOLEAN_TOKEN_TYPE:
