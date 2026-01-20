@@ -81,6 +81,7 @@ INT_8 = "int8"
 INT_16 = "int16"
 INT_32 = "int32"
 INT_64 = "int64"
+INT = "int"  # This is used special for error messages such as assigning an in to a string var
 BOOL = "bool"
 CHAR = "char"
 STRING = "string"
@@ -168,7 +169,6 @@ INT_KEYWORDS = (INT_8, INT_16, INT_32, INT_64)
 ##################
 NUMERIC = "numeric"
 FUNCTION = "function"
-
 
 ###################
 # Method Signatures
@@ -1980,6 +1980,23 @@ class MacroReferenceNode(Node):
         return f"{self.value}"
 
 
+################################
+# Node class to Var Type Mapping
+################################
+TYPE_TO_NODE_MAPPING = {
+    STRING: StringNode,
+    CHAR: CharNode,
+    BOOL: BooleanNode,
+    INT: NumberNode,
+}
+NODE_TO_TYPE_MAPPING = {
+    StringNode: STRING,
+    CharNode: CHAR,
+    BooleanNode: BOOL,
+    NumberNode: INT,
+}
+
+
 #########
 # PROGRAM
 #########
@@ -2797,6 +2814,9 @@ class Parser:
         except InvalidArgsException as iae:
             print_exception_message(program_lines, iae.col_num, iae)
             sys.exit()
+        except InvalidAssignmentException as iae:
+            print_exception_message(program_lines, iae.col_num, iae)
+            sys.exit()
         except BufferOverflowException as boe:
             print_exception_message(program_lines, boe.col_num, boe)
             sys.exit()
@@ -2809,11 +2829,13 @@ class Parser:
         except EmptyMacroException as eme:
             print_exception_message(program_lines, eme.col_num, eme)
             sys.exit()
+        except InvalidConcatenationException as ice:
+            print_exception_message(program_lines, ice.col_num, ice)
+            sys.exit()
 
     def build_main_node(self):
         main_node = self.curr_block[0]
-        # TODO(map) Include check for the node being a left curl brace
-        left_curl_node = self.curr_block[1]
+
         while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
             ast = self.process_body_block_line()
             if ast is not None and type(ast) is not list:
@@ -2911,6 +2933,17 @@ class Parser:
 
         return var_type_node
 
+    def _can_concat_to_ref(self, ref_type, concat_node):
+        if type(concat_node.left_side) is VariableReferenceNode:
+            if type(concat_node.right_side) is NumberNode and ref_type in INT_KEYWORDS:
+                return True
+            elif type(concat_node.right_side) is CharNode and ref_type in [STRING]:
+                return True
+            else:
+                return False
+        else:
+            return False
+
     def build_var_ref_ast(self):
         # TODO(map) Put in error checking
         assignment_node = self.curr_block[1]
@@ -2923,8 +2956,32 @@ class Parser:
         elif any(isinstance(node, PlusMinusNode) for node in self.curr_block[2:]):
             # TODO(map) PEMDAS ISSUE This sends to a dumb method that doesn't do PEMDAS yet
             val_node = self.build_arithmetic_ast(self.curr_block[2:])
+            if not self._can_concat_to_ref(
+                self.variable_to_type_map[var_name_node.value], val_node
+            ):
+                raise InvalidConcatenationException(
+                    var_name_node.token.row,
+                    var_name_node.token.col,
+                    self.variable_to_type_map[var_name_node.value],
+                    type(val_node.right_side),
+                )
         else:
             val_node = self.curr_block[2]
+
+        # TODO(map) When the time comes this check should be more robust. It should be able to check for setting a
+        # different type than what was assigned to the variable, as well as check for buffer overflow on numbers if
+        # possible to prevent issues
+        # Validate the assignment of the variable by type
+        # newly_assigned_type = TYPE_TO_NODE_MAPPING.get(
+        #     self.variable_to_type_map[var_name_node.value]
+        # )
+        # if newly_assigned_type and newly_assigned_type is not type(val_node):
+        #     raise InvalidAssignmentException(
+        #         var_name_node.token.row,
+        #         var_name_node.token.col,
+        #         self.variable_to_type_map[var_name_node.value],
+        #         NODE_TO_TYPE_MAPPING[type(val_node)],
+        #     )
 
         assignment_node.set_right_side(val_node)
 
@@ -2932,6 +2989,7 @@ class Parser:
 
     def build_arithmetic_ast(self, node_list=None):
         # TODO(map) This is dumb right now. It doesn't handle PEMDAS
+        # TODO(map) Major bug: This allows adding of anything. This shouldn't work like that.
         if node_list:
             nodes = node_list
         else:
@@ -3152,12 +3210,32 @@ class Parser:
 
         return loop_node
 
+    def _get_index_of_class_type(self, node_list, class_type):
+        # Helper method that will find the first index of a node type in a list of nodes
+        for i, node in enumerate(node_list):
+            if type(node) is class_type:
+                return i
+        return -1
+
+    def _get_condition_ast(self, condition_block):
+        if len(condition_block) > 1:
+            if self._get_index_of_class_type(condition_block, PlusMinusNode) != -1:
+                return self.build_arithmetic_line_ast(condition_block)
+            else:
+                assert False, "Multiple nodes in condition without PlusMinus"
+        else:
+            return condition_block[0]
+
     def build_logic_block_ast(self):
         logic_node = self.curr_block[0]
 
-        left_condition = self.curr_block[1]
-        right_condition = self.curr_block[3]
-        comparator_node = self.curr_block[2]
+        # Get the set of nodes that make up the left and right condition and the index of the compare node itself
+        compare_node_idx = self._get_index_of_class_type(self.curr_block, CompareNode)
+        comparator_node = self.curr_block[compare_node_idx]
+        left_condition = self._get_condition_ast(self.curr_block[1:compare_node_idx])
+        right_condition = self._get_condition_ast(
+            self.curr_block[compare_node_idx + 1 :]
+        )
 
         comparator_node.set_left_side(left_condition)
         comparator_node.set_right_side(right_condition)
@@ -3592,17 +3670,46 @@ class Parser:
         """
         block = []
 
-        # Loop until we hit the left curl brace that starts the definition of
-        # the function call body
-        while self.curr_token.ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
-            block.append(self.process_token_rewrite())
-            self.advance_token()
+        # Add the main to the node list and move past the token
+        block.append(self.process_token_rewrite())
+        self.advance_token()
+
+        # Add the left paren to the node list and move past the token
+        block.append(self.process_token_rewrite())
+        self.advance_token()
+
+        # Add the right paren to the node list and move past the token
+        block.append(self.process_token_rewrite())
+        self.advance_token()
 
         # Add the left curl brace to the node list and move past the token
         block.append(self.process_token_rewrite())
         self.advance_token()
 
-        self.curr_block = block
+        # Validation stuff
+        if type(block[1]) is not LeftParenNode:
+            raise KeywordMisuseException(
+                start_node.token.row,
+                start_node.token.col,
+                start_node.token.value,
+                MAIN_SIGNATURE,
+            )
+        elif type(block[2]) is not RightParenNode:
+            raise KeywordMisuseException(
+                start_node.token.row,
+                start_node.token.col,
+                start_node.token.value,
+                MAIN_SIGNATURE,
+            )
+        elif type(block[3]) is not LeftCurlBraceNode:
+            raise KeywordMisuseException(
+                start_node.token.row,
+                start_node.token.col,
+                start_node.token.value,
+                MAIN_SIGNATURE,
+            )
+        else:
+            self.curr_block = block
 
     def read_macro_def_line(self, start_node):
         block = []

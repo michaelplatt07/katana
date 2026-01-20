@@ -2050,27 +2050,26 @@ class TestParserChar:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 9, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 11, 1, "=", 2),
-            Token(CHARACTER_TOKEN_TYPE, 14, 1, "a", 0),
-            Token(EOL_TOKEN_TYPE, 16, 1, ";", 0),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 4, 2, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 6, 2, "=", 2),
-            Token(NUM_TOKEN_TYPE, 8, 2, "12", 0),
-            Token(EOL_TOKEN_TYPE, 10, 2, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 9, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 11, "=", 2),
+            Token(CHARACTER_TOKEN_TYPE, 1, 14, "a", 0),
+            Token(EOL_TOKEN_TYPE, 1, 16, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(NUM_TOKEN_TYPE, 2, 8, "12", 0),
+            Token(EOL_TOKEN_TYPE, 2, 10, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        # mock_print.assert_called_with([], 4, InvalidArgsException(3, 4, "copyStr", "int64"))
         mock_print.assert_called_with(
-            [], 4, InvalidAssignmentException(2, 4, "char", "int8")
+            [], 4, InvalidAssignmentException(2, 4, "char", "int")
         )
 
 
@@ -3750,30 +3749,37 @@ class TestKeywordAdvanced:
         ]
         lower_string_node = StringNode(token_list[28], "false")
         second_print_node = FunctionKeywordNode(
-            token_list[26], "print", [lower_string_node]
+            token_list[26], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(
-            token_list[18], "print", [greater_string_node]
+            token_list[18], "print", arg_nodes=[greater_string_node]
         )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
-        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
+        x_assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=x_node, right_side=one_node
+        )
+        keyword_node = VariableKeywordNode(
+            token_list[4], "int64", child_node=x_assignment_node
+        )
         x_ref_node = VariableReferenceNode(token_list[11], "x")
         one_minus_node = NumberNode(token_list[13], "1")
-        subtract_node = PlusMinusNode(token_list[12], "-", x_ref_node, one_minus_node)
+        subtract_node = PlusMinusNode(
+            token_list[12], "-", left_side=x_ref_node, right_side=one_minus_node
+        )
         zero_node = NumberNode(token_list[7], "0")
-        compare_node = CompareNode(token_list[14], ">", subtract_node, zero_node)
+        compare_node = CompareNode(
+            token_list[14], ">", left_side=subtract_node, right_side=zero_node
+        )
         if_node = LogicKeywordNode(
             token_list[9],
             "if",
-            compare_node,
-            None,
-            [first_print_node],
-            [second_print_node],
+            child_node=compare_node,
+            true_side=[first_print_node],
+            false_side=[second_print_node],
         )
-        ast = StartNode(token_list[0], "main", [keyword_node, if_node])
+        ast = StartNode(token_list[0], "main", children_nodes=[keyword_node, if_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -3830,30 +3836,37 @@ class TestKeywordAdvanced:
         ]
         lower_string_node = StringNode(token_list[28], "false")
         second_print_node = FunctionKeywordNode(
-            token_list[26], "print", [lower_string_node]
+            token_list[26], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[20], "true")
         first_print_node = FunctionKeywordNode(
-            token_list[18], "print", [greater_string_node]
+            token_list[18], "print", arg_nodes=[greater_string_node]
         )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
-        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
+        x_assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=x_node, right_side=one_node
+        )
+        keyword_node = VariableKeywordNode(
+            token_list[4], "int64", child_node=x_assignment_node
+        )
         x_ref_node = VariableReferenceNode(token_list[13], "x")
         one_minus_node = NumberNode(token_list[15], "1")
-        subtract_node = PlusMinusNode(token_list[14], "-", x_ref_node, one_minus_node)
+        subtract_node = PlusMinusNode(
+            token_list[14], "-", left_side=x_ref_node, right_side=one_minus_node
+        )
         zero_node = NumberNode(token_list[11], "0")
-        compare_node = CompareNode(token_list[12], ">", zero_node, subtract_node)
+        compare_node = CompareNode(
+            token_list[12], ">", left_side=zero_node, right_side=subtract_node
+        )
         if_node = LogicKeywordNode(
             token_list[9],
             "if",
-            compare_node,
-            None,
-            [first_print_node],
-            [second_print_node],
+            child_node=compare_node,
+            true_side=[first_print_node],
+            false_side=[second_print_node],
         )
-        ast = StartNode(token_list[0], "main", [keyword_node, if_node])
+        ast = StartNode(token_list[0], "main", children_nodes=[keyword_node, if_node])
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -3918,41 +3931,52 @@ class TestKeywordAdvanced:
         ]
         lower_string_node = StringNode(token_list[35], "false")
         second_print_node = FunctionKeywordNode(
-            token_list[33], "print", [lower_string_node]
+            token_list[33], "print", arg_nodes=[lower_string_node]
         )
         greater_string_node = StringNode(token_list[27], "true")
         first_print_node = FunctionKeywordNode(
-            token_list[25], "print", [greater_string_node]
+            token_list[25], "print", arg_nodes=[greater_string_node]
         )
         one_node = NumberNode(token_list[7], "1")
         x_node = VariableNode(token_list[5], "x", False)
-        x_assignment_node = AssignmentNode(token_list[6], "=", x_node, one_node)
-        keyword_node_x = VariableKeywordNode(token_list[4], "int64", x_assignment_node)
+        x_assignment_node = AssignmentNode(
+            token_list[6], "=", left_side=x_node, right_side=one_node
+        )
+        keyword_node_x = VariableKeywordNode(
+            token_list[4], "int64", child_node=x_assignment_node
+        )
         two_node = NumberNode(token_list[12], "2")
         y_node = VariableNode(token_list[10], "y", False)
-        y_assignment_node = AssignmentNode(token_list[11], "=", y_node, two_node)
-        keyword_node_y = VariableKeywordNode(token_list[9], "int64", y_assignment_node)
+        y_assignment_node = AssignmentNode(
+            token_list[11], "=", left_side=y_node, right_side=two_node
+        )
+        keyword_node_y = VariableKeywordNode(
+            token_list[9], "int64", child_node=y_assignment_node
+        )
         x_ref_node = VariableReferenceNode(token_list[20], "x")
         one_minus_node = NumberNode(token_list[22], "1")
-        subtract_node = PlusMinusNode(token_list[21], "-", x_ref_node, one_minus_node)
+        subtract_node = PlusMinusNode(
+            token_list[21], "-", left_side=x_ref_node, right_side=one_minus_node
+        )
         y_ref_node = VariableReferenceNode(token_list[16], "y")
         two_minus_node = NumberNode(token_list[18], "2")
         subtract_node_two = PlusMinusNode(
-            token_list[17], "-", y_ref_node, two_minus_node
+            token_list[17], "-", left_side=y_ref_node, right_side=two_minus_node
         )
         compare_node = CompareNode(
-            token_list[19], ">", subtract_node_two, subtract_node
+            token_list[19], ">", left_side=subtract_node_two, right_side=subtract_node
         )
         if_node = LogicKeywordNode(
             token_list[14],
             "if",
-            compare_node,
-            None,
-            [first_print_node],
-            [second_print_node],
+            child_node=compare_node,
+            true_side=[first_print_node],
+            false_side=[second_print_node],
         )
         ast = StartNode(
-            token_list[0], "main", [keyword_node_x, keyword_node_y, if_node]
+            token_list[0],
+            "main",
+            children_nodes=[keyword_node_x, keyword_node_y, if_node],
         )
         parser = Parser(token_list)
         parser.parse()
@@ -3989,16 +4013,27 @@ class TestKeywordAdvanced:
         ]
         one_node = NumberNode(token_list[7], "1")
         x_var_node = VariableNode(token_list[5], "x", False)
-        x_assign_node = AssignmentNode(token_list[6], "=", x_var_node, one_node)
-        int_keyword_node = VariableKeywordNode(token_list[4], "int64", x_assign_node)
+        x_assign_node = AssignmentNode(
+            token_list[6], "=", left_side=x_var_node, right_side=one_node
+        )
+        int_keyword_node = VariableKeywordNode(
+            token_list[4], "int64", child_node=x_assign_node
+        )
         three_node = NumberNode(token_list[13], "3")
         x_ref_node = VariableReferenceNode(token_list[11], "x")
-        plus_node = PlusMinusNode(token_list[12], "+", x_ref_node, three_node)
+        plus_node = PlusMinusNode(
+            token_list[12], "+", left_side=x_ref_node, right_side=three_node
+        )
         x_left_assignmet_ref_node = VariableReferenceNode(token_list[9], "x")
         reassign_node = AssignmentNode(
-            token_list[10], "=", x_left_assignmet_ref_node, plus_node
+            token_list[10],
+            "=",
+            left_side=x_left_assignmet_ref_node,
+            right_side=plus_node,
         )
-        ast = StartNode(token_list[0], "main", [int_keyword_node, reassign_node])
+        ast = StartNode(
+            token_list[0], "main", children_nodes=[int_keyword_node, reassign_node]
+        )
         parser = Parser(token_list)
         parser.parse()
         assert [ast] == parser.get_nodes()
@@ -4070,28 +4105,28 @@ class TestConcatenation:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 11, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 13, 1, "=", 2),
-            Token(STRING_TOKEN_TYPE, 15, 1, "Hello", 0),
-            Token(EOL_TOKEN_TYPE, 22, 1, ";", 0),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 4, 2, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 6, 2, "=", 2),
-            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 8, 2, "x", 0),
-            Token(PLUS_TOKEN_TYPE, 10, 2, "+", 1),
-            Token(STRING_TOKEN_TYPE, 13, 2, ", Katana!", 0),
-            Token(EOL_TOKEN_TYPE, 23, 2, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 3, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 4, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 11, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 13, "=", 2),
+            Token(STRING_TOKEN_TYPE, 1, 15, "Hello", 0),
+            Token(EOL_TOKEN_TYPE, 1, 22, ";", 0),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 4, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 2, 6, "=", 2),
+            Token(VARIABLE_REFERENCE_TOKEN_TYPE, 2, 8, "x", 0),
+            Token(PLUS_TOKEN_TYPE, 2, 10, "+", 1),
+            Token(STRING_TOKEN_TYPE, 2, 13, ", Katana!", 0),
+            Token(EOL_TOKEN_TYPE, 2, 23, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 3, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 4, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with(
-            [], 8, InvalidConcatenationException(2, 8, "string", StringNode)
+            [], 4, InvalidConcatenationException(2, 4, "string", StringNode)
         )
 
 
