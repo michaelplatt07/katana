@@ -616,7 +616,7 @@ class TestParserPrint:
     def test_keyword_print_with_literal(self):
         """
         Given a program like:
-        main {
+        main() {
             print(3);
         }
         Expected to return an AST like:
@@ -624,17 +624,19 @@ class TestParserPrint:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 4, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 0, 1, "print", ULTRA_HIGH),
-            Token(LEFT_PAREN_TOKEN_TYPE, 5, 1, "(", HIGH),
-            Token(NUM_TOKEN_TYPE, 6, 1, "3", LOW),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 7, 1, ")", HIGH),
-            Token(EOL_TOKEN_TYPE, 8, 1, ";", LOW),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 2, "EOF", LOW),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 0, "print", ULTRA_HIGH),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 5, "(", HIGH),
+            Token(NUM_TOKEN_TYPE, 1, 6, "3", LOW),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 7, ")", HIGH),
+            Token(EOL_TOKEN_TYPE, 1, 8, ";", LOW),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", LOW),
         ]
-        three_node = NumberNode(token_list[4], "3")
-        print_node = FunctionKeywordNode(token_list[2], "print", arg_nodes=[three_node])
+        three_node = NumberNode(token_list[6], "3")
+        print_node = FunctionKeywordNode(token_list[4], "print", arg_nodes=[three_node])
         ast = StartNode(token_list[0], "main", children_nodes=[print_node])
         parser = Parser(token_list)
         parser.parse()
@@ -651,18 +653,20 @@ class TestParserPrint:
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 4, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "printl", 5),
-            Token(LEFT_PAREN_TOKEN_TYPE, 10, 1, "(", 5),
-            Token(NUM_TOKEN_TYPE, 11, 1, "3", 1),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 12, 1, ")", 5),
-            Token(EOL_TOKEN_TYPE, 13, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 5, 0, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", HIGH),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", HIGH),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "printl", 5),
+            Token(LEFT_PAREN_TOKEN_TYPE, 1, 10, "(", 5),
+            Token(NUM_TOKEN_TYPE, 1, 11, "3", 1),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 1, 12, ")", 5),
+            Token(EOL_TOKEN_TYPE, 1, 13, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
-        three_node = NumberNode(token_list[4], "3")
+        three_node = NumberNode(token_list[6], "3")
         printl_node = FunctionKeywordNode(
-            token_list[2], "printl", arg_nodes=[three_node]
+            token_list[4], "printl", arg_nodes=[three_node]
         )
         ast = StartNode(token_list[0], "main", children_nodes=[printl_node])
         parser = Parser(token_list)

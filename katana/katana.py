@@ -3686,7 +3686,7 @@ class Parser:
         block.append(self.process_token_rewrite())
         self.advance_token()
 
-        # Validation stuff
+        # Validation of the main method signature
         if type(block[1]) is not LeftParenNode:
             raise KeywordMisuseException(
                 start_node.token.row,
