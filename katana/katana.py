@@ -2858,16 +2858,43 @@ class Parser:
 
         return macro_node
 
-    def _is_valid_var_assignment(self, var_type, assignment_type):
-        if var_type == CHAR and type(assignment_type) is not CharNode:
+    def _validate_char_assignment(self, assignment):
+        if len(assignment) == 1 and type(assignment[0]) is CharNode:
+            return True
+        elif type(assignment[0]) is FunctionKeywordNode:
+            return assignment[0].token.value == CHAR_AT
+        else:
             return False
-        elif var_type in INT_KEYWORDS and type(assignment_type) is not NumberNode:
+
+    def _validate_int_assignment(self, assignment):
+        if all(type(node) in [NumberNode, PlusMinusNode] for node in assignment):
+            return True
+        else:
             return False
-        elif var_type == STRING and type(assignment_type) is not StringNode:
+
+    def _validate_string_assignment(self, assignment):
+        if len(assignment) == 1 and type(assignment[0]) is StringNode:
+            return True
+        else:
             return False
-        elif var_type == BOOL and type(assignment_type) is not BooleanNode:
+
+    def _validate_boolean_assignment(self, assignment):
+        if len(assignment) == 1 and type(assignment[0]) is BooleanNode:
+            return True
+        else:
             return False
-        return True
+
+    def _is_valid_var_assignment(self, var_type, assignment):
+        if var_type == CHAR:
+            return self._validate_char_assignment(assignment)
+        elif var_type in INT_KEYWORDS:
+            return self._validate_int_assignment(assignment)
+        elif var_type == STRING:
+            return self._validate_string_assignment(assignment)
+        elif var_type == BOOL:
+            return self._validate_boolean_assignment(assignment)
+        else:
+            return False
 
     def build_var_dec_ast(self):
         # TODO(map) Put in error checking
@@ -2902,7 +2929,9 @@ class Parser:
             )
             # val_node = self.curr_block[right_side_idx_start]
 
-        if not self._is_valid_var_assignment(var_type_node.token.value, val_node):
+        if not self._is_valid_var_assignment(
+            var_type_node.token.value, self.curr_block[right_side_idx_start:]
+        ):
             # This is not fully robust. It determines if the type of node can be assigned based on the type of var
             # being referenced. The message isn't great, but it will work for now
             raise InvalidTypeDeclarationException(
