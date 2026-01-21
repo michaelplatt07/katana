@@ -2073,7 +2073,7 @@ class TestParserChar:
         with pytest.raises(SystemExit):
             parser.parse()
         mock_print.assert_called_with(
-            [], 4, InvalidAssignmentException(2, 4, "char", "int")
+            [], 4, InvalidAssignmentException(2, 4, "char", NumberNode)
         )
 
 
@@ -4148,85 +4148,93 @@ class TestParserTypeChecking:
             int64 x = false;
         }
         ```
-        Expected an exception to be raised for invalid concatenation
+        Expected an exception to be raised for invalid type delcaration
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "int64", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
-            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "int64", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 1, 14, "false", 0),
+            Token(EOL_TOKEN_TYPE, 1, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with(
+            [], 10, InvalidTypeDeclarationException(1, 10, "int64", BooleanNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_setting_string_to_bool_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "string", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
-            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "string", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 1, 14, "false", 0),
+            Token(EOL_TOKEN_TYPE, 1, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with(
+            [], 10, InvalidTypeDeclarationException(1, 10, "string", BooleanNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_setting_bool_to_int_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "bool", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(NUM_TOKEN_TYPE, 14, 1, "10", 0),
-            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "bool", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(NUM_TOKEN_TYPE, 1, 14, "10", 0),
+            Token(EOL_TOKEN_TYPE, 1, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 3, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with(
+            [], 10, InvalidTypeDeclarationException(1, 10, "int64", BooleanNode)
+        )
 
     @patch("katana.katana.print_exception_message")
     def test_setting_char_to_bool_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
-            Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", 3),
-            Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", 3),
-            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", 3),
-            Token(KEYWORD_TOKEN_TYPE, 4, 1, "char", 4),
-            Token(VARIABLE_NAME_TOKEN_TYPE, 10, 1, "x", 0),
-            Token(ASSIGNMENT_TOKEN_TYPE, 12, 1, "=", 2),
-            Token(BOOLEAN_TOKEN_TYPE, 14, 1, "false", 0),
-            Token(EOL_TOKEN_TYPE, 19, 1, ";", 0),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 0, 2, "}", 3),
-            Token(EOF_TOKEN_TYPE, 0, 3, "EOF", 0),
+            Token(LEFT_PAREN_TOKEN_TYPE, 0, 4, "(", 3),
+            Token(RIGHT_PAREN_TOKEN_TYPE, 0, 5, ")", 3),
+            Token(LEFT_CURL_BRACE_TOKEN_TYPE, 0, 7, "{", 3),
+            Token(KEYWORD_TOKEN_TYPE, 1, 4, "char", 4),
+            Token(VARIABLE_NAME_TOKEN_TYPE, 1, 10, "x", 0),
+            Token(ASSIGNMENT_TOKEN_TYPE, 1, 12, "=", 2),
+            Token(BOOLEAN_TOKEN_TYPE, 1, 14, "false", 0),
+            Token(EOL_TOKEN_TYPE, 1, 19, ";", 0),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 2, 0, "}", 3),
+            Token(EOF_TOKEN_TYPE, 2, 0, "EOF", 0),
         ]
         parser = Parser(token_list)
         with pytest.raises(SystemExit):
             parser.parse()
-        mock_print.assert_called_with([], 10, InvalidTypeDeclarationException(1, 10))
+        mock_print.assert_called_with(
+            [], 10, InvalidTypeDeclarationException(1, 10, "char", BooleanNode)
+        )
 
 
 class TestParserVariablesOutsideMain:

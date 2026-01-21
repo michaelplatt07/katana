@@ -434,13 +434,15 @@ class UnpairedElseError(Exception):
 
 
 class InvalidTypeDeclarationException(Exception):
-    def __init__(self, line_num, col_num):
+    def __init__(self, line_num, col_num, expected_type, actual_type):
         super().__init__("Invalid type")
         self.line_num = line_num + 1
         self.col_num = col_num
+        self.expected_type = expected_type
+        self.actual_type = actual_type
 
     def __str__(self):
-        return f"Invalid type at {self.line_num}:{self.col_num}."
+        return f"Invalid type at {self.line_num}:{self.col_num}. Expected {self.expected_type} but got {self.actual_type}."
 
     def __eq__(self, other):
         assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
@@ -1980,23 +1982,6 @@ class MacroReferenceNode(Node):
         return f"{self.value}"
 
 
-################################
-# Node class to Var Type Mapping
-################################
-TYPE_TO_NODE_MAPPING = {
-    STRING: StringNode,
-    CHAR: CharNode,
-    BOOL: BooleanNode,
-    INT: NumberNode,
-}
-NODE_TO_TYPE_MAPPING = {
-    StringNode: STRING,
-    CharNode: CHAR,
-    BooleanNode: BOOL,
-    NumberNode: INT,
-}
-
-
 #########
 # PROGRAM
 #########
@@ -2832,6 +2817,9 @@ class Parser:
         except InvalidConcatenationException as ice:
             print_exception_message(program_lines, ice.col_num, ice)
             sys.exit()
+        except InvalidTypeDeclarationException as itde:
+            print_exception_message(program_lines, itde.col_num, itde)
+            sys.exit()
 
     def build_main_node(self):
         main_node = self.curr_block[0]
@@ -2870,6 +2858,17 @@ class Parser:
 
         return macro_node
 
+    def _is_valid_var_assignment(self, var_type, assignment_type):
+        if var_type == CHAR and type(assignment_type) is not CharNode:
+            return False
+        elif var_type in INT_KEYWORDS and type(assignment_type) is not NumberNode:
+            return False
+        elif var_type == STRING and type(assignment_type) is not StringNode:
+            return False
+        elif var_type == BOOL and type(assignment_type) is not BooleanNode:
+            return False
+        return True
+
     def build_var_dec_ast(self):
         # TODO(map) Put in error checking
         if self.curr_block[0].value == CONST:
@@ -2902,6 +2901,16 @@ class Parser:
                 self.curr_block[right_side_idx_start:]
             )
             # val_node = self.curr_block[right_side_idx_start]
+
+        if not self._is_valid_var_assignment(var_type_node.token.value, val_node):
+            # This is not fully robust. It determines if the type of node can be assigned based on the type of var
+            # being referenced. The message isn't great, but it will work for now
+            raise InvalidTypeDeclarationException(
+                var_name_node.token.row,
+                var_name_node.token.col,
+                var_type_node.token.value,
+                type(val_node),
+            )
 
         type_to_max_val = {
             INT_8: 255,
@@ -2944,6 +2953,9 @@ class Parser:
         else:
             return False
 
+    def _is_valid_ref_assignment(self, curr_var_type, new_val_node):
+        return False
+
     def build_var_ref_ast(self):
         # TODO(map) Put in error checking
         assignment_node = self.curr_block[1]
@@ -2966,22 +2978,18 @@ class Parser:
                     type(val_node.right_side),
                 )
         else:
+            if not self._is_valid_ref_assignment(
+                self.variable_to_type_map[var_name_node.value], self.curr_block[2]
+            ):
+                # This is not fully robust. It determines if the type of node can be assigned based on the type of var
+                # being referenced. The message isn't great, but it will work for now
+                raise InvalidAssignmentException(
+                    var_name_node.token.row,
+                    var_name_node.token.col,
+                    self.variable_to_type_map[var_name_node.value],
+                    type(self.curr_block[2]),
+                )
             val_node = self.curr_block[2]
-
-        # TODO(map) When the time comes this check should be more robust. It should be able to check for setting a
-        # different type than what was assigned to the variable, as well as check for buffer overflow on numbers if
-        # possible to prevent issues
-        # Validate the assignment of the variable by type
-        # newly_assigned_type = TYPE_TO_NODE_MAPPING.get(
-        #     self.variable_to_type_map[var_name_node.value]
-        # )
-        # if newly_assigned_type and newly_assigned_type is not type(val_node):
-        #     raise InvalidAssignmentException(
-        #         var_name_node.token.row,
-        #         var_name_node.token.col,
-        #         self.variable_to_type_map[var_name_node.value],
-        #         NODE_TO_TYPE_MAPPING[type(val_node)],
-        #     )
 
         assignment_node.set_right_side(val_node)
 
