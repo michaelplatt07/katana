@@ -3871,22 +3871,6 @@ class Parser:
         if type(loop_node) in [LoopUpKeywordNode, LoopUpInclusiveKeywordNode]:
             block = [loop_node]
 
-            # # Move onto the next node which should be a left paren
-            # self.advance_token()
-            # # Move past the left paren
-            # self.advance_token()
-            # # Get the number to which the loop should execute
-            # block.append(self.process_token_rewrite())
-            # self.advance_token()
-            # # Move past the right paren
-            # self.advance_token()
-            #
-            # # Add the left curl brace to the node list and move past the token
-            # block.append(self.process_token_rewrite())
-            # self.advance_token()
-
-            # self.curr_block = block
-
             # Move onto the next node which should be a left paren
             self.advance_token()
             block.append(self.process_token_rewrite())
@@ -3909,21 +3893,6 @@ class Parser:
         elif type(loop_node) in [LoopDownKeywordNode, LoopDownInclusiveKeywordNode]:
             block = [loop_node]
 
-            # # Move onto the next node which should be a left paren
-            # self.advance_token()
-            # # Move past the left paren
-            # self.advance_token()
-            # # Get the number to which the loop should execute
-            # block.append(self.process_token_rewrite())
-            # self.advance_token()
-            # # Move past the right paren
-            # self.advance_token()
-            #
-            # # Add the left curl brace to the node list and move past the token
-            # block.append(self.process_token_rewrite())
-            # self.advance_token()
-            #
-            # self.curr_block = block
             # Move onto the next node which should be a left paren
             self.advance_token()
             block.append(self.process_token_rewrite())
@@ -3946,27 +3915,6 @@ class Parser:
         elif type(loop_node) in [LoopFromKeywordNode, LoopFromInclusiveKeywordNode]:
             block = [loop_node]
 
-            #     # Move onto the next node which should be a left paren
-            #     self.advance_token()
-            #     # Move past the left paren
-            #     self.advance_token()
-            #     # Get the first number in the loop
-            #     block.append(self.process_token_rewrite())
-            #     self.advance_token()
-            #     # Get the range indication
-            #     block.append(self.process_token_rewrite())
-            #     self.advance_token()
-            #     # Get the second number for the loop
-            #     block.append(self.process_token_rewrite())
-            #     self.advance_token()
-            #     # Move past the right paren
-            #     self.advance_token()
-            #
-            #     # Add the left curl brace to the node list and move past the token
-            #     block.append(self.process_token_rewrite())
-            #     self.advance_token()
-            #
-            #     self.curr_block = block
             # Move onto the next node which should be a left paren
             self.advance_token()
             block.append(self.process_token_rewrite())
