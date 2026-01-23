@@ -1,2 +1,2 @@
 #!/bin/sh
-python katana/katana.py --program "./sample_programs/program.ktna" --compile
+python3 katana/katana.py --program "./sample_programs/program.ktna" --compile
