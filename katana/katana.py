@@ -946,6 +946,9 @@ class FunctionDecSeparatorNode(Node):
     def __eq__(self, other):
         return self.token == other.token
 
+    def __repr__(self):
+        return ":"
+
 
 class FunctionDecLeftParenNode(Node):
     """
@@ -994,13 +997,36 @@ class FunctionNode(Node):
         self.value = value
         self.function_name = function_name
         self.function_return_type = function_return_type
-        self.function_body = function_body
-        self.function_args = function_args
+
+        if function_body:
+            self.function_body = function_body
+            for node in function_body:
+                node.parent_node = self
+        else:
+            self.function_body = []
+
         if function_args:
+            self.function_args = function_args
             for node in function_args:
                 node.parent_node = self
         else:
-            function_args = []
+            self.function_args = []
+
+    def set_name_node(self, node):
+        self.function_name = node
+        node.parent_node = self
+
+    def set_return_type_node(self, node):
+        self.function_return_type = node
+        node.parent_node = self
+
+    def add_function_arg(self, node):
+        self.function_args.append(node)
+        node.parent_node = self
+
+    def add_function_body(self, node):
+        self.function_body.append(node)
+        node.parent_node = self
 
     def __eq__(self, other):
         # TODO(map) Make this equal better
@@ -1060,8 +1086,14 @@ class FunctionReferenceNode(Node):
         self.value = value
         if function_args:
             self.function_args = function_args
+            for node in function_args:
+                node.parent = self
         else:
             self.function_args = []
+
+    def add_function_arg(self, node):
+        self.function_args.append(node)
+        node.parent = self
 
     def __eq__(self, other):
         return (
@@ -1148,6 +1180,10 @@ class FunctionArgTypeNode(Node):
         self.fn_arg_name = fn_arg_name
         self.parent_node = parent_node
 
+    def set_func_arg_name_node(self, node):
+        self.fn_arg_name = node
+        node.parent = self
+
     def __eq__(self, other):
         types_equal = type(self) == type(other)
         values_equal = self.value == other.value
@@ -1220,6 +1256,10 @@ class FunctionReturnNode(Node):
         self.value = value
         self.return_body = return_body
         self.parent_node = parent_node
+
+    def set_return_body(self, node):
+        self.return_body = node
+        node.parent_node = self
 
     def __eq__(self, other):
         types_equal = type(self) == type(other)
@@ -2779,10 +2819,13 @@ class Parser:
                     self.node_list.append(self.build_main_node())
                 elif type(self.curr_block[0]) == MacroNode:
                     self.node_list.append(self.build_macro_node_ast())
+                # TODO(map) Why am I handling variable and Number nodes here? I should try to get this removed in some way
                 elif type(self.curr_block[0]) == NumberNode:
                     self.node_list.append(self.build_arithmetic_ast())
                 elif type(self.curr_block[0]) == VariableKeywordNode:
                     self.node_list.append(self.build_var_dec_ast())
+                elif type(self.curr_block[0]) == FunctionNode:
+                    self.node_list.append(self.build_function_dec_ast())
                 else:
                     assert (
                         False
@@ -2857,6 +2900,29 @@ class Parser:
         self.macros[macro_node.name_node.value] = macro_node.children_nodes
 
         return macro_node
+
+    def build_function_dec_ast(self):
+        # TODO(map) Put in error checking later
+        function_root = self.curr_block[0]
+
+        function_root.set_name_node(self.curr_block[1])
+        function_root.set_return_type_node(self.curr_block[-2])
+
+        for idx, node in enumerate(self.curr_block):
+            # This is really bad and brittle but because of how we declare methods, we can just go back one spot on
+            # the list and get that node for the function argument name
+            # TODO(map) Explore storing the function name, return type, args, and arg types in a dict
+            if type(node) is FunctionArgTypeNode:
+                node.set_func_arg_name_node(self.curr_block[idx - 1])
+                function_root.add_function_arg(node)
+
+        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            ast = self.process_body_block_line()
+            if ast is not None:
+                function_root.add_function_body(ast)
+        self.parse_block()
+
+        return function_root
 
     def _validate_char_assignment(self, assignment):
         if len(assignment) == 1 and type(assignment[0]) is CharNode:
@@ -2982,45 +3048,35 @@ class Parser:
         else:
             return False
 
-    def _is_valid_ref_assignment(self, curr_var_type, new_val_node):
-        return False
-
     def build_var_ref_ast(self):
         # TODO(map) Put in error checking
         assignment_node = self.curr_block[1]
         var_name_node = self.curr_block[0]
         assignment_node.set_left_side(var_name_node)
 
-        # Evaluate the right side of the assignment
+        # Validate the assignment
+        if not self._is_valid_var_assignment(
+            self.variable_to_type_map[var_name_node.value], self.curr_block[2:]
+        ):
+            raise InvalidAssignmentException(
+                var_name_node.token.row,
+                var_name_node.token.col,
+                self.variable_to_type_map[var_name_node.value],
+                type(self.curr_block[2]),
+            )
+
+        # Build the right side that is being assigned
         if type(self.curr_block[2]) is FunctionKeywordNode:
-            val_node = self.build_function_keyword_ast(self.curr_block[2:])
+            assignment_node.set_right_side(
+                self.build_function_keyword_ast(self.curr_block[2:])
+            )
         elif any(isinstance(node, PlusMinusNode) for node in self.curr_block[2:]):
             # TODO(map) PEMDAS ISSUE This sends to a dumb method that doesn't do PEMDAS yet
-            val_node = self.build_arithmetic_ast(self.curr_block[2:])
-            if not self._can_concat_to_ref(
-                self.variable_to_type_map[var_name_node.value], val_node
-            ):
-                raise InvalidConcatenationException(
-                    var_name_node.token.row,
-                    var_name_node.token.col,
-                    self.variable_to_type_map[var_name_node.value],
-                    type(val_node.right_side),
-                )
+            assignment_node.set_right_side(
+                self.build_arithmetic_ast(self.curr_block[2:])
+            )
         else:
-            if not self._is_valid_ref_assignment(
-                self.variable_to_type_map[var_name_node.value], self.curr_block[2]
-            ):
-                # This is not fully robust. It determines if the type of node can be assigned based on the type of var
-                # being referenced. The message isn't great, but it will work for now
-                raise InvalidAssignmentException(
-                    var_name_node.token.row,
-                    var_name_node.token.col,
-                    self.variable_to_type_map[var_name_node.value],
-                    type(self.curr_block[2]),
-                )
-            val_node = self.curr_block[2]
-
-        assignment_node.set_right_side(val_node)
+            assignment_node.set_right_side(self.curr_block[2])
 
         return assignment_node
 
@@ -3299,6 +3355,30 @@ class Parser:
 
         return logic_node
 
+    def build_function_return_node_ast(self):
+        # Start by getting first node of the return statement
+        ret_node = self.curr_block[0]
+
+        self.advance_token()
+        ret_statement = self.process_body_block_line()
+
+        ret_node.set_return_body(ret_statement)
+
+        return ret_node
+
+    def build_function_call_ast(self):
+        func_ref_node = self.curr_block[0]
+
+        for node in self.curr_block[1:]:
+            if type(node) not in [
+                ArgSeparatorNode,
+                LeftParenNode,
+                RightParenNode,
+            ]:
+                func_ref_node.add_function_arg(node)
+
+        return func_ref_node
+
     def process_body_block_line(self):
         self.parse_block()
         if len(self.curr_block) == 0:
@@ -3342,6 +3422,15 @@ class Parser:
             raise InvalidMacroDeclaration(
                 self.curr_block[0].token.row, self.curr_block[0].token.col, MAIN
             )
+        elif type(self.curr_block[0]) is FunctionReturnNode:
+            return self.build_function_return_node_ast()
+        elif type(self.curr_block[0]) is FunctionArgReferenceNode:
+            # TODO(map) This is not great but for now would be fine. Fine because we can assume for the time being that
+            # If the first node is an arg ref, we are not doing anything with it other than arithmetic or nothing else.
+            # This is bad though because we could do more complex things in the future.
+            return self.build_arithmetic_ast()
+        elif type(self.curr_block[0]) is FunctionReferenceNode:
+            return self.build_function_call_ast()
         else:
             assert (
                 False
@@ -3668,6 +3757,14 @@ class Parser:
         elif type(first_node) is MacroReferenceNode:
             # TODO(map) This is not safe. Macro might not exist. Problem for tomorrow me
             self.read_macro_reference_line(first_node)
+        elif type(first_node) is FunctionNode:
+            self.read_function_def_line(first_node)
+        elif type(first_node) is FunctionReturnNode:
+            self.read_function_ret_node(first_node)
+        elif type(first_node) is FunctionArgReferenceNode:
+            self.read_full_line()
+        elif type(first_node) is FunctionReferenceNode:
+            self.read_full_line()
         elif type(first_node) is CommentNode:
             # Set an empty block because there's nothing to parse on this line
             self.read_comment_line()
@@ -3927,6 +4024,28 @@ class Parser:
         # Move past the eol token
         self.advance_token()
 
+        self.curr_block = block
+
+    def read_function_def_line(self, function_start_node):
+        block = [function_start_node]
+
+        # Move past the already processed function start node and begin reading the rest of the definition
+        self.advance_token()
+        while self.curr_token.ttype != LEFT_CURL_BRACE_TOKEN_TYPE:
+            block.append(self.process_token_rewrite())
+            self.advance_token()
+
+        # Add the left curl brace and move past it
+        block.append(self.process_token_rewrite())
+        self.advance_token()
+
+        self.curr_block = block
+
+    def read_function_ret_node(self, function_ret_node):
+        # This method just sets the current block to the return node. This simplifies how the return statement is
+        # processed later and allows for reuse of methods like parse_block on the remaining nodes instead of having
+        # logic rewritten again for the single return node
+        block = [function_ret_node]
         self.curr_block = block
 
     def read_logic_declaration_line(self, logic_node):
