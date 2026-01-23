@@ -3,6 +3,8 @@ import copy
 import os
 import sys
 
+from exceptions import *
+
 # TODO(map) Move all the classes and enums outs so imports are nice
 #########
 # GLOBALS
@@ -192,416 +194,16 @@ LOOP_FROM_SIGNATURE = (
     "loopFrom(START..END) { BODY; }: Loops from START to END executing BODY each time"
 )
 MACRO_SIGNATURE = "MACRO macroName { BODY }: Creates a Macro that substitues any references for the BODY"
-
-
-############
-# Exceptions
-############
-class UnclosedParenthesisError(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Unclosed parenthesis in program.")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Unclosed parenthesis at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-# TODO(map) Because the line_num in the program starts at 0 we add 1 for now.
-class InvalidTokenException(Exception):
-    def __init__(self, line_num, col_num, character):
-        super().__init__("Invalid token.")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.character = character
-
-    def __str__(self):
-        return f"Invalid token '{self.character}' at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.character == other.character, f"{self.character, other.character}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.character == other.character
-        )
-
-
-class NoTerminatorError(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Line is not terminted with a semicolon.")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Line {self.line_num}:{self.col_num} must end with a semicolon."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class UnknownKeywordError(Exception):
-    def __init__(self, line_num, col_num, keyword):
-        super().__init__("Unknown keyword")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.keyword = keyword
-
-    def __str__(self):
-        return f"Unknown keyword '{self.keyword}' at {self.line_num}:{self.col_num} in program."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.keyword == other.keyword, f"{self.keyword, other.keyword}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.keyword == other.keyword
-        )
-
-
-class InvalidVariableNameError(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Invalid variable name")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return (
-            f"Variable name at {self.line_num}:{self.col_num} cannot start with digit."
-        )
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class KeywordMisuseException(Exception):
-    def __init__(self, line_num, col_num, keyword, usage):
-        super().__init__("Improper use of keyword.")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.keyword = keyword
-        self.usage = usage
-
-    def __str__(self):
-        return f"Improper use of '{self.keyword}' at {self.line_num}:{self.col_num} in program. \n   Sample Usage: {self.usage}"
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num} == {other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num} == {other.col_num}"
-        assert self.keyword == other.keyword, f"{self.keyword} == {other.keyword}"
-        assert self.usage == other.usage, f"{self.usage} == {other.usage}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.keyword == other.keyword
-            and self.usage == other.usage
-        )
-
-
-class TooManyArgsException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Too many args")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Too many args for keyword at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class NotEnoughArgsException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Not enough args")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Not enough args for keyword at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class InvalidArgsException(Exception):
-    def __init__(self, line_num, col_num, keyword, arg_type):
-        super().__init__("Invalid args")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.keyword = keyword
-        self.arg_type = arg_type
-
-    def __str__(self):
-        return f"Keyword '{self.keyword}' does not support '{self.arg_type}' at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.keyword == other.keyword, f"{self.keyword, other.keyword}"
-        assert self.arg_type == other.arg_type, f"{self.arg_type, other.arg_type}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.keyword == other.keyword
-            and self.arg_type == other.arg_type
-        )
-
-
-class UnclosedQuotationException(Exception):
-    def __init__(self, line_num, col_num, string):
-        super().__init__("Unclosed quotation")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.string = string
-
-    def __str__(self):
-        return f"Unclosed quotation mark for '{self.string}' at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.string == other.string, f"{self.string, other.string}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.string == other.string
-        )
-
-
-class InvalidCharException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Invalid char")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Invalid declaration of `char` at {self.line_num}:{self.col_num}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class BadFormattedLogicBlock(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Badly formatted logic block")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Incorrectly formatted else statement at {self.line_num}:{self.col_num}. Cannot have code between if/else block."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class UnpairedElseError(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Unpaired else")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return (
-            f"else at {self.line_num}:{self.col_num} does not have a matching if block."
-        )
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class InvalidTypeDeclarationException(Exception):
-    def __init__(self, line_num, col_num, expected_type, actual_type):
-        super().__init__("Invalid type")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.expected_type = expected_type
-        self.actual_type = actual_type
-
-    def __str__(self):
-        return f"Invalid type at {self.line_num}:{self.col_num}. Expected {self.expected_type} but got {self.actual_type}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class BufferOverflowException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Buffer overflow")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"Buffer overflow at {self.line_num}:{self.col_num}. Value too large."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class InvalidAssignmentException(Exception):
-    def __init__(self, line_num, col_num, base_type, assignment_type):
-        super().__init__("Invalid assignment")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.base_type = base_type
-        self.assignment_type = assignment_type
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot assign a {self.base_type} with a {self.assignment_type}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.base_type == other.base_type, f"{self.base_type, other.base_type}"
-        assert (
-            self.assignment_type == other.assignment_type
-        ), f"{self.assignment_type, other.assignment_type}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.base_type == other.base_type
-            and self.assignment_type == other.assignment_type
-        )
-
-
-class InvalidConcatenationException(Exception):
-    def __init__(self, line_num, col_num, base_type, concat_type):
-        super().__init__("Invalid concatenation")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.base_type = base_type
-        self.concat_type = concat_type
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot concatenate a {self.base_type} with a {self.concat_type}."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        assert self.base_type == other.base_type, f"{self.base_type, other.base_type}"
-        assert (
-            self.concat_type == other.concat_type
-        ), f"{self.concat_type, other.concat_type}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and self.base_type == other.base_type
-            and self.concat_type == other.concat_type
-        )
-
-
-class UnnamedFunctionException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Unnamed Function")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot declare Function without a name."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and type(self) == type(other)
-        )
-
-
-class InvalidFunctionDeclarationException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Invalid Function")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return (
-            f"{self.line_num}:{self.col_num} Function was declared with invalid syntax."
-        )
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return (
-            self.line_num == other.line_num
-            and self.col_num == other.col_num
-            and type(self) == type(other)
-        )
-
-
-class InvalidMacroDeclaration(Exception):
-    def __init__(self, line_num, col_num, function_name, is_ref=False):
-        super().__init__("Invalid MACRO")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-        self.function_name = function_name
-        self.is_ref = is_ref
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot {'use' if self.is_ref else 'declare'} MACRO inside `{self.function_name}` method."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class UnnamedMacroException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Unnamed MACRO")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot declare MACRO without a name."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
-
-
-class EmptyMacroException(Exception):
-    def __init__(self, line_num, col_num):
-        super().__init__("Unnamed MACRO")
-        self.line_num = line_num + 1
-        self.col_num = col_num
-
-    def __str__(self):
-        return f"{self.line_num}:{self.col_num} Cannot declare an empty MACRO."
-
-    def __eq__(self, other):
-        assert self.line_num == other.line_num, f"{self.line_num, other.line_num}"
-        assert self.col_num == other.col_num, f"{self.col_num, other.col_num}"
-        return self.line_num == other.line_num and self.col_num == other.col_num
+SIG_MAP = {
+    CHAR_AT: CHAR_AT_SIGNATURE,
+    COPY_STR: COPY_STR_SIGNATURE,
+    UPDATE_CHAR: UPDATE_CHAR_SIGNATURE,
+    MAIN: MAIN_SIGNATURE,
+    PRINT: PRINT_SIGNATURE,
+    LOOP_UP: LOOP_UP_SIGNATURE,
+    LOOP_DOWN: LOOP_DOWN_SIGNATURE,
+    LOOP_FROM: LOOP_FROM_SIGNATURE,
+}
 
 
 ########
@@ -1056,17 +658,21 @@ class FunctionKeywordNode(Node):
     def __init__(self, token, value, parent_node=None, arg_nodes=None):
         super().__init__(token, HIGH, parent_node)
         self.value = value
-        self.arg_nodes = arg_nodes
         if arg_nodes:
+            self.arg_nodes = arg_nodes
             for node in arg_nodes:
                 node.parent_node = self
         else:
-            arg_nodes = []
+            self.arg_nodes = []
 
     def set_arg_nodes(self, arg_nodes):
         self.arg_nodes = arg_nodes
         for node in arg_nodes:
             node.parent_node = self
+
+    def add_arg_node(self, arg_node):
+        self.arg_nodes.append(arg_node)
+        arg_node.parent_node = self
 
     def __eq__(self, other):
         args_equal = self.arg_nodes == other.arg_nodes
@@ -2180,7 +1786,7 @@ class Lexer:
         )
 
         # Do checking to make sure the tokens make sense to be parsed.
-        self.check_paren_pairing()
+        # self.check_paren_pairing()
         self.check_if_else_blocks()
 
         # Return the list of tokens but filter out any NEW_LINE_TOKEN_TYPE as
@@ -2702,25 +2308,25 @@ class Lexer:
             VERY_HIGH,
         )
 
-    def check_paren_pairing(self):
-        # Check to make sure all the parenthesis line up accordingly.
-        paren_error_row = 0
-        paren_error_col = 0
-        if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
-            for token in self.token_list:
-                if token.ttype == LEFT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens += 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
-                elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
-                    self.unpaired_parens -= 1
-                    paren_error_row = token.row
-                    paren_error_col = token.col
-
-        if self.unpaired_parens != 0:
-            upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
-            print_exception_message(self.program.lines, paren_error_col, upe)
-            sys.exit()
+    # def check_paren_pairing(self):
+    #     # Check to make sure all the parenthesis line up accordingly.
+    #     paren_error_row = 0
+    #     paren_error_col = 0
+    #     if len(self.left_paren_idx_list) != len(self.right_paren_idx_list):
+    #         for token in self.token_list:
+    #             if token.ttype == LEFT_PAREN_TOKEN_TYPE:
+    #                 self.unpaired_parens += 1
+    #                 paren_error_row = token.row
+    #                 paren_error_col = token.col
+    #             elif token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+    #                 self.unpaired_parens -= 1
+    #                 paren_error_row = token.row
+    #                 paren_error_col = token.col
+    #
+    #     if self.unpaired_parens != 0:
+    #         upe = UnclosedParenthesisError(paren_error_row, paren_error_col)
+    #         print_exception_message(self.program.lines, paren_error_col, upe)
+    #         sys.exit()
 
     def check_if_else_blocks(self):
         # Confirm there is at least one `else` present, otherwise no need to
@@ -2808,28 +2414,36 @@ class Parser:
             ret_nodes.append(self.main_node)
         return ret_nodes
 
+    def consume_token(self):
+        node = self.process_token_rewrite()
+        self.advance_token()
+        return node
+
     def parse(self):
         try:
-            while self.has_next_token:
-                self.parse_block()
-                if len(self.curr_block) == 0:
-                    # Do nothing because we didn't get nodes to parse
-                    pass
-                elif type(self.curr_block[0]) == StartNode:
-                    self.node_list.append(self.build_main_node())
-                elif type(self.curr_block[0]) == MacroNode:
-                    self.node_list.append(self.build_macro_node_ast())
-                # TODO(map) Why am I handling variable and Number nodes here? I should try to get this removed in some way
-                elif type(self.curr_block[0]) == NumberNode:
-                    self.node_list.append(self.build_arithmetic_ast())
-                elif type(self.curr_block[0]) == VariableKeywordNode:
-                    self.node_list.append(self.build_var_dec_ast())
-                elif type(self.curr_block[0]) == FunctionNode:
-                    self.node_list.append(self.build_function_dec_ast())
-                else:
-                    assert (
-                        False
-                    ), f"Error building AST for block starting with {type(self.curr_block[0])}"
+            while self.curr_token.ttype != EOF_TOKEN_TYPE:
+                node = self.consume_token()
+                if type(node) is StartNode:
+                    self.node_list.append(self.build_main_node(node))
+                # self.parse_block()
+                # if len(self.curr_block) == 0:
+                #     # Do nothing because we didn't get nodes to parse
+                #     pass
+                # elif type(self.curr_block[0]) == StartNode:
+                #     self.node_list.append(self.build_main_node())
+                # elif type(self.curr_block[0]) == MacroNode:
+                #     self.node_list.append(self.build_macro_node_ast())
+                # # TODO(map) Why am I handling variable and Number nodes here? I should try to get this removed in some way
+                # elif type(self.curr_block[0]) == NumberNode:
+                #     self.node_list.append(self.build_arithmetic_ast())
+                # elif type(self.curr_block[0]) == VariableKeywordNode:
+                #     self.node_list.append(self.build_var_dec_ast())
+                # elif type(self.curr_block[0]) == FunctionNode:
+                #     self.node_list.append(self.build_function_dec_ast())
+                # else:
+                #     assert (
+                #         False
+                #     ), f"Error building AST for block starting with {type(self.curr_block[0])}"
         except KeywordMisuseException as kme:
             print_exception_message(program_lines, kme.col_num, kme)
             sys.exit()
@@ -2864,20 +2478,84 @@ class Parser:
             print_exception_message(program_lines, itde.col_num, itde)
             sys.exit()
 
-    def build_main_node(self):
-        main_node = self.curr_block[0]
+    def consume_expected_node(self, expected_type, value, exception):
+        # Checks that the node is the expected type and raises the exception otherwise. This should not be used for
+        # normal processing of tokens and should only be calle when a token should exist but isn't part of the AST, such
+        # as a ( or ,
+        node = self.consume_token()
+        if type(node) is not expected_type:
+            raise exception(
+                node.token.row,
+                node.token.col,
+                value,
+                SIG_MAP.get(value),
+            )
 
-        while self.curr_token.ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
-            ast = self.process_body_block_line()
-            if ast is not None and type(ast) is not list:
-                main_node.add_child_node(ast)
-            elif ast is not None and type(ast) is list:
-                # In the case of Macros, the AST would be a list, potentially of a large size so we need to add all
-                # nodes to the main node as children, not just a single AST
-                for node in ast:
-                    main_node.add_child_node(node)
-        self.parse_block()
+    def build_main_node(self, main_node):
+        # Check for left paren node
+        self.consume_expected_node(
+            LeftParenNode,
+            main_node.token.value,
+            KeywordMisuseException,
+        )
+
+        # Check for right paren node
+        self.consume_expected_node(
+            RightParenNode,
+            main_node.token.value,
+            KeywordMisuseException,
+        )
+
+        # Check for left curl brace
+        self.consume_expected_node(
+            LeftCurlBraceNode,
+            main_node.token.value,
+            KeywordMisuseException,
+        )
+
+        while self.peek_next_token().ttype != RIGHT_CURL_BRACE_TOKEN_TYPE:
+            statement = self.parse_statement()
+            main_node.add_child_node(statement)
+
         return main_node
+
+    def parse_statement(self):
+        if self.curr_token.ttype == KEYWORD_TOKEN_TYPE:
+            return self.parse_function_keyword_node()
+        else:
+            assert (
+                False
+            ), f"Cannot parse statement starting with {self.curr_token.ttype}"
+
+    def parse_expression(self):
+        return self.consume_token()
+
+    def parse_function_keyword_node(self):
+        function_keyword_node = self.consume_token()
+
+        self.consume_expected_node(
+            LeftParenNode,
+            function_keyword_node.value,
+            KeywordMisuseException,
+        )
+
+        while self.curr_token.ttype != RIGHT_PAREN_TOKEN_TYPE:
+            arg_node = self.parse_expression()
+            function_keyword_node.add_arg_node(arg_node)
+            if self.curr_token.ttype == COMMA_TOKEN_TYPE:
+                self.consume_token()
+            elif self.curr_token.ttype == RIGHT_PAREN_TOKEN_TYPE:
+                break
+            else:
+                assert False, "Failure in processing function arg"
+
+        self.consume_expected_node(
+            RightParenNode,
+            function_keyword_node.value,
+            KeywordMisuseException,
+        )
+
+        return function_keyword_node
 
     def build_macro_node_ast(self):
         macro_node = self.curr_block[0]
@@ -3795,6 +3473,8 @@ class Parser:
         """
         self.advance_token()
         self.curr_block = []
+
+    # def read_main_method_call_line(self):
 
     def read_main_method_call_line(self, start_node):
         """
