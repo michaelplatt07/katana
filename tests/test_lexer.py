@@ -1,64 +1,33 @@
 from unittest.mock import patch
+
 import pytest
 
-from katana.katana import (
-    Lexer,
-    Program,
-    Token,
-    ASSIGNMENT_TOKEN_TYPE,
-    BOOLEAN_TOKEN_TYPE,
-    CHARACTER_TOKEN_TYPE,
-    COMMA_TOKEN_TYPE,
-    COMMENT_TOKEN_TYPE,
-    DIVIDE_TOKEN_TYPE,
-    EQUAL_TOKEN_TYPE,
-    GREATER_THAN_TOKEN_TYPE,
-    EOF_TOKEN_TYPE,
-    EOL_TOKEN_TYPE,
-    KEYWORD_TOKEN_TYPE,
-    LEFT_CURL_BRACE_TOKEN_TYPE,
-    LEFT_PAREN_TOKEN_TYPE,
-    LESS_THAN_TOKEN_TYPE,
-    LOOP_INDEX_KEYWORD_TOKEN_TYPE,
-    FUNCTION_ARG_TOKEN_TYPE,
-    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
-    FUNCTION_ARG_TYPE_TOKEN_TYPE,
-    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
-    FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
-    FUNCTION_RETURN_TOKEN_TYPE,
-    FUNCTION_KEYWORD_TOKEN_TYPE,
-    FUNCTION_NAME_TOKEN_TYPE,
-    FUNCTION_SEPARATOR_TOKEN_TYPE,
-    FUNCTION_REFERENCE_TOKEN_TYPE,
-    MACRO_KEYWORD_TOKEN_TYPE,
-    MACRO_NAME_TOKEN_TYPE,
-    MACRO_REFERENCE_TOKEN_TYPE,
-    MINUS_TOKEN_TYPE,
-    MULTIPLY_TOKEN_TYPE,
-    NUM_TOKEN_TYPE,
-    PLUS_TOKEN_TYPE,
-    RANGE_INDICATION_TOKEN_TYPE,
-    RIGHT_CURL_BRACE_TOKEN_TYPE,
-    RIGHT_PAREN_TOKEN_TYPE,
-    STRING_TOKEN_TYPE,
-    VARIABLE_NAME_TOKEN_TYPE,
-    VARIABLE_REFERENCE_TOKEN_TYPE,
-    LOW,
-    HIGH,
-    MEDIUM,
-    VERY_HIGH,
-    ULTRA_HIGH,
-    BadFormattedLogicBlock,
-    InvalidCharException,
-    InvalidFunctionDeclarationException,
-    InvalidTokenException,
-    InvalidVariableNameError,
-    NoTerminatorError,
-    UnclosedParenthesisError,
-    UnclosedQuotationException,
-    UnknownKeywordError,
-    UnpairedElseError,
-)
+from exceptions import (BadFormattedLogicBlock, InvalidCharException,
+                        InvalidFunctionDeclarationException,
+                        InvalidTokenException, InvalidVariableNameError,
+                        NoTerminatorError, UnclosedParenthesisError,
+                        UnclosedQuotationException, UnknownKeywordError,
+                        UnpairedElseError)
+from katana import (ASSIGNMENT_TOKEN_TYPE, BOOLEAN_TOKEN_TYPE,
+                    CHARACTER_TOKEN_TYPE, COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
+                    DIVIDE_TOKEN_TYPE, EOF_TOKEN_TYPE, EOL_TOKEN_TYPE,
+                    EQUAL_TOKEN_TYPE, FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
+                    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+                    FUNCTION_ARG_TOKEN_TYPE, FUNCTION_ARG_TYPE_TOKEN_TYPE,
+                    FUNCTION_KEYWORD_TOKEN_TYPE, FUNCTION_NAME_TOKEN_TYPE,
+                    FUNCTION_REFERENCE_TOKEN_TYPE,
+                    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
+                    FUNCTION_RETURN_TOKEN_TYPE, FUNCTION_SEPARATOR_TOKEN_TYPE,
+                    GREATER_THAN_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
+                    LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                    LESS_THAN_TOKEN_TYPE, LOOP_INDEX_KEYWORD_TOKEN_TYPE, LOW,
+                    MACRO_KEYWORD_TOKEN_TYPE, MACRO_NAME_TOKEN_TYPE,
+                    MACRO_REFERENCE_TOKEN_TYPE, MEDIUM, MINUS_TOKEN_TYPE,
+                    MULTIPLY_TOKEN_TYPE, NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
+                    RANGE_INDICATION_TOKEN_TYPE, RIGHT_CURL_BRACE_TOKEN_TYPE,
+                    RIGHT_PAREN_TOKEN_TYPE, STRING_TOKEN_TYPE, ULTRA_HIGH,
+                    VARIABLE_NAME_TOKEN_TYPE, VARIABLE_REFERENCE_TOKEN_TYPE,
+                    VERY_HIGH, Lexer, Program, Token)
 
 
 def get_main_tokens():
@@ -357,7 +326,7 @@ class TestLexerParenthesis:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_unclosed_paren_error(self, mock_print):
         program = Program(["1 + (2 + 3;\n"])
         lexer = Lexer(program)
@@ -367,7 +336,7 @@ class TestLexerParenthesis:
             ["1 + (2 + 3;\n"], 4, UnclosedParenthesisError(0, 4)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_unclosed_paren_error_other_side(self, mock_print):
         program = Program(["1 + 2) + 3;\n"])
         lexer = Lexer(program)
@@ -395,7 +364,7 @@ class TestLexerEndOfLineSemicolon:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_error_if_line_ends_without_semicolon(self, mock_print):
         program = Program(["3 + 4\n"])
         lexer = Lexer(program)
@@ -403,7 +372,7 @@ class TestLexerEndOfLineSemicolon:
             lexer.lex()
         mock_print.assert_called_with(["3 + 4\n"], 5, NoTerminatorError(0, 5))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_error_if_later_line_ends_without_semicolon(self, mock_print):
         code = ["main() {\n", "int16 x = 16;\n", "print(x)\n", "}\n"]
         program = Program(code)
@@ -414,7 +383,7 @@ class TestLexerEndOfLineSemicolon:
 
 
 class TestLexerInvalidTokenException:
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_invalid_token_raises_exception(self, mock_print):
         """
         Ensures that if an unknown token shows up an exception is raised.
@@ -431,7 +400,7 @@ class TestLexerInvalidKeyword:
     Tests to ensure that an invalid keyword gets flagged by the lexer.
     """
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_invalid_keyword(self, mock_print):
         """
         Ensuring an error is raised if an unrecognized keyword is in program.
@@ -580,7 +549,7 @@ class TestLexerIntKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_invalid_int_64_variable_name_with_underscore(self, mock_print):
         """
         Test to make sure if a variable is anything other than alpha numeric
@@ -593,7 +562,7 @@ class TestLexerIntKeyword:
             lexer.lex()
         mock_print.assert_called_with(code, 9, InvalidTokenException(1, 9, "_"))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_invalid_int_64_variable_name_starts_with_number(self, mock_print):
         """
         Test to make sure that a variable name starting with a number raises
@@ -691,7 +660,7 @@ class TestLexerCharKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_invalid_character_variable_declaration_raises_exception(self, mock_print):
         """
         Tests that anything other than a char in the format 'a' is not valid.
@@ -904,7 +873,7 @@ class TestLexerIfElseKeyword:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_else_with_no_if_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
@@ -917,7 +886,7 @@ class TestLexerIfElseKeyword:
             lexer.lex()
         mock_print.assert_called_with(code, 1, UnpairedElseError(1, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_else_with_something_between_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
@@ -940,7 +909,7 @@ class TestLexerIfElseKeyword:
             lexer.lex()
         mock_print.assert_called_with(code, 5, BadFormattedLogicBlock(5, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_else_with_something_between_same_line_raises_error(self, mock_print):
         """
         If the `else` keyword is present without the `if` keyword we get an
@@ -962,7 +931,7 @@ class TestLexerIfElseKeyword:
             lexer.lex()
         mock_print.assert_called_with(code, 4, BadFormattedLogicBlock(4, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_nested_if_else_with_bad_line(self, mock_print):
         """
         Ensures that the nested if/else block that are improperly formatted get
@@ -991,7 +960,7 @@ class TestLexerIfElseKeyword:
             lexer.lex()
         mock_print.assert_called_with(code, 7, BadFormattedLogicBlock(7, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_nested_else_without_if(self, mock_print):
         """
         Ensures that the inner `else` without an if block gets flagged as the
@@ -1365,7 +1334,7 @@ class TestLexerQuotationCharacter:
         lexer = Lexer(program)
         assert token_list == lexer.lex()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_exception_raised_with_no_closing_quote_eol(self, mock_print):
         program = Program(['"test string;\n'])
         lexer = Lexer(program)
@@ -1375,7 +1344,7 @@ class TestLexerQuotationCharacter:
             ['"test string;\n'], 12, UnclosedQuotationException(0, 12, "test string")
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_exception_raised_with_no_closing_quote_new_line(self, mock_print):
         program = Program(['"test string\n'])
         lexer = Lexer(program)
@@ -1490,7 +1459,7 @@ class TestLexerDotOperator:
     All tests related to using the dot operator in the program.
     """
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_single_dot_raises_error(self, mock_print):
         code = ["main() {\n", "1.2\n", "}\n"]
         program = Program(code)
@@ -1546,7 +1515,7 @@ class TestLexerFunction:
     All tests related to declaring and using functions.
     """
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_function_without_left_paren_raises_error(self, mock_print):
         """
         Given a program like:
