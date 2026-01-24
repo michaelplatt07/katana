@@ -2,58 +2,49 @@ from unittest.mock import patch
 
 import pytest
 
-from katana.katana import (ASSIGNMENT_TOKEN_TYPE, BOOLEAN_TOKEN_TYPE,
-                           CHAR_AT_SIGNATURE, CHARACTER_TOKEN_TYPE,
-                           COMMA_TOKEN_TYPE, COMMENT_TOKEN_TYPE,
-                           COPY_STR_SIGNATURE, DIVIDE_TOKEN_TYPE,
-                           EOF_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
-                           FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
-                           FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
-                           FUNCTION_ARG_TOKEN_TYPE,
-                           FUNCTION_ARG_TYPE_TOKEN_TYPE,
-                           FUNCTION_KEYWORD_TOKEN_TYPE,
-                           FUNCTION_NAME_TOKEN_TYPE,
-                           FUNCTION_REFERENCE_TOKEN_TYPE,
-                           FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
-                           FUNCTION_RETURN_TOKEN_TYPE,
-                           FUNCTION_SEPARATOR_TOKEN_TYPE,
-                           GREATER_THAN_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
-                           LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
-                           LESS_THAN_TOKEN_TYPE, LOOP_DOWN_SIGNATURE,
-                           LOOP_FROM_SIGNATURE, LOOP_INDEX_KEYWORD_TOKEN_TYPE,
-                           LOOP_UP_SIGNATURE, LOW, MACRO_KEYWORD_TOKEN_TYPE,
-                           MACRO_NAME_TOKEN_TYPE, MACRO_REFERENCE_TOKEN_TYPE,
-                           MAIN_SIGNATURE, MEDIUM, MINUS_TOKEN_TYPE,
-                           MULTIPLY_TOKEN_TYPE, NUM_TOKEN_TYPE,
-                           PLUS_TOKEN_TYPE, PRINT_SIGNATURE,
-                           RANGE_INDICATION_TOKEN_TYPE,
-                           RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
-                           STRING_TOKEN_TYPE, ULTRA_HIGH,
-                           UPDATE_CHAR_SIGNATURE, VARIABLE_NAME_TOKEN_TYPE,
-                           VARIABLE_REFERENCE_TOKEN_TYPE, VERY_HIGH,
-                           AssignmentNode, BooleanNode,
-                           BufferOverflowException, CharNode, CompareNode,
-                           EmptyMacroException, FunctionArgNode,
-                           FunctionArgReferenceNode, FunctionArgTypeNode,
-                           FunctionKeywordNode, FunctionNameNode, FunctionNode,
-                           FunctionReferenceNode, FunctionReturnNode,
-                           FunctionReturnTypeNode, InvalidArgsException,
-                           InvalidAssignmentException,
-                           InvalidConcatenationException,
-                           InvalidFunctionDeclarationException,
-                           InvalidMacroDeclaration,
-                           InvalidTypeDeclarationException,
-                           KeywordMisuseException, LogicKeywordNode,
-                           LoopDownInclusiveKeywordNode, LoopDownKeywordNode,
-                           LoopFromInclusiveKeywordNode, LoopFromKeywordNode,
-                           LoopIdxKeywordNode, LoopUpInclusiveKeywordNode,
-                           LoopUpKeywordNode, MacroNameNode, MacroNode,
-                           MultiplyDivideNode, NotEnoughArgsException,
-                           NumberNode, Parser, PlusMinusNode, RangeNode,
-                           StartNode, StringNode, Token, TooManyArgsException,
-                           UnnamedFunctionException, UnnamedMacroException,
-                           VariableKeywordNode, VariableNode,
-                           VariableReferenceNode)
+from katana import (ASSIGNMENT_TOKEN_TYPE, BOOLEAN_TOKEN_TYPE,
+                    CHAR_AT_SIGNATURE, CHARACTER_TOKEN_TYPE, COMMA_TOKEN_TYPE,
+                    COMMENT_TOKEN_TYPE, COPY_STR_SIGNATURE, DIVIDE_TOKEN_TYPE,
+                    EOF_TOKEN_TYPE, EOL_TOKEN_TYPE, EQUAL_TOKEN_TYPE,
+                    FUNCTION_ARG_REFERENCE_TOKEN_TYPE,
+                    FUNCTION_ARG_SEPARATOR_TYPE_TOKEN_TYPE,
+                    FUNCTION_ARG_TOKEN_TYPE, FUNCTION_ARG_TYPE_TOKEN_TYPE,
+                    FUNCTION_KEYWORD_TOKEN_TYPE, FUNCTION_NAME_TOKEN_TYPE,
+                    FUNCTION_REFERENCE_TOKEN_TYPE,
+                    FUNCTION_RETURN_KEYWORD_TOKEN_TYPE,
+                    FUNCTION_RETURN_TOKEN_TYPE, FUNCTION_SEPARATOR_TOKEN_TYPE,
+                    GREATER_THAN_TOKEN_TYPE, HIGH, KEYWORD_TOKEN_TYPE,
+                    LEFT_CURL_BRACE_TOKEN_TYPE, LEFT_PAREN_TOKEN_TYPE,
+                    LESS_THAN_TOKEN_TYPE, LOOP_DOWN_SIGNATURE,
+                    LOOP_FROM_SIGNATURE, LOOP_INDEX_KEYWORD_TOKEN_TYPE,
+                    LOOP_UP_SIGNATURE, LOW, MACRO_KEYWORD_TOKEN_TYPE,
+                    MACRO_NAME_TOKEN_TYPE, MACRO_REFERENCE_TOKEN_TYPE,
+                    MAIN_SIGNATURE, MEDIUM, MINUS_TOKEN_TYPE,
+                    MULTIPLY_TOKEN_TYPE, NUM_TOKEN_TYPE, PLUS_TOKEN_TYPE,
+                    PRINT_SIGNATURE, RANGE_INDICATION_TOKEN_TYPE,
+                    RIGHT_CURL_BRACE_TOKEN_TYPE, RIGHT_PAREN_TOKEN_TYPE,
+                    STRING_TOKEN_TYPE, ULTRA_HIGH, UPDATE_CHAR_SIGNATURE,
+                    VARIABLE_NAME_TOKEN_TYPE, VARIABLE_REFERENCE_TOKEN_TYPE,
+                    VERY_HIGH, AssignmentNode, BooleanNode,
+                    BufferOverflowException, CharNode, CompareNode,
+                    EmptyMacroException, FunctionArgNode,
+                    FunctionArgReferenceNode, FunctionArgTypeNode,
+                    FunctionKeywordNode, FunctionNameNode, FunctionNode,
+                    FunctionReferenceNode, FunctionReturnNode,
+                    FunctionReturnTypeNode, InvalidArgsException,
+                    InvalidAssignmentException, InvalidConcatenationException,
+                    InvalidFunctionDeclarationException,
+                    InvalidMacroDeclaration, InvalidTypeDeclarationException,
+                    KeywordMisuseException, LogicKeywordNode,
+                    LoopDownInclusiveKeywordNode, LoopDownKeywordNode,
+                    LoopFromInclusiveKeywordNode, LoopFromKeywordNode,
+                    LoopIdxKeywordNode, LoopUpInclusiveKeywordNode,
+                    LoopUpKeywordNode, MacroNameNode, MacroNode,
+                    MultiplyDivideNode, NotEnoughArgsException, NumberNode,
+                    Parser, PlusMinusNode, RangeNode, StartNode, StringNode,
+                    Token, TooManyArgsException, UnnamedFunctionException,
+                    UnnamedMacroException, VariableKeywordNode, VariableNode,
+                    VariableReferenceNode)
 
 
 class TestParserLiterals:
@@ -673,7 +664,7 @@ class TestParserPrint:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_print_use_invalid(self, mock_print):
         """
         Given a progrma like:
@@ -701,7 +692,7 @@ class TestParserPrint:
             [], 4, KeywordMisuseException(1, 4, "print", PRINT_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_print_with_multiple_args_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -732,7 +723,7 @@ class TestParserPrint:
             parser.parse()
         mock_print.assert_called_with([], 4, TooManyArgsException(1, 4))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_printl_with_multiple_args_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -769,32 +760,27 @@ class TestParserMain:
     All tests related to the main keyword.
     """
 
-    @pytest.mark.skip()
-    def test_keyword_main_with_literal(self):
+    def test_main_declaration_with_empty_body(self):
         """
         Given a program like:
-        main() { 3; };
+        main() { };
         Expected to return an AST like:
-        (main(3))
+        (main([]))
         """
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", ULTRA_HIGH),
             Token(LEFT_PAREN_TOKEN_TYPE, 4, 0, "(", HIGH),
             Token(RIGHT_PAREN_TOKEN_TYPE, 5, 0, ")", HIGH),
             Token(LEFT_CURL_BRACE_TOKEN_TYPE, 7, 0, "{", HIGH),
-            Token(NUM_TOKEN_TYPE, 9, 0, "3", LOW),
-            Token(EOL_TOKEN_TYPE, 10, 0, ";", LOW),
-            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 12, 0, "}", HIGH),
+            Token(RIGHT_CURL_BRACE_TOKEN_TYPE, 9, 0, "}", HIGH),
             Token(EOL_TOKEN_TYPE, 13, 0, ";", LOW),
             Token(EOF_TOKEN_TYPE, 0, 1, "EOF", LOW),
         ]
-        three_node = NumberNode(token_list[4], "3")
-        ast = StartNode(token_list[0], "main", [three_node])
+        ast = StartNode(token_list[0], "main", [])
         parser = Parser(token_list)
-        parser.parse()
-        assert [ast] == parser.get_nodes()
+        assert ast == parser.build_main_node()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_main_with_no_left_paren_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -820,7 +806,7 @@ class TestParserMain:
             [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_main_with_method_params_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -846,7 +832,7 @@ class TestParserMain:
             [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_main_with_no_right_paren_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -872,7 +858,7 @@ class TestParserMain:
             [], 0, KeywordMisuseException(0, 0, "main", MAIN_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_main_with_no_left_curl_brace_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -1041,7 +1027,7 @@ class TestParserInt:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_int_8_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1061,7 +1047,7 @@ class TestParserInt:
             parser.parse()
         mock_print.assert_called_with([], 9, BufferOverflowException(1, 9))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_int_16_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1081,7 +1067,7 @@ class TestParserInt:
             parser.parse()
         mock_print.assert_called_with([], 10, BufferOverflowException(1, 10))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_int_32_variable_declaration_overflow(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1207,7 +1193,7 @@ class TestParserCharAt:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_invalid_syntax(self, mock_print):
         """
         Given a program like:
@@ -1239,7 +1225,7 @@ class TestParserCharAt:
         )
 
     @pytest.mark.skip("This is being done as part of the lexer")
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_no_left_paren_raises_error(self, mock_print):
         """
         Given a program like:
@@ -1270,7 +1256,7 @@ class TestParserCharAt:
             [], 13, KeywordMisuseException(1, 13, "charAt", CHAR_AT_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_not_enough_params_raises_error(self, mock_print):
         """
         Given a program like:
@@ -1300,7 +1286,7 @@ class TestParserCharAt:
             parser.parse()
         mock_print.assert_called_with([], 13, NotEnoughArgsException(1, 13))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_invalid_type_first_param(self, mock_print):
         """
         Given a program like:
@@ -1334,7 +1320,7 @@ class TestParserCharAt:
             [], 13, InvalidArgsException(1, 13, "charAt", NumberNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_invalid_type_second_param(self, mock_print):
         """
         Given a program like:
@@ -1368,7 +1354,7 @@ class TestParserCharAt:
             [], 13, InvalidArgsException(1, 13, "charAt", CharNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_invalid_type_first_param_as_var(self, mock_print):
         """
         Given a program like:
@@ -1408,7 +1394,7 @@ class TestParserCharAt:
             [], 13, InvalidArgsException(2, 13, "charAt", "int64")
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_char_at_invalid_type_second_param_as_var(self, mock_print):
         """
         Given a program like:
@@ -1598,7 +1584,7 @@ class TestUpdateChar:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_update_char_function_invalid_syntax(self, mock_print):
         """
         Given a program like:
@@ -1633,7 +1619,7 @@ class TestUpdateChar:
         )
 
     @pytest.mark.skip("Will revist at a later time with appropriate exception handling")
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_update_char_function_no_left_paren_raises_error(self, mock_print):
         """
         Given a program like:
@@ -1739,7 +1725,7 @@ class TestParserCopyString:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_function_invalid_syntax(self, mock_print):
         """
         Given a program like:
@@ -1771,7 +1757,7 @@ class TestParserCopyString:
     @pytest.mark.skip(
         "This will be fixed later. Open closing paren raises error in lexing"
     )
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_function_no_left_paren_raises_error(self, mock_print):
         """
         Given a program like:
@@ -1800,7 +1786,7 @@ class TestParserCopyString:
             [], 1, KeywordMisuseException(0, 1, "copyStr", COPY_STR_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_first_arg_not_string(self, mock_print):
         """
         Given a program like:
@@ -1831,7 +1817,7 @@ class TestParserCopyString:
             [], 4, InvalidArgsException(1, 4, "copyStr", NumberNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_second_arg_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1855,7 +1841,7 @@ class TestParserCopyString:
             [], 4, InvalidArgsException(1, 4, "copyStr", NumberNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_first_arg_var_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -1889,7 +1875,7 @@ class TestParserCopyString:
             [], 4, InvalidArgsException(3, 4, "copyStr", "int64")
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_copy_str_second_arg_var_not_string(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -2042,7 +2028,7 @@ class TestParserChar:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_update_char_with_invalid_type_fails(self, mock_print):
         """
         Given a program like:
@@ -2592,7 +2578,7 @@ class TestParserLoopKeyword:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_up_with_variable_wrong_type_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2743,7 +2729,7 @@ class TestParserLoopKeyword:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_down_with_variable_wrong_type_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2839,7 +2825,7 @@ class TestParserLoopKeyword:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_from_keyword_without_dot_operator_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2876,7 +2862,7 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with([], 4, NotEnoughArgsException(1, 4))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_up_with_string_in_params_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2915,7 +2901,7 @@ class TestParserLoopKeyword:
             [], 11, InvalidArgsException(1, 11, "loopUp", StringNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_down_with_string_in_params_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2954,7 +2940,7 @@ class TestParserLoopKeyword:
             [], 11, InvalidArgsException(1, 11, "loopDown", StringNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_up_with_dot_operator_raises_error(self, mock_print):
         """
         Given a program like:
@@ -2995,7 +2981,7 @@ class TestParserLoopKeyword:
             [], 12, InvalidArgsException(1, 12, "loopUp", RangeNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_up_with_multiple_args_raises_error(self, mock_print):
         """
         Given a program like:
@@ -3034,7 +3020,7 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with([], 11, TooManyArgsException(1, 11))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_down_with_multiple_args_raises_error(self, mock_print):
         """
         Given a program like:
@@ -3073,7 +3059,7 @@ class TestParserLoopKeyword:
             parser.parse()
         mock_print.assert_called_with([], 11, TooManyArgsException(1, 11))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_loop_down_with_dot_operator_raises_error(self, mock_print):
         """
         Given a program like:
@@ -3114,7 +3100,7 @@ class TestParserLoopKeyword:
             [], 12, InvalidArgsException(1, 12, "loopDown", RangeNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_basic_loop_up_invalid_syntax(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -3141,7 +3127,7 @@ class TestParserLoopKeyword:
             [], 4, KeywordMisuseException(1, 4, "loopUp", LOOP_UP_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_basic_loop_down_invalid_syntax(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -3168,7 +3154,7 @@ class TestParserLoopKeyword:
             [], 4, KeywordMisuseException(1, 4, "loopDown", LOOP_DOWN_SIGNATURE)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_basic_loop_from_invalid_syntax(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -4095,7 +4081,7 @@ class TestConcatenation:
         parser.parse()
         assert [ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_concatenate_other_to_string_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -4139,7 +4125,7 @@ class TestParserTypeChecking:
     All tests related to checking if a type is valid in the program.
     """
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_setting_int_to_bool_raises_exception(self, mock_print):
         """
         Given a program like:
@@ -4170,7 +4156,7 @@ class TestParserTypeChecking:
             [], 10, InvalidTypeDeclarationException(1, 10, "int64", BooleanNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_setting_string_to_bool_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -4192,7 +4178,7 @@ class TestParserTypeChecking:
             [], 10, InvalidTypeDeclarationException(1, 10, "string", BooleanNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_setting_bool_to_int_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -4214,7 +4200,7 @@ class TestParserTypeChecking:
             [], 10, InvalidTypeDeclarationException(1, 10, "int64", BooleanNode)
         )
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_setting_char_to_bool_raises_exception(self, mock_print):
         token_list = [
             Token(KEYWORD_TOKEN_TYPE, 0, 0, "main", 4),
@@ -4391,7 +4377,7 @@ class TestParserMacro:
         ast = StartNode(token_list[11], "main", children_nodes=[print_node])
         assert [macro_node, ast] == parser.get_nodes()
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_macro_fails_declared_in_main(self, mock_print):
         """
         Given a program like:
@@ -4429,7 +4415,7 @@ class TestParserMacro:
             parser.parse()
         mock_print.assert_called_with([], 4, InvalidMacroDeclaration(1, 4, "main"))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_macro_fails_invalid_declaration_no_name(self, mock_print):
         token_list = [
             Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 4, "MACRO", 4),
@@ -4456,7 +4442,7 @@ class TestParserMacro:
             parser.parse()
         mock_print.assert_called_with([], 4, UnnamedMacroException(0, 4))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_macro_fails_empty_macro(self, mock_print):
         token_list = [
             Token(MACRO_KEYWORD_TOKEN_TYPE, 0, 4, "MACRO", 4),
@@ -4486,7 +4472,7 @@ class TestParserFunctionKeyword:
     All tests related to user defined functions.
     """
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_function_without_name_raises_error(self, mock_print):
         """
         Given a program with a function declared without a name like:
@@ -4528,7 +4514,7 @@ class TestParserFunctionKeyword:
             parser.parse()
         mock_print.assert_called_with([], 0, UnnamedFunctionException(0, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_function_invalid_syntax_raises_error(self, mock_print):
         """
         Given a program like:
@@ -4578,7 +4564,7 @@ class TestParserFunctionKeyword:
             parser.parse()
         mock_print.assert_called_with([], 0, InvalidFunctionDeclarationException(0, 0))
 
-    @patch("katana.katana.print_exception_message")
+    @patch("katana.print_exception_message")
     def test_function_invalid_syntax_no_second_separator_raises_error(self, mock_print):
         """
         Given a program like:
